@@ -39,6 +39,6 @@ public sealed class JobsViewModel
         B2 = RuntimeBuildJobService.CanCancel(job),
         B3 = RuntimeBuildJobService.CanRetry(job),
         B4 = RuntimeBuildJobService.CanClear(job),
-        Data = JsonSerializer.SerializeToNode(job)!.AsObject()
+        Data = JsonSerializer.SerializeToNode(job) as JsonObject ?? new JsonObject()
     };
 }

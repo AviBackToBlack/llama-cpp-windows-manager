@@ -15,7 +15,11 @@ public static class ModelGatewayResponseWriter
 
     public static void TryClose(HttpListenerResponse response)
     {
-        try { response.Close(); } catch { }
+        try { response.Close(); }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Could not close model gateway response: {ex.Message}");
+        }
     }
 
     public static object ModelsResponse(IReadOnlyList<ModelRecord> models)

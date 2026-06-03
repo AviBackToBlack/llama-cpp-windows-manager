@@ -101,6 +101,28 @@ public static class RuntimeAdapter
             errors.Add("KV offload must be auto, on, or off.");
         if (!IsOneOf(request.KvUnified, "auto", "on", "off"))
             errors.Add("Unified KV must be auto, on, or off.");
+        if (!IsOneOf(request.PromptCacheMode, "auto", "on", "off"))
+            errors.Add("Prompt cache must be auto, on, or off.");
+        if (request.PromptCacheRamMb < -1)
+            errors.Add("Prompt cache MB must be -1 for no limit, 0 for disabled, or greater.");
+        if (request.PromptCacheRamMb > 1_048_576)
+            errors.Add("Prompt cache MB is too large.");
+        if (string.Equals(request.PromptCacheMode, "on", StringComparison.OrdinalIgnoreCase) && request.PromptCacheRamMb == 0)
+            errors.Add("Prompt cache MB must be -1 or greater than 0 when prompt cache is on.");
+        if (!IsOneOf(request.ContextCheckpointsMode, "auto", "on", "off"))
+            errors.Add("Context checkpoints must be auto, on, or off.");
+        if (request.ContextCheckpointCount < 0)
+            errors.Add("Checkpoint count cannot be negative.");
+        if (request.ContextCheckpointCount > 10_000)
+            errors.Add("Checkpoint count is too large.");
+        if (string.Equals(request.ContextCheckpointsMode, "on", StringComparison.OrdinalIgnoreCase) && request.ContextCheckpointCount < 1)
+            errors.Add("Checkpoint count must be at least 1 when checkpoints are on.");
+        if (request.ContextCheckpointEveryNTokens < -1)
+            errors.Add("Checkpoint spacing must be -1 for disabled or greater.");
+        if (request.ContextCheckpointEveryNTokens > 1_048_576)
+            errors.Add("Checkpoint spacing is too large.");
+        if (string.Equals(request.ContextCheckpointsMode, "on", StringComparison.OrdinalIgnoreCase) && request.ContextCheckpointEveryNTokens < 1)
+            errors.Add("Checkpoint spacing must be at least 1 when checkpoints are on.");
         if (!IsOneOf(request.ContinuousBatching, "on", "off"))
             errors.Add("Continuous batching must be on or off.");
         if (!IsOneOf(request.ReasoningMode, "auto", "on", "off"))
@@ -167,6 +189,8 @@ public static class RuntimeAdapter
         if (!validation.Ok) throw new InvalidOperationException(string.Join(" ", validation.Errors));
         var host = NormalizeHost(request.Host);
         var ropeScaling = (request.RopeScaling ?? "auto").Trim().ToLowerInvariant();
+        var promptCacheMode = (request.PromptCacheMode ?? "auto").Trim().ToLowerInvariant();
+        var contextCheckpointsMode = (request.ContextCheckpointsMode ?? "auto").Trim().ToLowerInvariant();
         var speculativeType = LaunchSettingMetadataService.NormalizeSpeculativeType(request.SpeculativeType);
         var llamaSpeculativeType = LaunchSettingMetadataService.LlamaSpeculativeTypeArgument(speculativeType);
         var args = new List<string>
@@ -218,6 +242,20 @@ public static class RuntimeAdapter
             args.Add("--kv-unified");
         else if (request.KvUnified == "off")
             args.Add("--no-kv-unified");
+        if (promptCacheMode == "on")
+            args.AddRange(["--cache-ram", request.PromptCacheRamMb.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
+        else if (promptCacheMode == "off")
+            args.AddRange(["--cache-ram", "0"]);
+        if (contextCheckpointsMode == "on")
+        {
+            args.AddRange(["--ctx-checkpoints", request.ContextCheckpointCount.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
+            args.AddRange(["--checkpoint-every-n-tokens", request.ContextCheckpointEveryNTokens.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
+        }
+        else if (contextCheckpointsMode == "off")
+        {
+            args.AddRange(["--ctx-checkpoints", "0"]);
+            args.AddRange(["--checkpoint-every-n-tokens", "-1"]);
+        }
         if (request.ContinuousBatching == "on")
             args.Add("--cont-batching");
         else if (request.ContinuousBatching == "off")

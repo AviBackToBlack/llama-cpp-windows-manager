@@ -384,12 +384,12 @@ public sealed partial class ReleaseHardeningTests
         Assert.True(loadingModelMatches);
         Assert.False(tracker.IsLoadingModel("model-1"));
         Assert.Equal(ModelRuntimeStatusKind.Loading, loading.Kind);
-        Assert.Equal("Loading Qwen (5s)", loading.MetricText);
+        Assert.Equal("Loading Model: Qwen\nLoading Time: 5s", loading.MetricText);
         Assert.Equal("Loading Qwen at http://127.0.0.1:8083.", loading.StatusText);
         Assert.Equal(ModelRuntimeStatusKind.Fallback, otherModel.Kind);
         Assert.NotNull(loaded);
         Assert.Equal(ModelRuntimeStatusKind.Loaded, loaded.Kind);
-        Assert.Equal("Loaded: Qwen in 5s", loaded.MetricText);
+        Assert.Equal("Loaded Model: Qwen\nLoading Time: 5s", loaded.MetricText);
         Assert.Equal(ModelRuntimeStatusKind.Loaded, loadedVisible.Kind);
         Assert.Equal(ModelRuntimeStatusKind.Fallback, cleared.Kind);
         Assert.True(loadingPlan.ShouldRender);
@@ -419,7 +419,7 @@ public sealed partial class ReleaseHardeningTests
         var source = ReadMainWindowSources();
         var lifecycle = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.ModelRuntimeLifecycle.cs"));
         var state = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.State.cs"));
-        var controllerSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeStatusController.cs"));
+        var controllerSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeStatusController.cs"));
         var factorySource = ReadAppServiceFactorySources();
         var timerFactory = new ManualUiTimerFactory();
         var controller = new ModelRuntimeStatusController(new ModelRuntimeStatusTracker(), timerFactory);
@@ -446,6 +446,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.NotNull(loaded);
         Assert.False(timerFactory.Timers[0].Started);
         Assert.False(controller.IsLoadingModel("model-1"));
+        Assert.Equal("Loaded Model: Qwen\nLoading Time: 4s", loaded.MetricText);
 
         controller.StartLoadedStatusTimer(() =>
         {
@@ -459,16 +460,19 @@ public sealed partial class ReleaseHardeningTests
 
         await timerFactory.Timers[1].FireAsync();
         Assert.Equal(1, loadedExpired);
-        controller.StopLoadedStatusTimer();
+        controller.StopLoadedStatusTimer(clearLoadedStatus: false);
         Assert.False(controller.HasLoadedStatusTimer);
         Assert.False(timerFactory.Timers[1].Started);
+        Assert.Equal("Loaded Model: Qwen\nLoading Time: 4s", controller.StatusFor("model-1", "No model", startedAt.AddSeconds(5)).MetricText);
+        controller.StopLoadedStatusTimer();
+        Assert.Equal("No model", controller.StatusFor("model-1", "No model", startedAt.AddSeconds(5)).MetricText);
 
         Assert.Contains("DispatcherUiTimerFactory", factorySource, StringComparison.Ordinal);
         Assert.DoesNotContain("DispatcherUiTimerFactory", controllerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("new ModelRuntimeStatusController()", state, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Models.ModelRuntimeStatus", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Models.ModelRuntimeStatus.StartLoadedStatusTimer", source, StringComparison.Ordinal);
-        Assert.Contains("_coreServices.Models.ModelRuntimeStatus.StopLoadedStatusTimer()", source, StringComparison.Ordinal);
+        Assert.Contains("_coreServices.Models.ModelRuntimeStatus.StopLoadedStatusTimer(clearLoadedStatus)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_modelLoadingTimer", state + lifecycle, StringComparison.Ordinal);
         Assert.DoesNotContain("_modelLoadedStatusTimer", state + lifecycle, StringComparison.Ordinal);
         Assert.DoesNotContain("new System.Windows.Threading.DispatcherTimer", lifecycle, StringComparison.Ordinal);
@@ -479,9 +483,9 @@ public sealed partial class ReleaseHardeningTests
     public void ModelRuntimeStartFollowupServiceOwnsPostLaunchAndFailurePlans()
     {
         var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.ModelRuntimeLifecycle.cs"));
-        var serviceSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeStartFollowupService.cs"));
-        var applicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeStartFollowupApplicationService.cs"));
-        var launchApplicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeLaunchApplicationService.cs"));
+        var serviceSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeStartFollowupService.cs"));
+        var applicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeStartFollowupApplicationService.cs"));
+        var launchApplicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeLaunchApplicationService.cs"));
         var service = new ModelRuntimeStartFollowupService();
 
         var started = service.AfterSessionStarted();
@@ -650,10 +654,10 @@ public sealed partial class ReleaseHardeningTests
     public void MainWindowDelegatesRuntimeSessionMutationsToCoordinator()
     {
         var source = ReadMainWindowSources();
-        var preparation = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeLaunchPreparationService.cs"));
-        var commands = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeSessionCommandService.cs"));
-        var sessionApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeSessionApplicationService.cs"));
-        var launchApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeLaunchApplicationService.cs"));
+        var preparation = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeLaunchPreparationService.cs"));
+        var commands = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeSessionCommandService.cs"));
+        var sessionApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeSessionApplicationService.cs"));
+        var launchApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeLaunchApplicationService.cs"));
 
         Assert.Contains("_runtimeSessions.EnsureLaunchPortAvailable", preparation, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Models.ModelRuntimeLaunchApplication.LaunchAsync", source, StringComparison.Ordinal);
@@ -683,10 +687,10 @@ public sealed partial class ReleaseHardeningTests
     {
         var dashboard = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeDashboard.cs"));
         var counters = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeMetricCounters.cs"));
-        var refreshApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDashboardRefreshApplicationService.cs"));
-        var service = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeIdleUnloadPolicyService.cs"));
+        var refreshApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDashboardRefreshApplicationService.cs"));
+        var service = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeIdleUnloadPolicyService.cs"));
         var state = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.State.cs"));
-        var telemetry = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeTelemetryApplicationService.cs"));
+        var telemetry = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeTelemetryApplicationService.cs"));
 
         Assert.Contains("await actions.ApplyIdleUnloadPoliciesAsync(pollResults)", refreshApplication, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Runtime.RuntimeTelemetryApplication.ApplyIdleUnloadPoliciesAsync(", counters, StringComparison.Ordinal);

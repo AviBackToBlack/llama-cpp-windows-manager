@@ -140,8 +140,9 @@ public partial class MainWindow
                 if (icon is not null) return icon;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"Could not extract tray icon from the executable: {ex.Message}");
         }
 
         return System.Drawing.SystemIcons.Application;
@@ -197,7 +198,10 @@ public partial class MainWindow
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Could not dispose tray icon: {ex.Message}");
+        }
         _trayIcon = null;
     }
 }

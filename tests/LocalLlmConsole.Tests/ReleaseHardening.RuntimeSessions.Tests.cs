@@ -53,7 +53,7 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void LoadedModelSessionManagerUsesSupervisorFactoryForSessionLifecycles()
     {
-        var managerSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LoadedModelSessionManager.cs"));
+        var managerSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "LoadedModelSessionManager.cs"));
         var root = CreateTempRoot();
         var settings = AppSettings.CreateDefault(root);
         var runtime = new RuntimeRecord("runtime", "llama.cpp CUDA", RuntimeMode.Native, RuntimeBackend.Cuda, Path.Combine(root, "llama-server.exe"), "{}", DateTimeOffset.UtcNow);

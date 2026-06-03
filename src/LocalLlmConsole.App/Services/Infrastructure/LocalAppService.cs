@@ -72,7 +72,7 @@ public sealed class LocalAppService : ILocalAppServiceHost
                 {
                     _requestHandlers.Remove(completed);
                 }
-                _ = completed.Exception;
+                TraceFaultedTask(completed, "Local app service request handler failed.");
             },
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
@@ -124,10 +124,14 @@ public sealed class LocalAppService : ILocalAppServiceHost
 
             await WriteJsonAsync(context, 404, new { ok = false, error = "Not found." });
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceError($"Local app service request failed: {ex}");
             try { await WriteJsonAsync(context, 500, new { ok = false, error = "Internal server error." }); }
-            catch { }
+            catch (Exception writeEx)
+            {
+                Trace.TraceWarning($"Local app service failed to write error response: {writeEx}");
+            }
         }
     }
 
@@ -198,8 +202,15 @@ public sealed class LocalAppService : ILocalAppServiceHost
         {
             await task;
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"Local app service background task completed with an observed exception: {ex}");
         }
+    }
+
+    private static void TraceFaultedTask(Task task, string message)
+    {
+        if (!task.IsFaulted || task.Exception is null) return;
+        Trace.TraceError($"{message} {task.Exception}");
     }
 }

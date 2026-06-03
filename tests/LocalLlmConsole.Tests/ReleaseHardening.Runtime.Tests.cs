@@ -25,10 +25,10 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void LlamaProcessSupervisorUsesCentralLogRedaction()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LlamaRuntimeOutputObserver.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "LlamaRuntimeOutputObserver.cs"));
 
         Assert.Contains("LogFileService.RedactSensitiveText", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("Regex.Replace", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LlamaProcessSupervisor.cs")), StringComparison.Ordinal);
+        Assert.DoesNotContain("Regex.Replace", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "LlamaProcessSupervisor.cs")), StringComparison.Ordinal);
     }
 
 
@@ -71,7 +71,7 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void LlamaProcessSupervisorUsesWslRuntimeStopServiceForRecoveredWslSessions()
     {
-        var supervisorSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LlamaProcessSupervisor.cs"));
+        var supervisorSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "LlamaProcessSupervisor.cs"));
         var commands = new List<IReadOnlyList<string>>();
         var runner = new ScriptedProcessRunner(psi =>
         {
@@ -110,7 +110,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(["-d", "Ubuntu-24.04", "--", "bash", "-lc"], command.Take(5).ToArray());
         Assert.Contains("marker='marker'\"'\"'1'", command[5], StringComparison.Ordinal);
         Assert.DoesNotContain("new WslRuntimeStopService", supervisorSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Process.Start(", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LlamaProcessSupervisor.Wsl.cs")), StringComparison.Ordinal);
+        Assert.DoesNotContain("Process.Start(", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "LlamaProcessSupervisor.Wsl.cs")), StringComparison.Ordinal);
     }
 
 
@@ -164,7 +164,7 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void NativeRuntimeStopServiceVerifiesAndRetriesByProcessId()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "NativeRuntimeStopService.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "NativeRuntimeStopService.cs"));
 
         Assert.Contains("PrimaryExitWaitMilliseconds = 3000", source, StringComparison.Ordinal);
         Assert.Contains("VerificationExitWaitMilliseconds = 1000", source, StringComparison.Ordinal);
@@ -384,6 +384,40 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("--port", args);
         Assert.Contains("8081", args);
         Assert.Contains("--api-key", args);
+        Assert.DoesNotContain("--cache-ram", args);
+        Assert.DoesNotContain("--ctx-checkpoints", args);
+        Assert.DoesNotContain("--checkpoint-every-n-tokens", args);
+    }
+
+    [Fact]
+    public void RuntimeAdapterBuildsPromptCacheAndCheckpointArgs()
+    {
+        var onArgs = RuntimeAdapter.BuildArgs(ValidLaunchRequest() with
+        {
+            PromptCacheMode = "on",
+            PromptCacheRamMb = 16_384,
+            ContextCheckpointsMode = "on",
+            ContextCheckpointCount = 48,
+            ContextCheckpointEveryNTokens = 512
+        });
+        var offArgs = RuntimeAdapter.BuildArgs(ValidLaunchRequest() with
+        {
+            PromptCacheMode = "off",
+            ContextCheckpointsMode = "off"
+        });
+
+        Assert.Contains("--cache-ram", onArgs);
+        Assert.Contains("16384", onArgs);
+        Assert.Contains("--ctx-checkpoints", onArgs);
+        Assert.Contains("48", onArgs);
+        Assert.Contains("--checkpoint-every-n-tokens", onArgs);
+        Assert.Contains("512", onArgs);
+
+        Assert.Contains("--cache-ram", offArgs);
+        Assert.Contains("0", offArgs);
+        Assert.Contains("--ctx-checkpoints", offArgs);
+        Assert.Contains("--checkpoint-every-n-tokens", offArgs);
+        Assert.Contains("-1", offArgs);
     }
 
 
@@ -415,7 +449,7 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void RuntimeAdapterTreatsMetalAsGpuBackend()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeAdapter.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeAdapter.cs"));
 
         Assert.Contains("request.Backend is RuntimeBackend.Cuda or RuntimeBackend.Vulkan or RuntimeBackend.Metal or RuntimeBackend.Sycl", source, StringComparison.Ordinal);
     }
@@ -639,6 +673,8 @@ public sealed partial class ReleaseHardeningTests
             SpecDraftMinTokens = 8,
             SpecDraftMaxTokens = 4,
             SpecDraftPSplit = 2,
+            PromptCacheMode = "maybe",
+            ContextCheckpointsMode = "maybe",
             RopeScaling = "banana"
         };
 
@@ -648,6 +684,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains(result.Errors, error => error.Contains("Speculative type", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Errors, error => error.Contains("Draft min tokens", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Errors, error => error.Contains("Draft split", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Errors, error => error.Contains("Prompt cache", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Errors, error => error.Contains("checkpoints", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Errors, error => error.Contains("RoPE", StringComparison.OrdinalIgnoreCase));
     }
 

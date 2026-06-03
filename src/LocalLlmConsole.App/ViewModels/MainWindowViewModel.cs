@@ -1,7 +1,11 @@
 namespace LocalLlmConsole.ViewModels;
 
-public sealed class MainWindowViewModel
+public sealed class MainWindowViewModel : ObservableViewModel
 {
+    private string _currentPage = "Overview";
+    private string _statusText = "Starting...";
+    private bool _isBusy;
+
     public OverviewPageViewModel Overview { get; } = new();
     public ModelsPageViewModel Models { get; } = new();
     public RuntimesPageViewModel Runtimes { get; } = new();
@@ -19,13 +23,31 @@ public sealed class MainWindowViewModel
     public LaunchSettingsViewModel LaunchSettings { get; } = new();
     public UpdatesPageViewModel Updates { get; } = new();
 
-    public string CurrentPage { get; set; } = "Overview";
-    public string StatusText { get; private set; } = "Starting...";
-    public bool IsBusy { get; private set; }
+    public string CurrentPage
+    {
+        get => _currentPage;
+        set => SetProperty(ref _currentPage, value);
+    }
+
+    public string StatusText
+    {
+        get => _statusText;
+        private set
+        {
+            if (SetProperty(ref _statusText, value))
+                OnPropertyChanged(nameof(DisplayStatusText));
+        }
+    }
+
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set => SetProperty(ref _isBusy, value);
+    }
 
     public string DisplayStatusText => string.IsNullOrWhiteSpace(StatusText) ? "Ready" : StatusText;
 
-    public void SetStatus(string text) => StatusText = text;
+    public void SetStatus(string text) => StatusText = text ?? "";
 
     public bool TryBeginBusy(out string busyMessage)
     {

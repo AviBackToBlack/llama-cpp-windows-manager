@@ -237,7 +237,136 @@ public sealed partial class ReleaseHardeningTests
         var summary = tracker.Apply("model|runtime|8081", [], settings, slotSnapshot: null, mtpTokenSnapshot: null, capturedAt: capturedAt);
 
         Assert.False(summary.UsedLastKnown);
-        Assert.Equal("0.0 t/s (Gen)\n0.0 t/s (Accepted)", summary.MtpTokens);
+        Assert.Equal("Unknown (Gen)\nUnknown (Accepted)", summary.MtpTokens);
+    }
+
+    [Fact]
+    public void RuntimeMetricSummaryTrackerKeepsKnownTokenValuesDuringPartialOutages()
+    {
+        var root = CreateTempRoot();
+        var settings = AppSettings.CreateDefault(root) with { SpeculativeType = "draft-mtp" };
+        var tracker = new RuntimeMetricSummaryTracker();
+        var capturedAt = DateTimeOffset.Parse("2026-05-26T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+        var samples = new[]
+        {
+            new PrometheusSample("llama_tokens_predicted_total", "", 10, "10", "counter", ""),
+            new PrometheusSample("llama_tokens_predicted_seconds_total", "", 5, "5", "counter", ""),
+            new PrometheusSample("llama_prompt_tokens_total", "", 4, "4", "counter", ""),
+            new PrometheusSample("llama_prompt_seconds_total", "", 2, "2", "counter", ""),
+            new PrometheusSample("llama_mtp_tokens_generated_total", "", 6, "6", "counter", ""),
+            new PrometheusSample("llama_mtp_tokens_generated_seconds_total", "", 3, "3", "counter", ""),
+            new PrometheusSample("llama_mtp_tokens_accepted_total", "", 4, "4", "counter", ""),
+            new PrometheusSample("llama_mtp_tokens_accepted_seconds_total", "", 2, "2", "counter", "")
+        };
+
+        var fresh = tracker.Apply("model|runtime|8081", samples, settings, slotSnapshot: null, mtpTokenSnapshot: null, capturedAt);
+        var partial = tracker.Apply(
+            "model|runtime|8081",
+            [],
+            settings,
+            new RuntimeSlotSnapshot(0, 0, IsProcessing: false, PromptTokens: null, ContextTokens: null, ContextSize: 4096),
+            mtpTokenSnapshot: null,
+            capturedAt.AddSeconds(3));
+
+        Assert.False(fresh.UsedLastKnown);
+        Assert.True(partial.UsedLastKnown);
+        Assert.Equal(capturedAt, partial.LastKnownCapturedAt);
+        Assert.Equal("Gen 10\nPrompt 4", partial.TotalTokens);
+        Assert.Equal("Unknown (Gen) | 2.0 t/s (Avg) | 10 t (Total)\nUnknown (Prompt) | 2.0 t/s (Avg) | 4 t (Total)", partial.Tokens);
+        Assert.Equal("Unknown (Gen) | 2.0 t/s (Avg) | 6 t (Total)\nUnknown (Accepted) | 2.0 t/s (Avg) | 4 t (Total)", partial.MtpTokens);
+    }
+
+    [Fact]
+    public void RuntimeMetricSummaryTrackerReportsTimestampForSpecificStaleCounters()
+    {
+        var root = CreateTempRoot();
+        var settings = AppSettings.CreateDefault(root);
+        var tracker = new RuntimeMetricSummaryTracker();
+        var capturedAt = DateTimeOffset.Parse("2026-05-26T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+
+        tracker.Apply(
+            "model|runtime|8081",
+            [
+                new PrometheusSample("llama_tokens_predicted_total", "", 10, "10", "counter", ""),
+                new PrometheusSample("llama_tokens_predicted_seconds_total", "", 5, "5", "counter", ""),
+                new PrometheusSample("llama_prompt_tokens_total", "", 4, "4", "counter", ""),
+                new PrometheusSample("llama_prompt_seconds_total", "", 2, "2", "counter", "")
+            ],
+            settings,
+            slotSnapshot: null,
+            mtpTokenSnapshot: null,
+            capturedAt);
+
+        var generatedFreshPromptStale = tracker.Apply(
+            "model|runtime|8081",
+            [
+                new PrometheusSample("llama_tokens_predicted_total", "", 16, "16", "counter", ""),
+                new PrometheusSample("llama_tokens_predicted_seconds_total", "", 8, "8", "counter", "")
+            ],
+            settings,
+            slotSnapshot: null,
+            mtpTokenSnapshot: null,
+            capturedAt.AddSeconds(2));
+
+        var promptFreshGeneratedStale = tracker.Apply(
+            "model|runtime|8081",
+            [
+                new PrometheusSample("llama_prompt_tokens_total", "", 10, "10", "counter", ""),
+                new PrometheusSample("llama_prompt_seconds_total", "", 5, "5", "counter", "")
+            ],
+            settings,
+            slotSnapshot: null,
+            mtpTokenSnapshot: null,
+            capturedAt.AddSeconds(4));
+
+        Assert.True(generatedFreshPromptStale.UsedLastKnown);
+        Assert.Equal(capturedAt, generatedFreshPromptStale.LastKnownCapturedAt);
+        Assert.True(promptFreshGeneratedStale.UsedLastKnown);
+        Assert.Equal(capturedAt.AddSeconds(2), promptFreshGeneratedStale.LastKnownCapturedAt);
+        Assert.Equal("Gen 16\nPrompt 10", promptFreshGeneratedStale.TotalTokens);
+    }
+
+    [Fact]
+    public void RuntimeMetricSummaryTrackerKeepsPerRuntimeRateBaselines()
+    {
+        var root = CreateTempRoot();
+        var settings = AppSettings.CreateDefault(root);
+        var tracker = new RuntimeMetricSummaryTracker();
+        var capturedAt = DateTimeOffset.Parse("2026-05-26T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+
+        tracker.Apply(
+            "model-a|runtime|8081",
+            [
+                new PrometheusSample("llama_tokens_predicted_total", "", 10, "10", "counter", ""),
+                new PrometheusSample("llama_tokens_predicted_seconds_total", "", 5, "5", "counter", "")
+            ],
+            settings,
+            slotSnapshot: null,
+            mtpTokenSnapshot: null,
+            capturedAt);
+        tracker.Apply(
+            "model-b|runtime|8082",
+            [
+                new PrometheusSample("llama_tokens_predicted_total", "", 100, "100", "counter", ""),
+                new PrometheusSample("llama_tokens_predicted_seconds_total", "", 50, "50", "counter", "")
+            ],
+            settings,
+            slotSnapshot: null,
+            mtpTokenSnapshot: null,
+            capturedAt.AddSeconds(1));
+
+        var secondA = tracker.Apply(
+            "model-a|runtime|8081",
+            [
+                new PrometheusSample("llama_tokens_predicted_total", "", 16, "16", "counter", ""),
+                new PrometheusSample("llama_tokens_predicted_seconds_total", "", 8, "8", "counter", "")
+            ],
+            settings,
+            slotSnapshot: null,
+            mtpTokenSnapshot: null,
+            capturedAt.AddSeconds(2));
+
+        Assert.Equal("Gen 3.0 t/s (2.0 avg)\nPrompt Unknown", secondA.GenerationRate);
     }
 
     [Fact]
@@ -281,6 +410,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("Unavailable", expired);
         Assert.Equal("Unavailable", cache.Store("", now));
         Assert.Equal("GPU 0: 76% | 62C | 12.0/24.0 GiB", cache.Store("GPU 0: 76%|62C|12.0/24.0 GiB", now));
+        Assert.Equal("NVIDIA 16 GB free", cache.Store("cuda", "NVIDIA 16 GB free", now));
+        Assert.False(cache.TryGet("vulkan", now.AddSeconds(1), out var wrongKey));
+        Assert.Equal("Unavailable", wrongKey);
 
         cache.Store("NVIDIA 16 GB free", now);
         cache.Clear();
@@ -298,10 +430,12 @@ public sealed partial class ReleaseHardeningTests
         var runner = new ScriptedProcessRunner(psi =>
         {
             files.Add(psi.FileName ?? "");
+            if (string.Equals(Path.GetFileName(psi.FileName), "powershell.exe", StringComparison.OrdinalIgnoreCase))
+                return new ProcessRunResult(0, "[{\"Index\":0,\"Name\":\"Intel(R) Arc(TM) A770 Graphics\",\"Utilization\":42,\"MemoryUsedBytes\":4294967296,\"MemoryTotalBytes\":17179869184}]", "");
             return new ProcessRunResult(0, "[level_zero:gpu][level_zero:0] Intel(R) Arc(TM) A770 Graphics", "");
         });
         var service = new RuntimeGpuSummaryApplicationService(
-            new GpuStatusProbeService(runner, () => "sycl-ls.exe"),
+            new GpuStatusProbeService(runner, () => "sycl-ls.exe", () => "nvidia-smi.exe", () => "powershell.exe"),
             new GpuSummaryCache(),
             () => "wsl.exe");
         var nativeSycl = Session(RuntimeMode.Native, RuntimeBackend.Sycl, AppSettings.CreateDefault(root), now);
@@ -309,13 +443,50 @@ public sealed partial class ReleaseHardeningTests
         var first = await service.SummaryAsync(nativeSycl, now, TestContext.Current.CancellationToken);
         var cached = await service.SummaryAsync(nativeSycl, now.AddSeconds(1), TestContext.Current.CancellationToken);
 
-        Assert.Equal("Intel(R) Arc(TM) A770 Graphics", first);
+        Assert.Equal("GPU 0: Intel(R) Arc(TM) A770 Graphics | 42% | 4.0/16.0 GiB", first);
         Assert.Equal(first, cached);
-        Assert.Equal(["sycl-ls.exe"], files);
+        Assert.Equal(["powershell.exe"], files);
 
         files.Clear();
+        var amdService = new RuntimeGpuSummaryApplicationService(
+            new GpuStatusProbeService(new ScriptedProcessRunner(psi =>
+            {
+                files.Add(psi.FileName ?? "");
+                return new ProcessRunResult(0, "[{\"Index\":0,\"Name\":\"AMD Radeon RX 7900 XTX\",\"Utilization\":53.4,\"MemoryUsedBytes\":8589934592,\"MemoryTotalBytes\":25769803776}]", "");
+            }), () => "", () => "nvidia-smi.exe", () => "powershell.exe"),
+            new GpuSummaryCache(),
+            () => "wsl.exe");
+
+        var amd = await amdService.SummaryAsync(Session(RuntimeMode.Native, RuntimeBackend.Vulkan, AppSettings.CreateDefault(root), now), now, TestContext.Current.CancellationToken);
+
+        Assert.Equal("GPU 0: AMD Radeon RX 7900 XTX | 53.4% | 8.0/24.0 GiB", amd);
+        Assert.Equal(["powershell.exe"], files);
+
+        files.Clear();
+        var cpuService = new RuntimeGpuSummaryApplicationService(
+            new GpuStatusProbeService(new ScriptedProcessRunner(psi =>
+            {
+                files.Add(psi.FileName ?? "");
+                return new ProcessRunResult(0, "{\"TemperatureCelsius\":58.4}", "");
+            }), () => "", () => "nvidia-smi.exe", () => "powershell.exe"),
+            new GpuSummaryCache(),
+            () => "wsl.exe");
+
+        var cpu = await cpuService.SummaryAsync(Session(RuntimeMode.Native, RuntimeBackend.Cpu, AppSettings.CreateDefault(root), now), now, TestContext.Current.CancellationToken);
+
+        Assert.Equal("CPU: 58.4C", cpu);
+        Assert.Equal(["powershell.exe"], files);
+
+        files.Clear();
+        var wslRunner = new ScriptedProcessRunner(psi =>
+        {
+            files.Add(psi.FileName ?? "");
+            if (string.Equals(Path.GetFileName(psi.FileName), "powershell.exe", StringComparison.OrdinalIgnoreCase))
+                return new ProcessRunResult(0, "[]", "");
+            return new ProcessRunResult(0, "[level_zero:gpu][level_zero:0] Intel(R) Arc(TM) A770 Graphics", "");
+        });
         var wslService = new RuntimeGpuSummaryApplicationService(
-            new GpuStatusProbeService(runner, () => "sycl-ls.exe"),
+            new GpuStatusProbeService(wslRunner, () => "sycl-ls.exe", () => "nvidia-smi.exe", () => "powershell.exe"),
             new GpuSummaryCache(),
             () => "wsl.exe");
         var wslSycl = Session(RuntimeMode.Wsl, RuntimeBackend.Sycl, AppSettings.CreateDefault(root) with { WslDistro = "Ubuntu-24.04" }, now);
@@ -323,8 +494,8 @@ public sealed partial class ReleaseHardeningTests
         var wsl = await wslService.SummaryAsync(wslSycl, now, TestContext.Current.CancellationToken);
 
         Assert.Equal("Intel(R) Arc(TM) A770 Graphics", wsl);
-        Assert.Equal("wsl.exe", files.Single());
-        Assert.Equal(["-d", "Ubuntu-24.04", "--", "bash", "-lc"], runner.Commands.Last().Take(5).ToArray());
+        Assert.Equal(["powershell.exe", "wsl.exe"], files);
+        Assert.Equal(["-d", "Ubuntu-24.04", "--", "bash", "-lc"], wslRunner.Commands.Last().Take(5).ToArray());
 
         var nvidiaRunner = new ScriptedProcessRunner(_ => new ProcessRunResult(0, "0, NVIDIA RTX, 76, 62, 12288, 24576", ""));
         var nvidiaService = new RuntimeGpuSummaryApplicationService(
@@ -1010,17 +1181,17 @@ public sealed partial class ReleaseHardeningTests
         var dashboard = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeDashboard.cs"));
         var counters = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeMetricCounters.cs"));
         var metrics = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeMetrics.cs"));
-        var refreshApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDashboardRefreshApplicationService.cs"));
-        var selection = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDashboardSelectionService.cs"));
-        var renderDecisions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDashboardRenderDecisionService.cs"));
-        var metricRows = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeMetricRowsRenderService.cs"));
+        var refreshApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDashboardRefreshApplicationService.cs"));
+        var selection = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDashboardSelectionService.cs"));
+        var renderDecisions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDashboardRenderDecisionService.cs"));
+        var metricRows = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeMetricRowsRenderService.cs"));
         var session = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeSession.cs"));
-        var poller = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeMetricPollerService.cs"));
-        var refreshCoordinator = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDashboardRefreshCoordinator.cs"));
-        var telemetry = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeTelemetryApplicationService.cs"));
-        var logTail = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeLogTailService.cs"));
-        var overviewStatus = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeOverviewStatusService.cs"));
-        var overviewModelSelection = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OverviewModelSelectionApplicationService.cs"));
+        var poller = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeMetricPollerService.cs"));
+        var refreshCoordinator = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDashboardRefreshCoordinator.cs"));
+        var telemetry = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeTelemetryApplicationService.cs"));
+        var logTail = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeLogTailService.cs"));
+        var overviewStatus = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeOverviewStatusService.cs"));
+        var overviewModelSelection = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "OverviewModelSelectionApplicationService.cs"));
         var overviewSelection = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.OverviewSelection.cs"));
 
         Assert.Contains("_coreServices.Runtime.RuntimeDashboardRefreshApplication.RefreshAsync(", dashboard, StringComparison.Ordinal);
@@ -1046,7 +1217,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("_selection.Select(new RuntimeDashboardSelectionRequest(", refreshApplication, StringComparison.Ordinal);
         Assert.Contains("_metricsApplication.Apply(", refreshApplication, StringComparison.Ordinal);
         Assert.Contains("RuntimeDashboardRenderDecisionKind.MetricsUnavailable", renderDecisions, StringComparison.Ordinal);
-        var metricsApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDashboardMetricsApplicationService.cs"));
+        var metricsApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDashboardMetricsApplicationService.cs"));
         Assert.Contains("_renderDecisions.Decide(new RuntimeDashboardRenderDecisionRequest(", metricsApplication, StringComparison.Ordinal);
         Assert.Contains("_rowsRender.Unavailable(", metricsApplication, StringComparison.Ordinal);
         Assert.Contains("_telemetry.ResetMetricCounters()", metricsApplication, StringComparison.Ordinal);
@@ -1105,7 +1276,6 @@ public sealed partial class ReleaseHardeningTests
                     calls.Add("save");
                     return Task.CompletedTask;
                 },
-                () => calls.Add("reset"),
                 () =>
                 {
                     calls.Add("metrics");
@@ -1135,19 +1305,15 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(OverviewModelSelectionOutcome.SwitchedLoaded, switched);
         Assert.Equal(OverviewModelSelectionOutcome.NotLoaded, staleLoaded);
         Assert.Equal([
-            "reset",
             "status:Qwen is not loaded. Load it to expose an OpenAI-compatible endpoint.",
             "metrics",
-            "reset",
             "metrics",
             $"select:{model.Id}",
             "active:8084",
             "save",
-            "reset",
             "metrics",
             $"select:{model.Id}",
             "status:Selected model is no longer loaded.",
-            "reset",
             "metrics"
         ], calls);
     }
@@ -1189,7 +1355,6 @@ public sealed partial class ReleaseHardeningTests
                 return new RuntimeSessionSelectResult(selectSucceeds, selectSucceeds ? activeSettings : null);
             },
             settings => calls.Add($"active:{settings?.Port}"),
-            () => calls.Add("reset"),
             () =>
             {
                 calls.Add("save");
@@ -1219,7 +1384,6 @@ public sealed partial class ReleaseHardeningTests
             $"select-ui:{model.Id}",
             $"select-runtime:{model.Id}",
             "active:8085",
-            "reset",
             "save",
             "metrics",
             "actions",

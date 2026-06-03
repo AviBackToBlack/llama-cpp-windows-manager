@@ -124,7 +124,7 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
     [Fact]
     public void LocalAppServiceObservesRequestHandlerTasks()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LocalAppService.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "LocalAppService.cs"));
 
         Assert.Contains("QueueRequest(context, cancellationToken)", source, StringComparison.Ordinal);
         Assert.Contains("_requestHandlers", source, StringComparison.Ordinal);
@@ -310,7 +310,7 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
     [Fact]
     public void ShellIntegrationServiceOwnsProcessLaunchAndFolderCreation()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ShellIntegrationService.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "ShellIntegrationService.cs"));
         var started = new List<ProcessStartInfo>();
         var service = new ShellIntegrationService(started.Add);
         var root = CreateTempRoot();
@@ -319,13 +319,17 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
         var url = "https://github.com/example/repo";
 
         service.OpenFolder(folder);
+        File.WriteAllText(logPath, "runtime");
         service.OpenPath(logPath);
         service.OpenUrl(url);
 
         Assert.True(Directory.Exists(folder));
-        Assert.Equal([folder, logPath, url], started.Select(process => process.FileName).ToArray());
+        Assert.Equal([Path.GetFullPath(folder), Path.GetFullPath(logPath), url], started.Select(process => process.FileName).ToArray());
         Assert.All(started, process => Assert.True(process.UseShellExecute));
         Assert.Throws<ArgumentException>(() => service.OpenUrl("relative/path"));
+        Assert.Throws<ArgumentException>(() => service.OpenUrl("javascript:alert(1)"));
+        Assert.Throws<FileNotFoundException>(() => service.OpenPath(Path.Combine(root, "missing.log")));
+        Assert.Throws<ArgumentException>(() => service.OpenPath(url));
         Assert.DoesNotContain("Process.Start", source, StringComparison.Ordinal);
     }
 
@@ -333,7 +337,7 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
     [Fact]
     public void FileSystemDialogServiceOwnsPickerDialogRequests()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "FileSystemDialogService.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "FileSystemDialogService.cs"));
         var factory = ReadAppServiceFactorySources();
         var root = CreateTempRoot();
         var existingFolder = Path.Combine(root, "existing");
@@ -389,7 +393,7 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
     [Fact]
     public void ClipboardServiceOwnsClipboardSetTextAction()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ClipboardService.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "ClipboardService.cs"));
         var copied = new List<string>();
         var service = new ClipboardService(copied.Add);
 

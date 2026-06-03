@@ -116,8 +116,12 @@ public static partial class LaunchSettingsPanelFactory
 
     private sealed class LaunchSettingsPanelBuilder(
         Dictionary<string, List<FrameworkElement>> launchSettingElements,
+        HashSet<string> advancedLaunchSettingLabels,
+        List<LaunchSettingsSectionElements> launchSettingSections,
         List<FrameworkElement> advancedLaunchSections)
     {
+        private readonly Dictionary<Grid, List<string>> _sectionLabelsByGrid = new();
+
         public void AddLaunchSetting(Grid grid, string label, FrameworkElement control)
         {
             control.ToolTip = TooltipText(LaunchSettingMetadataService.Tooltip(label));
@@ -144,13 +148,29 @@ public static partial class LaunchSettingsPanelFactory
             Grid.SetColumn(control, rightSide ? 4 : 1);
             grid.Children.Add(control);
             launchSettingElements[label] = new List<FrameworkElement> { labelText, control };
+            if (!_sectionLabelsByGrid.TryGetValue(grid, out var labels))
+            {
+                labels = [];
+                _sectionLabelsByGrid[grid] = labels;
+            }
+
+            labels.Add(label);
         }
 
         public void AddAdvancedLaunchSetting(Grid grid, string label, FrameworkElement control)
         {
             AddLaunchSetting(grid, label, control);
+            advancedLaunchSettingLabels.Add(label);
             if (launchSettingElements.TryGetValue(label, out var elements))
                 advancedLaunchSections.AddRange(elements);
+        }
+
+        public void AddSection(string title, FrameworkElement section, Grid grid, bool isAdvancedSection = false)
+        {
+            var labels = _sectionLabelsByGrid.TryGetValue(grid, out var sectionLabels)
+                ? sectionLabels.ToArray()
+                : [];
+            launchSettingSections.Add(new LaunchSettingsSectionElements(title, section, labels, isAdvancedSection));
         }
 
         public void AddAdvancedSection(FrameworkElement section)

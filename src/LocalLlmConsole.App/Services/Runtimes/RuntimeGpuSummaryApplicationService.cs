@@ -21,15 +21,55 @@ public sealed class RuntimeGpuSummaryApplicationService
         DateTimeOffset now,
         CancellationToken cancellationToken = default)
     {
-        if (_cache.TryGet(now, out var cachedSummary))
+        var cacheKey = CacheKey(activeSession);
+        if (_cache.TryGet(cacheKey, now, out var cachedSummary))
             return cachedSummary;
 
-        var summary = activeSession?.Backend == RuntimeBackend.Sycl
-            ? activeSession.Mode == RuntimeMode.Wsl
-                ? await _gpuStatus.WslIntelArcSummaryAsync(_wslExe(), activeSession.LaunchSettings.WslDistro, cancellationToken)
-                : await _gpuStatus.WindowsIntelArcSummaryAsync(cancellationToken)
-            : await _gpuStatus.SummaryAsync(cancellationToken);
-
-        return _cache.Store(summary, now);
+        var summary = await ProbeSummaryAsync(activeSession, cancellationToken);
+        return _cache.Store(cacheKey, summary, now);
     }
+
+    private async Task<string> ProbeSummaryAsync(
+        LoadedModelSessionSnapshot? activeSession,
+        CancellationToken cancellationToken)
+    {
+        if (activeSession?.Backend == RuntimeBackend.Cuda)
+            return await FirstAvailableAsync(
+                [() => _gpuStatus.SummaryAsync(cancellationToken),
+                    () => _gpuStatus.WindowsSummaryAsync(cancellationToken)]);
+
+        if (activeSession?.Backend == RuntimeBackend.Cpu)
+            return await _gpuStatus.CpuTemperatureAsync(cancellationToken);
+
+        if (activeSession?.Backend == RuntimeBackend.Sycl)
+            return await FirstAvailableAsync(
+                [() => _gpuStatus.WindowsSummaryAsync(cancellationToken),
+                    () => activeSession.Mode == RuntimeMode.Wsl
+                        ? _gpuStatus.WslIntelArcSummaryAsync(_wslExe(), activeSession.LaunchSettings.WslDistro, cancellationToken)
+                        : _gpuStatus.WindowsIntelArcSummaryAsync(cancellationToken)]);
+
+        return await FirstAvailableAsync(
+            [() => _gpuStatus.WindowsSummaryAsync(cancellationToken),
+                () => _gpuStatus.SummaryAsync(cancellationToken)]);
+    }
+
+    private static async Task<string> FirstAvailableAsync(IReadOnlyList<Func<Task<string>>> probes)
+    {
+        foreach (var probe in probes)
+        {
+            var summary = await probe();
+            if (!IsUnavailable(summary)) return summary;
+        }
+
+        return "Unavailable";
+    }
+
+    private static bool IsUnavailable(string summary)
+        => string.IsNullOrWhiteSpace(summary)
+           || string.Equals(summary.Trim(), "Unavailable", StringComparison.OrdinalIgnoreCase);
+
+    private static string CacheKey(LoadedModelSessionSnapshot? activeSession)
+        => activeSession is null
+            ? "host"
+            : $"{activeSession.SessionId}|{activeSession.Mode}|{activeSession.Backend}|{activeSession.LaunchSettings.WslDistro}";
 }

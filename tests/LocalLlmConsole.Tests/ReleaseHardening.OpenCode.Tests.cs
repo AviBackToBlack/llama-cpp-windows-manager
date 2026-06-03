@@ -39,9 +39,9 @@ public sealed partial class ReleaseHardeningTests
     {
         var source = ReadMainWindowSources();
         var openCodePage = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.OpenCode.cs"));
-        var factory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "OpenCodePageFactory.cs"));
-        var pageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "OpenCodePageState.cs"));
-        var fileSetState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCodeFileSetState.cs"));
+        var factory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "OpenCode", "OpenCodePageFactory.cs"));
+        var pageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "OpenCode", "OpenCodePageState.cs"));
+        var fileSetState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCode", "OpenCodeFileSetState.cs"));
 
         Assert.Contains("OpenCodePageFactory.Create(new OpenCodePageRequest(", openCodePage, StringComparison.Ordinal);
         Assert.Contains("ApplyOpenCodePageControls(page)", openCodePage, StringComparison.Ordinal);
@@ -102,7 +102,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("_openCodeModelEditor.SavedSnippet", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.OpenCodeServices.OpenCodeModelApplication.EditorState", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_openCodeModelEditor.MatchesSavedSnippet", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("public bool MatchesSavedSnippet", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCodeModelEditorSession.cs")), StringComparison.Ordinal);
+        Assert.DoesNotContain("public bool MatchesSavedSnippet", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCode", "OpenCodeModelEditorSession.cs")), StringComparison.Ordinal);
         Assert.Contains("_openCodeModelEditor.RunProgrammaticUpdate", source, StringComparison.Ordinal);
         Assert.Contains("SetOpenCodeModelSnippetText", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_updatingOpenCodeModelEditor", source, StringComparison.Ordinal);
@@ -594,7 +594,7 @@ public sealed partial class ReleaseHardeningTests
     public async Task OpenCodeFileSetApplicationServiceAppliesDetectedConfiguredAgentAndEnsuredTransitions()
     {
         var openCodeFiles = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.OpenCodeFiles.cs"));
-        var dialogs = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "FileSystemDialogService.cs"));
+        var dialogs = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "FileSystemDialogService.cs"));
         var root = CreateTempRoot();
         var openCode = new OpenCodeConfigService(root);
         var sync = new OpenCodeModelSyncService(openCode);
@@ -640,7 +640,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("_coreServices.OpenCodeServices.OpenCodeFileSetApplication.OpenConfigFolder", openCodeFiles, StringComparison.Ordinal);
         Assert.DoesNotContain("BuildConfigFilePicker(_openCodeFileSet.Current)", openCodeFiles, StringComparison.Ordinal);
         Assert.DoesNotContain("SaveConfigPathAsync", openCodeFiles, StringComparison.Ordinal);
-        Assert.Contains("public async Task<OpenCodeFileSetPickerOutcome> ChooseConfigPathAsync", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCodeFileSetApplicationService.cs")), StringComparison.Ordinal);
+        Assert.Contains("public async Task<OpenCodeFileSetPickerOutcome> ChooseConfigPathAsync", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCode", "OpenCodeFileSetApplicationService.cs")), StringComparison.Ordinal);
         Assert.Contains("new WpfOpenFileDialog", dialogs, StringComparison.Ordinal);
         Assert.DoesNotContain("OpenFileDialog", openCodeFiles, StringComparison.Ordinal);
         Assert.DoesNotContain("Path.GetDirectoryName(_openCodeFileSet.ConfigPath)", openCodeFiles, StringComparison.Ordinal);
@@ -811,6 +811,21 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(OpenCodeConfigService.DefaultOutputLimit.ToString(), provider?["models"]?[firstId.Split('/')[1]]?["limit"]?["output"]?.ToString());
         Assert.Equal("16384", provider?["models"]?[secondId.Split('/')[1]]?["limit"]?["context"]?.ToString());
         Assert.Equal("8192", provider?["models"]?[secondId.Split('/')[1]]?["limit"]?["output"]?.ToString());
+    }
+
+    [Fact]
+    public void OpenCodeConfigWritesUtf8WithoutBom()
+    {
+        var root = CreateTempRoot();
+        var service = new OpenCodeConfigService(root);
+        var configPath = Path.Combine(root, "opencode.json");
+        var model = new ModelRecord("model", "Test Model", Path.Combine(root, "models", "test-model.gguf"), OwnershipKind.AppOwned, "{}", DateTimeOffset.UtcNow);
+
+        service.AddOrUpdateLocalModel(configPath, model, "http://127.0.0.1:8082/v1", "gateway-key", 8192, 4096, useGatewayProvider: true);
+
+        var bytes = File.ReadAllBytes(configPath);
+        Assert.True(bytes.Length > 3);
+        Assert.False(bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF);
     }
 
 
@@ -1203,7 +1218,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("OpenCodeModelEditorStateApplicationRequest", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_coreServices.OpenCodeServices.OpenCodeModelApplication.SnippetsEquivalent", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_openCodeServices", source, StringComparison.Ordinal);
-        Assert.Contains("SaveAdmission(OpenCodeModelEntry? model)", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCodeModelWorkflowService.cs")), StringComparison.Ordinal);
+        Assert.Contains("SaveAdmission(OpenCodeModelEntry? model)", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCode", "OpenCodeModelWorkflowService.cs")), StringComparison.Ordinal);
         Assert.DoesNotContain("SetStatus($\"OpenCode model", source, StringComparison.Ordinal);
         Assert.DoesNotContain("SetStatus($\"Saved OpenCode model", source, StringComparison.Ordinal);
         Assert.DoesNotContain("SetStatus($\"Deleted OpenCode model", source, StringComparison.Ordinal);

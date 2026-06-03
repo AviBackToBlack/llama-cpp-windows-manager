@@ -37,15 +37,17 @@ public sealed partial class LlamaProcessSupervisor
             process.EnableRaisingEvents = true;
             process.Exited += (_, _) =>
             {
-                try { LastExitCode = process.ExitCode; } catch { }
+                try { LastExitCode = process.ExitCode; }
+                catch (Exception ex) { Trace.TraceWarning($"Could not read recovered llama process exit code: {ex.Message}"); }
                 if (State != LlamaRuntimeState.Stopped)
                     State = LlamaRuntimeState.Failed;
             };
             _process = process;
             _attached = false;
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"Could not attach to recovered native llama process {processId}: {ex.Message}");
             State = LlamaRuntimeState.Failed;
             _attached = false;
         }

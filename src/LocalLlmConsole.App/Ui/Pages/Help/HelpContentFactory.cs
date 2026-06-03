@@ -78,7 +78,7 @@ public static class HelpContentFactory
         panel.Children.Add(HelpCard(
             "Step 4",
             "Load the model",
-            "Open Overview, choose the model from the dropdown at the top, then click Load. Loaded model sessions stay available on their saved per-model ports, so more than one model can serve at the same time when the hardware has room.",
+            "Open Overview, choose the model from the dropdown at the top, then click Load. Loaded model sessions stay available on their saved per-model ports, so more than one model can serve at the same time when the hardware has room. Model Status keeps the final Loading Time visible after startup completes.",
             navigate,
             ("Open Overview", "overview-load")));
 
@@ -98,7 +98,7 @@ public static class HelpContentFactory
             ("Gateway endpoint", "The shared /v1 address used by auto-load clients. It can route a request to whichever configured model was requested."),
             ("Direct endpoint", "The normal per-model llama.cpp address. It stays available on the model's saved port while that model is loaded."),
             ("Runtime metrics", "Tokens and MTP Tokens use two rows: live rate by stream, average rate when recent data exists, and total tokens. Slots shows active/queued requests and busy decode slots."),
-            ("Model status", "Loading, warm, loaded, stopped, or failed. If a model stalls, inspect the runtime log below the metrics."));
+            ("Model status", "Loading, warm, loaded, stopped, or failed. Loading Model or Loaded Model appears separately from Loading Time, and the completed load duration remains visible after readiness. If a model stalls, inspect the runtime log below the metrics."));
         AddHelpBullets(panel,
             "The gateway row shows the shared router endpoint, policy, LAN exposure, and how many direct model sessions are currently loaded.",
             "Use unique direct ports when you want several models loaded at the same time.",
@@ -131,6 +131,7 @@ public static class HelpContentFactory
             ("GPU layers", "Higher values offload more layers to GPU. If loading fails with memory errors, reduce this first."),
             ("Batch and micro batch", "Higher batch can be faster but uses more memory. Lower micro batch when CUDA or Vulkan runs out of memory."),
             ("K cache and V cache", "Lower precision saves memory but can reduce quality or fail on some runtimes."),
+            ("Max tokens", "-1 leaves llama.cpp unlimited for direct serving. OpenCode sync uses positive Max tokens as limit.output; when Max tokens is unlimited, the app writes a context-derived OpenCode output cap."),
             ("Reasoning", "auto is safest. Use a specific reasoning format only when a model family needs it."),
             ("RoPE scaling", "Long-context experiments can reduce quality or fail. Leave auto unless the model card recommends a setting."),
             ("Spec type", "Use none unless you have a known-compatible draft, Atomic MTP, or n-gram mode for that runtime. Spec type atomic-mtp emits --mtp-head and is intended for compatible Atomic forks."),
@@ -167,7 +168,7 @@ public static class HelpContentFactory
 
     private static void AddSettingsHelp(StackPanel panel, Action<string> navigate)
     {
-        AddHelpArticle(panel, "Settings values", "Settings are app-level defaults and safety preferences. Direct model ports live in each model's launch settings on Models; Settings only exposes the shared gateway port.");
+        AddHelpArticle(panel, "Settings values", "Settings are grouped by category and cover app-level defaults and safety preferences. Direct model ports live in each model's launch settings on Models; Settings only exposes the shared gateway port.");
         AddHelpDefinitionList(panel,
             ("Theme", "system, light, or dark. System follows the Windows app theme."),
             ("Cache", "Read-only size display. Clear removes disposable cache files only when no download or runtime build is using them."),
@@ -205,6 +206,7 @@ public static class HelpContentFactory
         AddHelpBullets(panel,
             "Gateway mode is best when you want OpenCode to request any configured model through one address and let the app load it on demand.",
             "Direct mode is best when you manually keep one or more models loaded and want OpenCode entries to point at their saved per-model ports.",
+            "OpenCode output limits come from each model's saved Max tokens launch setting when it is positive. Unlimited model launches use a context-derived OpenCode limit.output value instead.",
             "Vision-capable OpenCode entries are marked as image-capable when the saved launch settings include vision plus embedded, detected, or explicit projector support.",
             "The gateway itself listens on one port, then proxies each request to the requested model's direct runtime port after ensuring that model is loaded.",
             "Prefer keeping loaded models keeps existing direct sessions running and performs a conservative VRAM admission check before adding another GPU model. Single active model unloads other sessions first.",

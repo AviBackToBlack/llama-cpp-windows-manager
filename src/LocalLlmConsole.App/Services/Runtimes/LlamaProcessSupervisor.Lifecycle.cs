@@ -19,8 +19,10 @@ public sealed partial class LlamaProcessSupervisor
                 BoundedLogFile.MegabytesToBytes(_lastSettings.MaxLogFileSizeMb)));
         }
 
-        try { _process?.Dispose(); } catch { }
-        try { _log?.Dispose(); } catch { }
+        try { _process?.Dispose(); }
+        catch (Exception ex) { Trace.TraceWarning($"Could not dispose llama process handle: {ex.Message}"); }
+        try { _log?.Dispose(); }
+        catch (Exception ex) { Trace.TraceWarning($"Could not dispose llama log writer: {ex.Message}"); }
         _process = null;
         _log = null;
         ActiveModelId = "";
@@ -45,7 +47,10 @@ public sealed partial class LlamaProcessSupervisor
                 _process.WaitForExit(3000);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Could not stop llama host process: {ex.Message}");
+        }
     }
 
     public void Dispose() => Stop();

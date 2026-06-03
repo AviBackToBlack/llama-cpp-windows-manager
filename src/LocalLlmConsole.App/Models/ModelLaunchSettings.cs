@@ -49,7 +49,12 @@ public sealed record ModelLaunchSettings(
     string SpecDraftCacheTypeK = AppSettings.DefaultCacheType,
     string SpecDraftCacheTypeV = AppSettings.DefaultCacheType,
     int VisionImageMinTokens = AppSettings.DefaultVisionImageMinTokens,
-    int VisionImageMaxTokens = AppSettings.DefaultVisionImageMaxTokens)
+    int VisionImageMaxTokens = AppSettings.DefaultVisionImageMaxTokens,
+    string PromptCacheMode = AppSettings.DefaultPromptCacheMode,
+    int PromptCacheRamMb = AppSettings.DefaultPromptCacheRamMb,
+    string ContextCheckpointsMode = AppSettings.DefaultContextCheckpointsMode,
+    int ContextCheckpointCount = AppSettings.DefaultContextCheckpointCount,
+    int ContextCheckpointEveryNTokens = AppSettings.DefaultContextCheckpointEveryNTokens)
 {
     public static ModelLaunchSettings FromAppSettings(AppSettings settings, string runtimeId = "") => new(
         settings.ContextSize,
@@ -100,7 +105,12 @@ public sealed record ModelLaunchSettings(
         settings.SpecDraftCacheTypeK,
         settings.SpecDraftCacheTypeV,
         settings.VisionImageMinTokens,
-        settings.VisionImageMaxTokens);
+        settings.VisionImageMaxTokens,
+        settings.PromptCacheMode,
+        settings.PromptCacheRamMb,
+        settings.ContextCheckpointsMode,
+        settings.ContextCheckpointCount,
+        settings.ContextCheckpointEveryNTokens);
 
     public AppSettings ApplyTo(AppSettings settings) => settings with
     {
@@ -151,6 +161,11 @@ public sealed record ModelLaunchSettings(
         SpecDraftCacheTypeK = SpecDraftCacheTypeK,
         SpecDraftCacheTypeV = SpecDraftCacheTypeV,
         VisionImageMinTokens = VisionImageMinTokens,
-        VisionImageMaxTokens = VisionImageMaxTokens
+        VisionImageMaxTokens = VisionImageMaxTokens,
+        PromptCacheMode = PromptCacheMode,
+        PromptCacheRamMb = PromptCacheRamMb,
+        ContextCheckpointsMode = ContextCheckpointsMode,
+        ContextCheckpointCount = ContextCheckpointCount,
+        ContextCheckpointEveryNTokens = ContextCheckpointEveryNTokens
     };
 }

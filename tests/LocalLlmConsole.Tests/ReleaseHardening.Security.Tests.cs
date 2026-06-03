@@ -87,8 +87,11 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.False(security.IsLocalOriginAllowed("null"));
         Assert.True(security.IsLocalOriginAllowed("http://127.0.0.1:8090"));
+        Assert.True(security.IsLocalOriginAllowed("http://127.0.0.2:8090"));
         Assert.False(security.IsLocalOriginAllowed("https://example.com"));
         Assert.True(security.IsLocalHostHeaderAllowed("127.0.0.1:8090", 8090));
+        Assert.True(security.IsLocalHostHeaderAllowed("127.0.0.2:8090", 8090));
+        Assert.False(security.IsLocalHostHeaderAllowed("0.0.0.0:8090", 8090));
         Assert.True(security.IsLocalHostHeaderAllowed("localhost:8090", 8090));
         Assert.False(security.IsLocalHostHeaderAllowed("example.com:8090", 8090));
         Assert.False(security.IsLocalHostHeaderAllowed("127.0.0.1:8091", 8090));

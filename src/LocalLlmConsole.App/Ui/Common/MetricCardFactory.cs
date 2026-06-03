@@ -230,7 +230,7 @@ public static class MetricCardFactory
             return true;
         }
 
-        if (string.Equals(label, "Model status", StringComparison.Ordinal))
+        if (string.Equals(label, "Model status", StringComparison.Ordinal) && row == 0)
         {
             AddSpanningMetricBlock(target, MetricPlainValueBlock(text, compact: false), row);
             return true;
@@ -252,14 +252,14 @@ public static class MetricCardFactory
         statusPrefix = "";
         modelName = "";
 
-        foreach (var prefix in new[] { "Loaded:", "Loading", "Warm:", "Stopped:" })
+        foreach (var prefix in new[] { "Loaded Model:", "Loading Model:", "Loaded:", "Loading:", "Warm:", "Stopped:" })
         {
             if (!text.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
-            var separator = prefix.EndsWith(":", StringComparison.Ordinal) ? prefix.Length : prefix.Length;
+            var separator = prefix.Length;
             var remainder = text[separator..].TrimStart();
             if (string.IsNullOrWhiteSpace(remainder)) return false;
 
-            statusPrefix = prefix.EndsWith(":", StringComparison.Ordinal) ? $"{text[..separator]} " : $"{text[..separator]} ";
+            statusPrefix = $"{text[..separator].TrimEnd(':')} ";
             modelName = remainder;
             return true;
         }

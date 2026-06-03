@@ -1,7 +1,8 @@
 # GitHub Release v1.1.2
 
 Historical notes for the published v1.1.2 release. Newer unreleased behavior,
-including the auto-load gateway, scoped LAN exposure, OpenCode sync toggle,
+including the auto-load gateway, scoped LAN exposure, OpenCode sync/output-limit
+mapping, grouped Settings navigation, preserved Overview load-time display,
 Start with Windows setting, and explicit Vision head selection, is tracked in
 `docs/GITHUB_RELEASE_NEXT.md`.
 

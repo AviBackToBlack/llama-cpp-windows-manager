@@ -8,7 +8,7 @@ param(
   [switch] $IncludeInstaller,
   [string] $InnoSetupPath = "",
   [string] $CertificateThumbprint = "",
-  [string] $TimestampServer = "http://timestamp.digicert.com",
+  [string] $TimestampServer = "https://timestamp.digicert.com",
   [switch] $RequireSigned
 )
 

@@ -71,6 +71,11 @@ public sealed record RuntimeLaunchRequest
     public string CacheTypeV { get; init; } = "f16";
     public string KvOffload { get; init; } = "auto";
     public string KvUnified { get; init; } = "auto";
+    public string PromptCacheMode { get; init; } = AppSettings.DefaultPromptCacheMode;
+    public int PromptCacheRamMb { get; init; } = AppSettings.DefaultPromptCacheRamMb;
+    public string ContextCheckpointsMode { get; init; } = AppSettings.DefaultContextCheckpointsMode;
+    public int ContextCheckpointCount { get; init; } = AppSettings.DefaultContextCheckpointCount;
+    public int ContextCheckpointEveryNTokens { get; init; } = AppSettings.DefaultContextCheckpointEveryNTokens;
     public string ContinuousBatching { get; init; } = "on";
     public string ReasoningMode { get; init; } = "auto";
     public string ReasoningFormat { get; init; } = "auto";
@@ -91,18 +96,18 @@ public sealed record RuntimeLaunchRequest
     public int Seed { get; init; } = -1;
     public int RepeatLastN { get; init; } = 64;
     public double RepeatPenalty { get; init; } = 1.0;
-    public double PresencePenalty { get; init; }
-    public double FrequencyPenalty { get; init; }
+    public double PresencePenalty { get; init; } = AppSettings.DefaultPresencePenalty;
+    public double FrequencyPenalty { get; init; } = AppSettings.DefaultFrequencyPenalty;
     public string RopeScaling { get; init; } = "auto";
-    public double RopeScale { get; init; }
-    public double RopeFreqBase { get; init; }
-    public double RopeFreqScale { get; init; }
+    public double RopeScale { get; init; } = AppSettings.DefaultRopeScale;
+    public double RopeFreqBase { get; init; } = AppSettings.DefaultRopeFreqBase;
+    public double RopeFreqScale { get; init; } = AppSettings.DefaultRopeFreqScale;
     public string SpeculativeType { get; init; } = "none";
     public string? SpecDraftModelPath { get; init; }
     public string? MtpHeadPath { get; init; }
     public int SpecDraftGpuLayers { get; init; } = -1;
-    public int SpecDraftMinTokens { get; init; }
-    public int SpecDraftMaxTokens { get; init; }
+    public int SpecDraftMinTokens { get; init; } = AppSettings.DefaultSpecDraftMinTokens;
+    public int SpecDraftMaxTokens { get; init; } = AppSettings.DefaultSpecDraftMaxTokens;
     public double SpecDraftPSplit { get; init; } = -1.0;
     public double SpecDraftPMin { get; init; } = -1.0;
     public string SpecDraftCacheTypeK { get; init; } = "q8_0";

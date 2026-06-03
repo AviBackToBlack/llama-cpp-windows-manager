@@ -85,14 +85,14 @@ public partial class MainWindow
 
         _coreServices.Models.ModelRuntimeStatus.StartLoadedStatusTimer(async () =>
         {
-            StopModelLoadedStatusTimer();
+            StopModelLoadedStatusTimer(clearLoadedStatus: false);
             await RefreshRuntimeMetricsAsync();
         });
     }
 
-    private void StopModelLoadedStatusTimer()
+    private void StopModelLoadedStatusTimer(bool clearLoadedStatus = true)
     {
-        _coreServices.Models.ModelRuntimeStatus.StopLoadedStatusTimer();
+        _coreServices.Models.ModelRuntimeStatus.StopLoadedStatusTimer(clearLoadedStatus);
     }
 
     private void ApplyModelRuntimeStatusRenderPlan(ModelRuntimeStatusRenderPlan plan)

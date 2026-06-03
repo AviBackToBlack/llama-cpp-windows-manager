@@ -225,11 +225,11 @@ public sealed partial class ReleaseHardeningTests
     public void MainWindowDelegatesRuntimeReadinessPollingToWorkflow()
     {
         var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.ModelRuntimeLifecycle.cs"));
-        var workflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeReadinessWorkflowService.cs"));
-        var completion = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeReadinessCompletionService.cs"));
-        var monitor = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeReadinessMonitorWorkflowService.cs"));
-        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeReadinessCompletionApplicationService.cs"));
-        var monitorApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeReadinessMonitorApplicationService.cs"));
+        var workflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeReadinessWorkflowService.cs"));
+        var completion = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeReadinessCompletionService.cs"));
+        var monitor = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeReadinessMonitorWorkflowService.cs"));
+        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeReadinessCompletionApplicationService.cs"));
+        var monitorApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeReadinessMonitorApplicationService.cs"));
 
         Assert.Contains("_coreServices.Runtime.RuntimeReadinessMonitorApplication.RunAsync(", source, StringComparison.Ordinal);
         Assert.Contains("new RuntimeReadinessMonitorApplicationRequest(", source, StringComparison.Ordinal);
@@ -354,7 +354,7 @@ public sealed partial class ReleaseHardeningTests
     public void RuntimeReadinessMonitorRegistryReplacesCompletesAndStopsTokens()
     {
         var source = ReadMainWindowSources();
-        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeReadinessMonitorApplicationService.cs"));
+        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeReadinessMonitorApplicationService.cs"));
         using var registry = new RuntimeReadinessMonitorRegistry();
 
         var first = registry.Start("model-1");
@@ -385,7 +385,7 @@ public sealed partial class ReleaseHardeningTests
     public void RuntimeSessionActionDecisionServiceOwnsStopAndSwitchRules()
     {
         var source = ReadMainWindowSources();
-        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeSessionApplicationService.cs"));
+        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeSessionApplicationService.cs"));
         var service = new RuntimeSessionActionDecisionService();
         var settings = AppSettings.CreateDefault(CreateTempRoot()) with { Port = 8083 };
         var runtime = new RuntimeRecord("runtime", "Runtime", RuntimeMode.Native, RuntimeBackend.Cuda, "llama-server.exe", "{}", DateTimeOffset.UtcNow);
@@ -429,7 +429,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.False(switchMissing.ResetMetricCounters);
         Assert.Equal($"{model.Name} is not loaded.", switchMissing.StatusMessage);
         Assert.True(switchLoaded.Selected);
-        Assert.True(switchLoaded.ResetMetricCounters);
+        Assert.False(switchLoaded.ResetMetricCounters);
         Assert.True(switchLoaded.StartDashboardRefresh);
         Assert.Equal($"Selected loaded model {model.Name}.", switchLoaded.StatusMessage);
         Assert.Contains("_commands.PlanStopSelected(", application, StringComparison.Ordinal);
@@ -446,9 +446,9 @@ public sealed partial class ReleaseHardeningTests
     public void ModelRuntimeCommandDecisionServiceOwnsLoadAndUnloadGates()
     {
         var source = ReadMainWindowSources();
-        var serviceSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeCommandDecisionService.cs"));
-        var loadApplicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeLoadApplicationService.cs"));
-        var unloadApplicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeUnloadApplicationService.cs"));
+        var serviceSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeCommandDecisionService.cs"));
+        var loadApplicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeLoadApplicationService.cs"));
+        var unloadApplicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeUnloadApplicationService.cs"));
         var service = new ModelRuntimeCommandDecisionService();
         var model = new ModelRecord("model", "Qwen", "qwen.gguf", OwnershipKind.External, "{}", DateTimeOffset.UtcNow);
 

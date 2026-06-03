@@ -35,7 +35,11 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         get
         {
             try { return _process?.Id ?? 0; }
-            catch { return 0; }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"Could not read llama process id: {ex.Message}");
+                return 0;
+            }
         }
     }
     public string WslProcessMarker => _lastWslProcessMarker;
@@ -113,6 +117,11 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
             CacheTypeV = settings.CacheTypeV,
             KvOffload = settings.KvOffload,
             KvUnified = settings.KvUnified,
+            PromptCacheMode = settings.PromptCacheMode,
+            PromptCacheRamMb = settings.PromptCacheRamMb,
+            ContextCheckpointsMode = settings.ContextCheckpointsMode,
+            ContextCheckpointCount = settings.ContextCheckpointCount,
+            ContextCheckpointEveryNTokens = settings.ContextCheckpointEveryNTokens,
             ContinuousBatching = settings.ContinuousBatching,
             ReasoningMode = settings.ReasoningMode,
             ReasoningFormat = settings.ReasoningFormat,
@@ -193,7 +202,8 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         _process.ErrorDataReceived += (_, e) => ObserveOutput(e.Data);
         _process.Exited += (_, _) =>
         {
-            try { LastExitCode = _process?.ExitCode; } catch { }
+            try { LastExitCode = _process?.ExitCode; }
+            catch (Exception ex) { Trace.TraceWarning($"Could not read llama process exit code: {ex.Message}"); }
             if (State != LlamaRuntimeState.Stopped)
                 State = LlamaRuntimeState.Failed;
         };

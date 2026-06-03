@@ -104,8 +104,21 @@ public sealed class OverviewPageViewModel
            && string.Equals(left.C4, right.C4, StringComparison.Ordinal)
            && string.Equals(left.C5, right.C5, StringComparison.Ordinal)
            && string.Equals(left.C6, right.C6, StringComparison.Ordinal)
-           && string.Equals(left.Data["SessionId"]?.ToString(), right.Data["SessionId"]?.ToString(), StringComparison.Ordinal)
-           && string.Equals(left.Data["ModelId"]?.ToString(), right.Data["ModelId"]?.ToString(), StringComparison.Ordinal);
+           && string.Equals(left.C7, right.C7, StringComparison.Ordinal)
+           && string.Equals(left.C8, right.C8, StringComparison.Ordinal)
+           && string.Equals(left.C9, right.C9, StringComparison.Ordinal)
+           && string.Equals(left.C10, right.C10, StringComparison.Ordinal)
+           && string.Equals(left.T1, right.T1, StringComparison.Ordinal)
+           && string.Equals(left.T2, right.T2, StringComparison.Ordinal)
+           && string.Equals(left.T3, right.T3, StringComparison.Ordinal)
+           && string.Equals(left.T4, right.T4, StringComparison.Ordinal)
+           && string.Equals(left.T5, right.T5, StringComparison.Ordinal)
+           && left.B1 == right.B1
+           && left.B2 == right.B2
+           && left.B3 == right.B3
+           && left.B4 == right.B4
+           && left.B5 == right.B5
+           && JsonNode.DeepEquals(left.Data, right.Data);
 
     private static string SessionStatusLabel(LoadedModelSessionSnapshot session) => session.Status switch
     {

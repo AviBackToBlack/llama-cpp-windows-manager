@@ -1,6 +1,6 @@
 # Release Readiness Checklist
 
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 ## Automated Gate
 
@@ -37,7 +37,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 
 ## Release Gate
 
 - Publish `dist\LlamaCppWindowsManager-win-x64.zip` and `dist\LlamaCppWindowsManager-win-x64\LlamaCppWindowsManager.exe` from a clean checkout.
-- Build `dist\installer\LlamaCppWindowsManager-Setup-1.1.3-win-x64.exe` from the published app with Inno Setup 6.
+- Build `dist\installer\LlamaCppWindowsManager-Setup-1.1.4-win-x64.exe` from the published app with Inno Setup 6.
 - Confirm the publish folder contains no `.pdb` files.
 - Confirm the portable zip, published executable, and installer each have a matching `.sha256` companion file. For signed builds, generate the companion file after signing.
 - Confirm signed installer builds fail before compilation if `-SkipPublish`
@@ -85,17 +85,26 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 
 - Confirm the Overview Loaded Model Sessions grid shows an auto-load gateway
   router row with endpoint, policy, LAN exposure, and current direct-session
   count.
+- Confirm the Overview Model Status card shows Loading Model / Loaded Model and
+  Loading Time as separate rows, and that Loading Time remains at the completed
+  duration after the model becomes ready.
 - Confirm Overview token monitors use two compact rows in the form
   `0.0 t/s (Gen) | 0.0 t/s (Avg) | 0 t (Total)`, with matching Prompt and
   Accepted rows, live rates falling back to `0.0 t/s` when idle, and average or
   total segments omitted when those values are unavailable.
 - Confirm the Overview Slots card shows active/queued requests and busy decode
-  slots in two rows, and that GPU metrics render separators as ` | ` with
+  slots in two rows, and that hardware metrics render separators as ` | ` with
   spaces on both sides.
+- Confirm the Overview Hardware card shows CPU temperature for CPU-backed
+  sessions, uses NVIDIA metrics for CUDA when available, falls back to Windows
+  GPU performance counters for AMD/Intel/Vulkan-backed sessions, and does not
+  show stale cached hardware data after switching runtimes.
 - Confirm the Settings API key Generate action creates a new model API key.
 - Confirm Settings > OpenCode > Sync on launch save controls whether saved
   launch settings and saved variants automatically rewrite OpenCode local model
   entries.
+- Confirm Settings is separated into named category sections rather than one
+  large flat settings grid.
 - Confirm Settings explains that OpenCode sync copies the model API key into
   OpenCode provider config in plain text, even though the app protects its own
   persisted key with current-user Windows data protection.
@@ -143,6 +152,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 
 - Confirm OpenCode local model entries can use either the shared gateway
   provider or direct per-model providers/endpoints, remain stable across app
   restarts, and include vision support when launch settings prove it.
+- Confirm OpenCode local model `limit.output` follows the model's saved
+  **Max tokens** launch setting when it is greater than zero, and falls back to
+  the app's context-derived output cap when **Max tokens** is unlimited.
 - Confirm CPU-only Ubuntu/WSL llama.cpp source build path succeeds after Install CPU Tools, or fails early if Git/CMake/compiler tools are still missing inside Ubuntu.
 - Confirm CUDA Ubuntu/WSL llama.cpp source build path succeeds after Install CUDA on supported NVIDIA hardware, or fails early with a clear driver/toolkit error.
 - Confirm Vulkan Ubuntu/WSL llama.cpp source build path succeeds after Install Vulkan on supported WSL Vulkan hardware, or fails early with a clear driver/toolkit error.
@@ -172,10 +184,21 @@ the diff had no whitespace errors, and publish/installer artifact checks passed
 locally. The next release notes draft is tracked in
 `docs/GITHUB_RELEASE_NEXT.md`.
 
+Additional local checks on 2026-06-03:
+
+```powershell
+dotnet test tests\LocalLlmConsole.Tests\LocalLlmConsole.Tests.csproj --no-restore --filter "Help|Settings|ModelRuntimeStatus|MetricCardFactory|LightTheme"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\publish-app.ps1 -Runtime win-x64 -Configuration Release
+```
+
+Result: focused Help/Settings/status/rendering tests passed (`41/41`), the
+Release publish succeeded, and an unsigned portable `win-x64` test build was
+produced in `dist`.
+
 ## Manual Clean-Machine Test
 
 1. Start from a clean Windows VM.
-2. Install `dist\installer\LlamaCppWindowsManager-Setup-1.1.3-win-x64.exe`.
+2. Install `dist\installer\LlamaCppWindowsManager-Setup-1.1.4-win-x64.exe`.
 3. Confirm the installer prefers `D:\LlamaCppWindowsManager` when `D:` exists and allows choosing a different folder before install.
 4. Confirm the launch-after-install option opens the app.
 5. Confirm first launch creates `data\models`, `data\runtimes`, `data\cache`, `data\state`, and `data\logs` beside the exe when the install folder is writable.

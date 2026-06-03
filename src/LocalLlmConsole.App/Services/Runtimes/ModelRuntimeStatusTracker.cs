@@ -41,7 +41,7 @@ public sealed class ModelRuntimeStatusTracker
         var elapsed = DisplayFormatService.Elapsed(now - _loadingStartedAt);
         return new ModelRuntimeStatusDisplay(
             _loadingModelId,
-            $"Loading {_loadingModelName} ({elapsed})",
+            $"Loading Model: {_loadingModelName}\nLoading Time: {elapsed}",
             ModelRuntimeStatusKind.Loading,
             $"Loading {_loadingModelName} at {_loadingEndpoint}.");
     }
@@ -66,7 +66,7 @@ public sealed class ModelRuntimeStatusTracker
             return null;
 
         _loadedStatusModelId = modelId;
-        _loadedStatusText = $"Loaded: {modelName} in {DisplayFormatService.Elapsed(elapsed)}";
+        _loadedStatusText = $"Loaded Model: {modelName}\nLoading Time: {DisplayFormatService.Elapsed(elapsed)}";
         return new ModelRuntimeStatusDisplay(_loadedStatusModelId, _loadedStatusText, ModelRuntimeStatusKind.Loaded);
     }
 

@@ -10,14 +10,14 @@ namespace LocalLlmConsole.Tests;
 public sealed partial class ReleaseHardeningTests
 {
     [Fact]
-    public void ProjectDeclaresVersionOneOneThreeMetadata()
+    public void ProjectDeclaresVersionOneOneFourMetadata()
     {
         var project = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "LocalLlmConsole.App.csproj"));
 
-        Assert.Contains("<Version>1.1.3</Version>", project, StringComparison.Ordinal);
-        Assert.Contains("<AssemblyVersion>1.1.3.0</AssemblyVersion>", project, StringComparison.Ordinal);
-        Assert.Contains("<FileVersion>1.1.3.0</FileVersion>", project, StringComparison.Ordinal);
-        Assert.Contains("<InformationalVersion>v1.1.3</InformationalVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<Version>1.1.4</Version>", project, StringComparison.Ordinal);
+        Assert.Contains("<AssemblyVersion>1.1.4.0</AssemblyVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<FileVersion>1.1.4.0</FileVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<InformationalVersion>v1.1.4</InformationalVersion>", project, StringComparison.Ordinal);
     }
 
 
@@ -44,6 +44,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("LlamaCppWindowsManager-$Runtime", publishScript, StringComparison.Ordinal);
         Assert.Contains("LlamaCppConsole.exe", publishScript, StringComparison.Ordinal);
         Assert.Contains("LlamaCppWindowsManager-$Runtime.zip", publishScript, StringComparison.Ordinal);
+        Assert.Contains("[string] $TimestampServer = \"https://timestamp.digicert.com\"", publishScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("http://timestamp.digicert.com", publishScript, StringComparison.Ordinal);
         Assert.Contains("sha256", publishScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("LlamaCppWindowsManager.exe", startScript, StringComparison.Ordinal);
         Assert.Contains("LLAMA_CPP_WINDOWS_MANAGER_DOTNET", publishScript, StringComparison.Ordinal);
@@ -115,6 +117,8 @@ public sealed partial class ReleaseHardeningTests
     {
         var buildInstaller = File.ReadAllText(FindRepositoryFile("build-installer.ps1"));
 
+        Assert.Contains("[string] $TimestampServer = \"https://timestamp.digicert.com\"", buildInstaller, StringComparison.Ordinal);
+        Assert.DoesNotContain("http://timestamp.digicert.com", buildInstaller, StringComparison.Ordinal);
         Assert.Contains("function Assert-SignedIfRequired", buildInstaller, StringComparison.Ordinal);
         Assert.Contains("Assert-SignedIfRequired $PublishedExe $RequireSigned.IsPresent \"Published executable\"", buildInstaller, StringComparison.Ordinal);
         Assert.Contains("$ArtifactLabel is not signed", buildInstaller, StringComparison.Ordinal);
@@ -140,6 +144,8 @@ public sealed partial class ReleaseHardeningTests
             Assert.Contains("Release requires a clean Git worktree", script, StringComparison.Ordinal);
         }
 
+        Assert.Contains("[string] $TimestampServer = \"https://timestamp.digicert.com\"", releaseGate, StringComparison.Ordinal);
+        Assert.DoesNotContain("http://timestamp.digicert.com", releaseGate, StringComparison.Ordinal);
         Assert.Contains("Verify clean Git worktree", releaseGate, StringComparison.Ordinal);
         Assert.Contains("$publishArgs += \"-RequireCleanTree\"", releaseGate, StringComparison.Ordinal);
         Assert.Contains("$installerArgs += \"-RequireCleanTree\"", releaseGate, StringComparison.Ordinal);
@@ -154,6 +160,9 @@ public sealed partial class ReleaseHardeningTests
     {
         var publishScript = File.ReadAllText(FindRepositoryFile("publish-app.ps1"));
 
+        Assert.Contains("$publishArgs = @(", publishScript, StringComparison.Ordinal);
+        Assert.Contains("& $Dotnet @publishArgs", publishScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("& $Dotnet publish $Project `", publishScript, StringComparison.Ordinal);
         Assert.Contains("function Remove-DistPath", publishScript, StringComparison.Ordinal);
         Assert.Contains("Refusing to remove $Label outside the dist folder", publishScript, StringComparison.Ordinal);
         Assert.Contains("System.IO.FileAttributes]::ReparsePoint", publishScript, StringComparison.Ordinal);
@@ -441,7 +450,7 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void AppUpdateServiceStartsInstallerThroughInjectedProcessLauncher()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AppUpdateService.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AppUpdateService.cs"));
         var root = CreateTempRoot();
         var scriptPath = Path.Combine(root, "cache", "app-updates", "v1.1.2", "Install-LlamaCppWindowsManagerUpdate.ps1");
         var sourceExe = Path.Combine(root, "cache", "app-updates", "v1.1.2", AppUpdateService.PortableExeName);

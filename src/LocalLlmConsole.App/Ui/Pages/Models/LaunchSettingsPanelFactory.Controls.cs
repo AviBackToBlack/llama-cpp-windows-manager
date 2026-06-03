@@ -4,7 +4,6 @@ using System.Windows.Media;
 using WpfApplication = System.Windows.Application;
 using WpfBrush = System.Windows.Media.Brush;
 using WpfButton = System.Windows.Controls.Button;
-using WpfCheckBox = System.Windows.Controls.CheckBox;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfTextBox = System.Windows.Controls.TextBox;
 
@@ -62,20 +61,55 @@ public static partial class LaunchSettingsPanelFactory
         return combo;
     }
 
-    private static WpfCheckBox AdvancedToggle(LaunchSettingsPanelRequest request)
+    private static Grid LaunchSettingsToolbar(
+        LaunchSettingsPanelRequest request,
+        out WpfTextBox searchBox,
+        out WpfButton advancedButton)
     {
-        var toggle = new WpfCheckBox
+        const double toolbarControlHeight = 30;
+        var grid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition());
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        searchBox = new WpfTextBox
         {
-            Content = "Advanced settings",
-            IsChecked = request.ShowAdvancedLaunchSettings,
-            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
-            Margin = new Thickness(0, 0, 0, 8),
+            Height = toolbarControlHeight,
+            MinHeight = toolbarControlHeight,
+            MinWidth = 150,
+            Margin = new Thickness(0, 0, 6, 0),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+            ToolTip = TooltipText("Filter launch settings by name or description as you type.")
+        };
+        searchBox.TextChanged += (_, _) => request.LaunchSettingsSearchChanged();
+        Grid.SetColumn(searchBox, 0);
+        grid.Children.Add(searchBox);
+
+        var showAdvanced = request.ShowAdvancedLaunchSettings;
+        var toggleButton = new WpfButton
+        {
+            Content = AdvancedButtonText(showAdvanced),
+            Height = toolbarControlHeight,
+            MinHeight = toolbarControlHeight,
+            MinWidth = 126,
+            Margin = new Thickness(0),
             ToolTip = TooltipText("Shows tuning controls for memory, RoPE, speculative/MTP decoding, and sampling.")
         };
-        toggle.Checked += (_, _) => request.AdvancedSettingsChanged(true);
-        toggle.Unchecked += (_, _) => request.AdvancedSettingsChanged(false);
-        return toggle;
+        ToolTipService.SetShowOnDisabled(toggleButton, true);
+        toggleButton.Click += (_, _) =>
+        {
+            showAdvanced = !showAdvanced;
+            toggleButton.Content = AdvancedButtonText(showAdvanced);
+            request.AdvancedSettingsChanged(showAdvanced);
+        };
+        advancedButton = toggleButton;
+        Grid.SetColumn(advancedButton, 1);
+        grid.Children.Add(advancedButton);
+
+        return grid;
     }
+
+    private static string AdvancedButtonText(bool showAdvanced)
+        => showAdvanced ? "Hide Advanced" : "Advanced Settings";
 
     private static WrapPanel ActionButtons(LaunchSettingsPanelRequest request, out WpfButton saveForModelButton)
     {

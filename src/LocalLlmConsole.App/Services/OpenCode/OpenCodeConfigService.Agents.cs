@@ -52,7 +52,7 @@ public sealed partial class OpenCodeConfigService
     {
         if (entry.Kind == OpenCodeAgentKind.Markdown)
         {
-            ConfigFileSafetyService.WriteTextWithBackup(entry.Path, snippet, Encoding.UTF8, "OpenCode agent file");
+            ConfigFileSafetyService.WriteTextWithBackup(entry.Path, snippet, Utf8NoBom, "OpenCode agent file");
             return;
         }
 
@@ -124,7 +124,7 @@ public sealed partial class OpenCodeConfigService
         builder.AppendLine("---");
         builder.AppendLine();
         builder.AppendLine("Describe how this agent should behave.");
-        ConfigFileSafetyService.WriteTextWithBackup(path, builder.ToString(), Encoding.UTF8, "OpenCode agent file");
+        ConfigFileSafetyService.WriteTextWithBackup(path, builder.ToString(), Utf8NoBom, "OpenCode agent file");
         return new OpenCodeAgentEntry($"markdown:{Path.GetFullPath(path)}", name, OpenCodeAgentKind.Markdown, Path.GetFullPath(path), $"{name} (markdown)");
     }
 }

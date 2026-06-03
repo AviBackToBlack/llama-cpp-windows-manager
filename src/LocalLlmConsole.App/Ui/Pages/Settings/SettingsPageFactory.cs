@@ -42,10 +42,11 @@ public static class SettingsPageFactory
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
 
-        var grid = SettingsGrid(request);
-        root.Children.Add(PageSectionFactory.GridFrame(grid));
+        var rows = request.Rows.Cast<EditableSettingRow>().ToList();
+        var sections = SettingsSections(rows, request);
+        root.Children.Add(sections.Root);
 
-        return new SettingsPageControls(root, themeCombo, grid);
+        return new SettingsPageControls(root, themeCombo, sections.FirstGrid);
     }
 
     private static Grid Toolbar(SettingsPageRequest request, out WpfComboBox themeCombo)
@@ -86,26 +87,40 @@ public static class SettingsPageFactory
         return toolbar;
     }
 
-    private static DataGrid SettingsGrid(SettingsPageRequest request)
+    private static (ScrollViewer Root, DataGrid FirstGrid) SettingsSections(
+        IReadOnlyList<EditableSettingRow> rows,
+        SettingsPageRequest request)
+    {
+        var stack = new StackPanel();
+        DataGrid? firstGrid = null;
+
+        foreach (var group in rows.GroupBy(row => row.Group))
+        {
+            var grid = SettingsGrid(group, request.Actions);
+            firstGrid ??= grid;
+            stack.Children.Add(PageSectionFactory.GridSection(group.Key, grid));
+        }
+
+        var scroll = new ScrollViewer
+        {
+            Content = stack,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+
+        return (scroll, firstGrid ?? SettingsGrid(Array.Empty<EditableSettingRow>(), request.Actions));
+    }
+
+    private static DataGrid SettingsGrid(IEnumerable<EditableSettingRow> rows, SettingsPageActions actions)
     {
         var grid = new DataGrid
         {
             IsReadOnly = false,
-            ItemsSource = request.Rows,
+            ItemsSource = rows,
             RowHeight = 38
         };
         PageSectionFactory.PolishGrid(grid);
         var textStyle = (Style)WpfApplication.Current.Resources["GridCellText"];
-        grid.Columns.Add(new DataGridTextColumn
-        {
-            Header = "Group",
-            Binding = new WpfBinding(nameof(EditableSettingRow.Group)),
-            IsReadOnly = true,
-            ElementStyle = SettingsGridColumnFactory.CellTextStyle(textStyle),
-            MinWidth = 80,
-            Width = new DataGridLength(120),
-            CanUserResize = true
-        });
         grid.Columns.Add(new DataGridTextColumn
         {
             Header = "Setting",
@@ -118,9 +133,9 @@ public static class SettingsPageFactory
         });
         grid.Columns.Add(SettingsGridColumnFactory.ValueColumn());
         grid.Columns.Add(SettingsGridColumnFactory.ActionsColumn(
-            request.Actions.RevealSecret,
-            request.Actions.CopySecret,
-            request.Actions.RowAction));
+            actions.RevealSecret,
+            actions.CopySecret,
+            actions.RowAction));
         return grid;
     }
 

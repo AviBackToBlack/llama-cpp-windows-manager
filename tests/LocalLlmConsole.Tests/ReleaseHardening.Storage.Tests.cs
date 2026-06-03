@@ -170,6 +170,11 @@ public sealed partial class ReleaseHardeningTests
         {
             DeleteRuntimeSourceAfterSuccessfulBuild = false,
             AutoSaveOpenCodeOnLaunchSettingsSave = false,
+            PromptCacheMode = "on",
+            PromptCacheRamMb = 16_384,
+            ContextCheckpointsMode = "on",
+            ContextCheckpointCount = 48,
+            ContextCheckpointEveryNTokens = 512,
             CudaPackagePreference = "compatibility"
         };
 
@@ -178,6 +183,11 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.False(loaded.DeleteRuntimeSourceAfterSuccessfulBuild);
         Assert.False(loaded.AutoSaveOpenCodeOnLaunchSettingsSave);
+        Assert.Equal("on", loaded.PromptCacheMode);
+        Assert.Equal(16_384, loaded.PromptCacheRamMb);
+        Assert.Equal("on", loaded.ContextCheckpointsMode);
+        Assert.Equal(48, loaded.ContextCheckpointCount);
+        Assert.Equal(512, loaded.ContextCheckpointEveryNTokens);
         Assert.Equal("compatibility", loaded.CudaPackagePreference);
     }
 

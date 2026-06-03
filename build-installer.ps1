@@ -4,7 +4,7 @@ param(
   [string] $Configuration = "Release",
   [string] $InnoSetupPath = "",
   [string] $CertificateThumbprint = "",
-  [string] $TimestampServer = "http://timestamp.digicert.com",
+  [string] $TimestampServer = "https://timestamp.digicert.com",
   [switch] $RequireSigned,
   [switch] $RequireCleanTree,
   [switch] $SkipPublish

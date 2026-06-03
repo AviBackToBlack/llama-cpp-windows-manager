@@ -20,6 +20,7 @@ public partial class MainWindow
                 _coreServices.Ui.AdvancedSections.SetLaunchSettings(showAdvanced);
                 UpdateLaunchControlVisibility();
             },
+            UpdateLaunchControlVisibility,
             SaveLaunchSettingsForSelectedModelAsync,
             SaveLaunchDefaultsFromControlsAsync,
             ResetLaunchSettingsToDefaults,

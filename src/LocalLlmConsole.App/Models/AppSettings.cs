@@ -67,7 +67,12 @@ public sealed record AppSettings(
     double SpecDraftPMin,
     string SpecDraftCacheTypeK,
     string SpecDraftCacheTypeV,
-    string CudaPackagePreference)
+    string CudaPackagePreference,
+    string PromptCacheMode = "auto",
+    int PromptCacheRamMb = 8192,
+    string ContextCheckpointsMode = "auto",
+    int ContextCheckpointCount = 32,
+    int ContextCheckpointEveryNTokens = 256)
 {
     public const int DefaultContextSize = 131_072;
     public const int DefaultGpuLayers = 999;
@@ -94,6 +99,11 @@ public sealed record AppSettings(
     public const int DefaultVisionImageMinTokens = 0;
     public const int DefaultVisionImageMaxTokens = 0;
     public const string DefaultCudaPackagePreference = "latest";
+    public const string DefaultPromptCacheMode = "auto";
+    public const int DefaultPromptCacheRamMb = 8192;
+    public const string DefaultContextCheckpointsMode = "auto";
+    public const int DefaultContextCheckpointCount = 32;
+    public const int DefaultContextCheckpointEveryNTokens = 256;
 
     public static AppSettings CreateDefault(string workspaceRoot) => new(
         workspaceRoot,

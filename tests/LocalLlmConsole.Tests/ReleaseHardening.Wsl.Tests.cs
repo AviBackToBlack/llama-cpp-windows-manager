@@ -79,6 +79,8 @@ public sealed partial class ReleaseHardeningTests
     {
         Assert.Equal("'a''b'", CommandLineService.PowerShellQuote("a'b"));
         Assert.Equal("'a'\"'\"'b'", CommandLineService.BashQuote("a'b"));
+        Assert.Throws<ArgumentException>(() => CommandLineService.PowerShellQuote("a\0b"));
+        Assert.Throws<ArgumentException>(() => CommandLineService.BashQuote("a\0b"));
         Assert.Equal("second", CommandLineService.FirstNonBlankLine("\r\n  second  \nthird"));
 
         var cleanup = CommandLineService.WslKillByEnvironmentMarkerCommand("marker'1");
@@ -104,7 +106,7 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void VisibleCommandLaunchServiceOwnsVisiblePowerShellProcessLaunch()
     {
-        var commandLine = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "CommandLineService.cs"));
+        var commandLine = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "CommandLineService.cs"));
         var started = new List<ProcessStartInfo>();
         var service = new VisibleCommandLaunchService(started.Add, () => "C:\\Windows\\System32\\wsl.exe");
 
@@ -118,7 +120,8 @@ public sealed partial class ReleaseHardeningTests
             Assert.Equal(HostExecutableResolver.WindowsPowerShellExe(), process.FileName);
             Assert.True(process.UseShellExecute);
             Assert.Equal(ProcessWindowStyle.Normal, process.WindowStyle);
-            Assert.Contains("-NoExit -NoProfile -ExecutionPolicy Bypass -EncodedCommand", process.Arguments, StringComparison.Ordinal);
+            Assert.Contains("-NoExit -NoProfile -EncodedCommand", process.Arguments, StringComparison.Ordinal);
+            Assert.DoesNotContain("-ExecutionPolicy Bypass", process.Arguments, StringComparison.Ordinal);
         });
         Assert.Equal("runas", started[0].Verb);
         Assert.Equal("", started[1].Verb);
@@ -297,7 +300,7 @@ public sealed partial class ReleaseHardeningTests
     {
         var mainWindow = ReadMainWindowSources();
         var actions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.WslActions.cs"));
-        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "WslDistroSelectionApplicationService.cs"));
+        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Environment", "WslDistroSelectionApplicationService.cs"));
 
         Assert.Contains("_coreServices.Environment.WslDistroSelectionApplication.SelectAsync", actions, StringComparison.Ordinal);
         Assert.Contains("WslDistroSelectionActions()", actions, StringComparison.Ordinal);
@@ -372,8 +375,8 @@ public sealed partial class ReleaseHardeningTests
     public void UbuntuInstallerIncludesCmakeBuildTools()
     {
         var mainWindow = ReadMainWindowSources();
-        var wslPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "WslPageFactory.cs"));
-        var wslPageWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "WslPageWorkflowService.cs"));
+        var wslPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Environment", "WslPageFactory.cs"));
+        var wslPageWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Environment", "WslPageWorkflowService.cs"));
 
         Assert.Contains("cmake", WslSetupCommands.BuildToolsPackages, StringComparison.Ordinal);
         Assert.Contains("build-essential", WslSetupCommands.BuildToolsPackages, StringComparison.Ordinal);
@@ -488,7 +491,7 @@ public sealed partial class ReleaseHardeningTests
     {
         const string removedWsl = "The Windows Subsystem for Linux is not installed. You can install by running 'wsl.exe --install'.";
         const string noDistros = "Windows Subsystem for Linux has no installed distributions.";
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "WslEnvironmentService.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Environment", "WslEnvironmentService.cs"));
         var mainWindow = ReadMainWindowSources();
 
         Assert.True(WslEnvironmentService.LooksLikeWslNotInstalled(removedWsl));
@@ -501,7 +504,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.DoesNotContain("await AutoSelectDetectedWslDistroAsync();", mainWindow, StringComparison.Ordinal);
         Assert.Contains("RunBackground(AutoSelectDetectedWslDistroAsync", mainWindow, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Environment.WslPageWorkflow.DetectRecommendedDistroAsync(_settings)", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("_detectWsl(cancellationToken)", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "WslPageWorkflowService.cs")), StringComparison.Ordinal);
+        Assert.Contains("_detectWsl(cancellationToken)", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Environment", "WslPageWorkflowService.cs")), StringComparison.Ordinal);
         Assert.Contains("_environmentPageSnapshots.TryStartWslAutoRefresh()", mainWindow, StringComparison.Ordinal);
         Assert.DoesNotContain("_wslLinuxAutoRefreshDone", mainWindow, StringComparison.Ordinal);
     }
@@ -510,13 +513,13 @@ public sealed partial class ReleaseHardeningTests
     public void WindowsAndWslToolTabsReuseCachedDetectionOnReturn()
     {
         var mainWindow = ReadMainWindowSources();
-        var windowsPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "WindowsPageFactory.cs"));
-        var windowsPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "WindowsPageState.cs"));
-        var wslPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "WslPageFactory.cs"));
-        var wslPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "WslPageState.cs"));
+        var windowsPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Environment", "WindowsPageFactory.cs"));
+        var windowsPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Environment", "WindowsPageState.cs"));
+        var wslPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Environment", "WslPageFactory.cs"));
+        var wslPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Environment", "WslPageState.cs"));
         var toolSetupApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Environment", "ToolSetupApplicationService.cs"));
 
-        var snapshotCache = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "EnvironmentPageSnapshotCache.cs"));
+        var snapshotCache = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Environment", "EnvironmentPageSnapshotCache.cs"));
 
         Assert.Contains("private readonly EnvironmentPageSnapshotCache _environmentPageSnapshots;", mainWindow, StringComparison.Ordinal);
         Assert.Contains("private readonly WindowsPageState _windowsPage;", mainWindow, StringComparison.Ordinal);

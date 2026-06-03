@@ -184,7 +184,7 @@ public sealed partial class ReleaseHardeningTests
     {
         var mainWindowPath = FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.xaml.cs");
         var appRoot = Path.GetDirectoryName(mainWindowPath)!;
-        var shell = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "LaunchSettingsPanelFactory.cs"));
+        var shell = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "LaunchSettingsPanelFactory.cs"));
 
         AssertServicePartials(appRoot, Path.Combine("Ui", "Pages", "Models"), "LaunchSettingsPanelFactory", 200,
             "LaunchSettingsPanelFactory.Controls.cs",
@@ -284,11 +284,11 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void ModelGatewayHostKeepsTransportResponsibilitiesSplit()
     {
-        var host = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelGatewayService.cs"));
-        var accessPolicy = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelGatewayRequestAccessPolicy.cs"));
-        var resolver = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelGatewayRequestResolver.cs"));
-        var proxy = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelGatewayUpstreamProxy.cs"));
-        var responseWriter = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelGatewayResponseWriter.cs"));
+        var host = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "ModelGatewayService.cs"));
+        var accessPolicy = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "ModelGatewayRequestAccessPolicy.cs"));
+        var resolver = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "ModelGatewayRequestResolver.cs"));
+        var proxy = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "ModelGatewayUpstreamProxy.cs"));
+        var responseWriter = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "ModelGatewayResponseWriter.cs"));
 
         Assert.Contains("ModelGatewayRequestAccessPolicy", host, StringComparison.Ordinal);
         Assert.Contains("ModelGatewayRequestResolver.ExtractRequestedModel", host, StringComparison.Ordinal);
@@ -316,9 +316,9 @@ public sealed partial class ReleaseHardeningTests
     public void RuntimeDeletionPlanningAndExecutionStaySeparate()
     {
         var planner = ReadServicePartialSources("RuntimeDeletionPlanner");
-        var executor = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDeletionExecutorService.cs"));
-        var buildDeletionApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeBuildDeletionApplicationService.cs"));
-        var packageApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimePackageApplicationService.cs"));
+        var executor = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDeletionExecutorService.cs"));
+        var buildDeletionApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeBuildDeletionApplicationService.cs"));
+        var packageApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimePackageApplicationService.cs"));
 
         Assert.Contains("PlanRuntimeDeletionAsync", planner, StringComparison.Ordinal);
         Assert.Contains("PlanPackageDeletionAsync", planner, StringComparison.Ordinal);
@@ -345,9 +345,9 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void AppUpdateServiceKeepsParsingAndVerificationHelpersSeparate()
     {
-        var service = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AppUpdateService.cs"));
-        var parser = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AppUpdateReleaseParser.cs"));
-        var verifier = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AppUpdateAssetVerifier.cs"));
+        var service = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AppUpdateService.cs"));
+        var parser = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AppUpdateReleaseParser.cs"));
+        var verifier = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AppUpdateAssetVerifier.cs"));
 
         Assert.Contains("AppUpdateReleaseParser.ParseLatestRelease", service, StringComparison.Ordinal);
         Assert.Contains("AppUpdateAssetVerifier.VerifyChecksumAssetAsync", service, StringComparison.Ordinal);

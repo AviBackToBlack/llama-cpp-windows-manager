@@ -32,7 +32,7 @@ public sealed class HuggingFacePageViewModel
                 T2 = "Open this repository's Hugging Face model card.",
                 B1 = !isInstalled,
                 B2 = true,
-                Data = JsonSerializer.SerializeToNode(file)!.AsObject()
+                Data = JsonSerializer.SerializeToNode(file) as JsonObject ?? new JsonObject()
             });
         }
     }
@@ -63,7 +63,7 @@ public sealed class HuggingFacePageViewModel
                 B2 = HuggingFaceInstallStateService.CanPauseDownload(job.Status),
                 B3 = HuggingFaceInstallStateService.CanStopDownload(job.Status),
                 B4 = true,
-                Data = JsonSerializer.SerializeToNode(job)!.AsObject()
+                Data = JsonSerializer.SerializeToNode(job) as JsonObject ?? new JsonObject()
             });
         }
     }

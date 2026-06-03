@@ -13,7 +13,6 @@ public sealed record OverviewLoadedSessionSelectionApplicationActions(
     Action<string> SelectModelId,
     Func<string, RuntimeSessionSelectResult> SelectRuntimeModel,
     Action<AppSettings?> SetActiveRuntimeSettings,
-    Action ResetMetricCounters,
     Func<Task> SaveActiveRuntimeSessionsAsync,
     Func<Task> RefreshRuntimeMetricsAsync,
     Action UpdateOverviewModelActions,
@@ -47,7 +46,6 @@ public sealed class OverviewLoadedSessionSelectionApplicationService
         }
 
         actions.SetActiveRuntimeSettings(selection.ActiveSettings);
-        actions.ResetMetricCounters();
         await actions.SaveActiveRuntimeSessionsAsync();
         await actions.RefreshRuntimeMetricsAsync();
         actions.UpdateOverviewModelActions();
@@ -63,7 +61,6 @@ public sealed class OverviewLoadedSessionSelectionApplicationService
         ArgumentNullException.ThrowIfNull(actions.SelectModelId);
         ArgumentNullException.ThrowIfNull(actions.SelectRuntimeModel);
         ArgumentNullException.ThrowIfNull(actions.SetActiveRuntimeSettings);
-        ArgumentNullException.ThrowIfNull(actions.ResetMetricCounters);
         ArgumentNullException.ThrowIfNull(actions.SaveActiveRuntimeSessionsAsync);
         ArgumentNullException.ThrowIfNull(actions.RefreshRuntimeMetricsAsync);
         ArgumentNullException.ThrowIfNull(actions.UpdateOverviewModelActions);

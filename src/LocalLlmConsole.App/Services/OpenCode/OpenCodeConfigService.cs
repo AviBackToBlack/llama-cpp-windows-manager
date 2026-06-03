@@ -63,6 +63,7 @@ public sealed partial class OpenCodeConfigService
     private const string LocalProviderName = "llama.cpp Windows Manager";
     private readonly string _workspaceRoot;
 
+    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
     private static readonly JsonSerializerOptions PrettyJson = new()
     {
         WriteIndented = true,
@@ -102,7 +103,7 @@ public sealed partial class OpenCodeConfigService
     public void SaveFileSet(OpenCodeFileSet fileSet)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath())!);
-        File.WriteAllText(SettingsPath(), JsonSerializer.Serialize(fileSet, PrettyJson) + Environment.NewLine, Encoding.UTF8);
+        File.WriteAllText(SettingsPath(), JsonSerializer.Serialize(fileSet, PrettyJson) + Environment.NewLine, Utf8NoBom);
     }
 
     public OpenCodeFileSet DetectFileSet()

@@ -24,17 +24,24 @@ public static class CommandLineService
         {
             UseShellExecute = true,
             WindowStyle = ProcessWindowStyle.Normal,
-            Arguments = $"-NoExit -NoProfile -ExecutionPolicy Bypass -EncodedCommand {encoded}"
+            Arguments = $"-NoExit -NoProfile -EncodedCommand {encoded}"
         };
         if (elevated) psi.Verb = "runas";
         return psi;
     }
 
     public static string PowerShellQuote(string value)
-        => "'" + (value ?? "").Replace("'", "''") + "'";
+        => "'" + RejectNullBytes(value ?? "", nameof(value)).Replace("'", "''") + "'";
 
     public static string BashQuote(string value)
-        => "'" + (value ?? "").Replace("'", "'\"'\"'") + "'";
+        => "'" + RejectNullBytes(value ?? "", nameof(value)).Replace("'", "'\"'\"'") + "'";
+
+    private static string RejectNullBytes(string value, string parameterName)
+    {
+        if (value.IndexOf('\0') >= 0)
+            throw new ArgumentException("Shell arguments cannot contain null bytes.", parameterName);
+        return value;
+    }
 
     public static string FirstNonBlankLine(string value)
         => (value ?? "")

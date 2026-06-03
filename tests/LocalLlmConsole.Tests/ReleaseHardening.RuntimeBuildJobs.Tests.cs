@@ -602,10 +602,10 @@ public sealed partial class ReleaseHardeningTests
     public void RuntimeBuildRetryPreservesDownloadedSourceContext()
     {
         var source = ReadMainWindowSources();
-        var applicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeBuildApplicationService.cs"));
-        var jobApplicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeBuildJobApplicationService.cs"));
-        var workflowSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeBuildWorkflowService.cs"));
-        var controlsSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeBuildJobControlService.cs"));
+        var applicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeBuildApplicationService.cs"));
+        var jobApplicationSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeBuildJobApplicationService.cs"));
+        var workflowSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeBuildWorkflowService.cs"));
+        var controlsSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeBuildJobControlService.cs"));
 
         Assert.Contains("var buildJobApplication = RuntimeServices.RuntimeBuildJobApplication;", source, StringComparison.Ordinal);
         Assert.Contains("buildJobApplication.RetryAsync(job, RuntimeBuildJobApplicationActions())", source, StringComparison.Ordinal);

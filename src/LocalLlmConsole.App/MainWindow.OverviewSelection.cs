@@ -64,7 +64,6 @@ public partial class MainWindow
             _coreServices.Runtime.RuntimeSessions.SelectModel,
             settings => _activeRuntimeSettings = settings,
             SaveActiveRuntimeSessionsAsync,
-            ResetMetricCounters,
             RefreshRuntimeMetricsAsync,
             SetStatus);
 
@@ -90,7 +89,6 @@ public partial class MainWindow
             _overviewPage.SelectModelId,
             _coreServices.Runtime.RuntimeSessions.SelectModel,
             settings => _activeRuntimeSettings = settings,
-            ResetMetricCounters,
             SaveActiveRuntimeSessionsAsync,
             RefreshRuntimeMetricsAsync,
             UpdateOverviewModelActions,
@@ -107,7 +105,6 @@ public partial class MainWindow
         if (FindOverviewModelChoice(modelId) is null)
             await RefreshOverviewModelSelectorAsync();
 
-        var previouslySelected = SelectedOverviewModel()?.Id ?? "";
         using (_coreServices.Ui.SelectionReentrancy.SuppressLoadedSessionSelection())
             _overviewPage.SelectModelId(modelId);
 
@@ -116,8 +113,6 @@ public partial class MainWindow
             return false;
 
         _activeRuntimeSettings = selection.ActiveSettings;
-        if (!string.Equals(previouslySelected, modelId, StringComparison.OrdinalIgnoreCase))
-            ResetMetricCounters();
         UpdateOverviewModelActions();
         return true;
     }

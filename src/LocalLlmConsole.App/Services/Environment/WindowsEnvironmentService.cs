@@ -325,7 +325,8 @@ public sealed class WindowsEnvironmentService
             var error = process.StandardError.ReadToEndAsync();
             if (!process.WaitForExit((int)timeout.TotalMilliseconds))
             {
-                try { process.Kill(entireProcessTree: true); } catch { }
+                try { process.Kill(entireProcessTree: true); }
+                catch (Exception ex) { Trace.TraceWarning($"Could not kill timed-out Windows tool probe: {ex.Message}"); }
                 return (-1, "", "Timed out.");
             }
 
