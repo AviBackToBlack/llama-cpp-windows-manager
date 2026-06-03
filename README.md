@@ -40,12 +40,15 @@ library replacement.
 - Supports saved launch variants, reasoning/template options, vision
   head/projector selection, dynamic-resolution image token settings, MTP head
   selection, and upstream-style speculative draft helpers.
-- Shows loaded sessions, logs, jobs, GPU summary, live slot activity, and
-  two-row token monitors with live, average, and total values for normal and
-  MTP token streams on the Overview page.
+- Shows loaded sessions, logs, jobs, runtime-aware hardware summary, live slot
+  activity, preserved model load duration, and two-row token monitors with
+  live, average, and total values for normal and MTP token streams on the
+  Overview page.
 - Optionally writes and syncs OpenCode local model/provider entries through the
   shared gateway or direct per-model endpoints; automatic sync on launch-save can
-  be disabled.
+  be disabled. OpenCode `limit.output` is derived from each model's saved
+  **Max tokens** launch setting, falling back to a context-derived default when
+  that setting is unlimited.
 - Offers a Start with Windows installer task, enabled by default for fresh
   installs, plus the same setting inside the app.
 - Stores settings, jobs, models, runtimes, migrations, and history in SQLite.
@@ -99,7 +102,9 @@ The normal path is prebuilt-first:
 3. Select the model, choose the runtime, keep or adjust its saved model port,
    and click **Save For Model**.
 4. Open **Overview**, choose the model, and click **Load**. Additional models
-   can be loaded on their own saved ports when hardware capacity allows it.
+   can be loaded on their own saved ports when hardware capacity allows it. The
+   Model Status card keeps Loading/Loaded Model and Loading Time on separate
+   rows, preserving the final load duration after startup completes.
 5. Optional: keep **Settings > Auto-load gateway** enabled so OpenCode can use
    one shared local provider and the app can load requested models on demand.
    Use **Gateway policy** to choose whether the router keeps existing models
@@ -109,6 +114,8 @@ The normal path is prebuilt-first:
    saved launch settings or saved variants change. The app's saved API key is
    protected in llama.cpp Windows Manager settings, but OpenCode provider config
    stores the synced key in plain text so OpenCode can call the local endpoint.
+   To control OpenCode's output cap, edit the model's **Max tokens** launch
+   setting and sync the OpenCode entry again.
 
 Use **Show advanced** in Runtimes only when you need to download source and build
 a custom fork, branch, patch, or runtime target without a prebuilt package. The
@@ -136,7 +143,7 @@ End users should receive a release artifact, not the source tree.
 Preferred artifact:
 
 ```text
-dist\installer\LlamaCppWindowsManager-Setup-1.1.3-win-x64.exe
+dist\installer\LlamaCppWindowsManager-Setup-1.1.4-win-x64.exe
 ```
 
 Portable artifacts:

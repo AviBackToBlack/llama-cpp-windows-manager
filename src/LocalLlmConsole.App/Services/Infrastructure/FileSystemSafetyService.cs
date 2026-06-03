@@ -37,7 +37,14 @@ public static class FileSystemSafetyService
         long size = 0;
         foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
         {
-            try { size += new FileInfo(file).Length; } catch { }
+            try
+            {
+                size += new FileInfo(file).Length;
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"Skipping file during directory size calculation: {file}. {ex.Message}");
+            }
         }
         return size;
     }
@@ -167,8 +174,9 @@ public static class FileSystemSafetyService
             if (cleaned != attributes)
                 File.SetAttributes(path, cleaned);
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"Could not clear delete-blocking attributes for {path}: {ex.Message}");
             // Deletion will surface any remaining access issue with the original path.
         }
     }

@@ -89,7 +89,11 @@ public sealed class TrackedProcessRunner : IProcessRunner
         }
         finally
         {
-            try { process.StandardInput.Close(); } catch { }
+            try { process.StandardInput.Close(); }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"Could not close child process standard input: {ex.Message}");
+            }
         }
     }
 

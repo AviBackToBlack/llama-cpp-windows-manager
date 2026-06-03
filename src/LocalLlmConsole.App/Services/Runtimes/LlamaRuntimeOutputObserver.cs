@@ -7,7 +7,14 @@ public static class LlamaRuntimeOutputObserver
         if (line is null)
             return false;
 
-        try { log?.WriteLine(LogFileService.RedactSensitiveText(line, apiKey)); } catch { }
+        try
+        {
+            log?.WriteLine(LogFileService.RedactSensitiveText(line, apiKey));
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Could not write llama runtime output to log: {ex.Message}");
+        }
         return LooksLoaded(line);
     }
 

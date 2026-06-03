@@ -55,7 +55,9 @@ public sealed class ApiSecurity
     }
 
     public static bool IsLoopbackHost(string host)
-        => host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
-            || host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
-            || host.Equals("::1", StringComparison.OrdinalIgnoreCase);
+    {
+        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+            return true;
+        return IPAddress.TryParse(host, out var address) && IPAddress.IsLoopback(address);
+    }
 }

@@ -40,7 +40,7 @@ public sealed class RuntimeSessionActionDecisionService
         ArgumentNullException.ThrowIfNull(model);
 
         return selected
-            ? new RuntimeSwitchDecision(true, ResetMetricCounters: true, StartDashboardRefresh: true, $"Selected loaded model {model.Name}.")
+            ? new RuntimeSwitchDecision(true, ResetMetricCounters: false, StartDashboardRefresh: true, $"Selected loaded model {model.Name}.")
             : new RuntimeSwitchDecision(false, ResetMetricCounters: false, StartDashboardRefresh: false, $"{model.Name} is not loaded.");
     }
 }

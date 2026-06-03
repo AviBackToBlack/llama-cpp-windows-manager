@@ -46,36 +46,90 @@ public sealed partial class ReleaseHardeningTests
 
 
     [Fact]
+    public void GpuStatusServiceFormatsWindowsGpuCounterJson()
+    {
+        const string json = """
+        [{"Index":0,"Name":"AMD Radeon RX 7900 XTX","Utilization":53.4,"MemoryUsedBytes":8589934592,"MemoryTotalBytes":25769803776}]
+        """;
+
+        var formatted = GpuStatusService.FormatWindowsGpuStatusJson(json);
+
+        Assert.Equal(["GPU 0: AMD Radeon RX 7900 XTX | 53.4% | 8.0/24.0 GiB"], formatted);
+        Assert.Equal(
+            ["GPU 0: Intel(R) Graphics | 12% | 1.5 GiB used"],
+            GpuStatusService.FormatWindowsGpuStatusJson("[{\"Index\":0,\"Name\":\"Intel(R) Graphics\",\"Utilization\":12,\"MemoryUsedBytes\":1610612736}]"));
+    }
+
+    [Fact]
+    public void GpuStatusServiceFormatsWindowsCpuTemperatureJson()
+    {
+        Assert.Equal("CPU: 57.2C", GpuStatusService.FormatWindowsCpuTemperatureJson("{\"TemperatureCelsius\":57.2}"));
+        Assert.Equal("CPU: 42C", GpuStatusService.FormatWindowsCpuTemperatureJson("[{\"CurrentTemperature\":3151.5},{\"TemperatureCelsius\":36.4}]"));
+        Assert.Equal("", GpuStatusService.FormatWindowsCpuTemperatureJson("{}"));
+    }
+
+
+    [Fact]
     public async Task GpuStatusProbeServiceRunsThroughProcessRunner()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "GpuStatusService.cs"));
+        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "GpuStatusService.cs"));
         var commands = new List<string>();
         var runner = new ScriptedProcessRunner(psi =>
         {
             commands.Add($"{Path.GetFileName(psi.FileName)} {string.Join(" ", psi.ArgumentList)}");
+            if (string.Equals(Path.GetFileName(psi.FileName), "powershell.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                var script = DecodePowerShellCommand(psi);
+                return script.Contains("MSAcpi_ThermalZoneTemperature", StringComparison.Ordinal)
+                    ? new ProcessRunResult(0, "{\"TemperatureCelsius\":57.2}", "")
+                    : new ProcessRunResult(0, "[{\"Index\":0,\"Name\":\"AMD Radeon RX 7900 XTX\",\"Utilization\":53.4,\"MemoryUsedBytes\":8589934592,\"MemoryTotalBytes\":25769803776}]", "");
+            }
             if (psi.ArgumentList.Contains("--query-gpu=memory.free,memory.total"))
                 return new ProcessRunResult(0, "1024, 24576\n8192, 24576", "");
             if (psi.ArgumentList.Contains("--query-gpu=index,name,utilization.gpu,temperature.gpu,memory.used,memory.total"))
                 return new ProcessRunResult(0, "0, NVIDIA RTX, 76, 62, 12288, 24576", "");
             return new ProcessRunResult(0, "[level_zero:gpu][level_zero:0] Intel(R) Arc(TM) A770 Graphics", "");
         });
-        var service = new GpuStatusProbeService(runner, () => "sycl-ls.exe", () => "nvidia-smi.exe");
+        var service = new GpuStatusProbeService(runner, () => "sycl-ls.exe", () => "nvidia-smi.exe", () => "powershell.exe");
 
         var memory = await service.MemoryAsync(TestContext.Current.CancellationToken);
         var summary = await service.SummaryAsync(TestContext.Current.CancellationToken);
+        var windows = await service.WindowsSummaryAsync(TestContext.Current.CancellationToken);
+        var cpu = await service.CpuTemperatureAsync(TestContext.Current.CancellationToken);
         var sycl = await service.WindowsIntelArcSummaryAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(memory);
         Assert.Equal(8, memory.FreeGiB);
         Assert.Equal(24, memory.TotalGiB);
         Assert.Equal("GPU 0: 76% | 62C | 12.0/24.0 GiB", summary);
+        Assert.Equal("GPU 0: AMD Radeon RX 7900 XTX | 53.4% | 8.0/24.0 GiB", windows);
+        Assert.Equal("CPU: 57.2C", cpu);
         Assert.Equal("Intel(R) Arc(TM) A770 Graphics", sycl);
+        Assert.Contains(commands, command => command.StartsWith("powershell", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("-EncodedCommand", StringComparison.Ordinal));
         Assert.Contains(commands, command => command.Contains("--query-gpu=memory.free,memory.total", StringComparison.Ordinal));
         Assert.Contains(commands, command => command.Contains("--query-gpu=index,name,utilization.gpu,temperature.gpu,memory.used,memory.total", StringComparison.Ordinal));
         Assert.Contains(commands, command => command.StartsWith("sycl-ls", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain("Process.Start(", source, StringComparison.Ordinal);
         Assert.DoesNotContain("new GpuStatusProbeService", source, StringComparison.Ordinal);
         Assert.DoesNotContain("new TrackedProcessRunner", source, StringComparison.Ordinal);
+
+        static string DecodePowerShellCommand(ProcessStartInfo psi)
+        {
+            var encodedIndex = -1;
+            for (var i = 0; i < psi.ArgumentList.Count; i++)
+            {
+                if (string.Equals(psi.ArgumentList[i], "-EncodedCommand", StringComparison.OrdinalIgnoreCase))
+                {
+                    encodedIndex = i;
+                    break;
+                }
+            }
+
+            return encodedIndex >= 0 && encodedIndex + 1 < psi.ArgumentList.Count
+                ? System.Text.Encoding.Unicode.GetString(Convert.FromBase64String(psi.ArgumentList[encodedIndex + 1]))
+                : "";
+        }
     }
 
 
@@ -213,9 +267,9 @@ public sealed partial class ReleaseHardeningTests
     public void ModelGatewayReturnsActionableLoadAndProxyErrors()
     {
         var source = string.Concat(
-            File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelGatewayService.cs")),
-            File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelGatewayResponseWriter.cs")));
-        var workflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "GatewayModelLoadWorkflowService.cs"));
+            File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "ModelGatewayService.cs")),
+            File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "ModelGatewayResponseWriter.cs")));
+        var workflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "GatewayModelLoadWorkflowService.cs"));
 
         Assert.Contains("\"model_load_failed\"", source, StringComparison.Ordinal);
         Assert.Contains("\"upstream_unavailable\"", source, StringComparison.Ordinal);
@@ -269,7 +323,7 @@ public sealed partial class ReleaseHardeningTests
     {
         var source = ReadMainWindowSources();
         var state = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.State.cs"));
-        var controllerSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "GatewayActivityStatusController.cs"));
+        var controllerSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "GatewayActivityStatusController.cs"));
         var factorySource = ReadAppServiceFactorySources();
         var timerFactory = new ManualUiTimerFactory();
         var controller = new GatewayActivityStatusController(new GatewayActivityStatusTracker(), timerFactory);

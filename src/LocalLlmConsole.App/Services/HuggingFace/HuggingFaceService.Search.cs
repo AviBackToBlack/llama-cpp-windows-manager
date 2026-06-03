@@ -213,7 +213,11 @@ public sealed partial class HuggingFaceService
 
         var detailUrl = $"https://huggingface.co/api/models/{Uri.EscapeDataString(repo).Replace("%2F", "/")}?blobs=true";
         JsonNode? detail = fallback;
-        try { detail = JsonNode.Parse(await _http.GetStringAsync(detailUrl, cancellationToken)); } catch { }
+        try { detail = JsonNode.Parse(await _http.GetStringAsync(detailUrl, cancellationToken)); }
+        catch (Exception ex)
+        {
+            Trace.TraceInformation($"Hugging Face model details fallback used for {repo}: {ex.Message}");
+        }
         var downloads = detail?["downloads"]?.GetValue<long?>() ?? 0;
         var tags = (detail?["tags"]?.AsArray() ?? new JsonArray())
             .Select(tag => tag?.ToString() ?? "")
@@ -306,7 +310,10 @@ public sealed partial class HuggingFaceService
             using var headResponse = await _http.SendAsync(head, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (headResponse.Content.Headers.ContentLength is > 0 and var headLength) return headLength;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Trace.TraceInformation($"Hugging Face HEAD size probe failed for {repo}/{path}: {ex.Message}");
+        }
 
         try
         {
@@ -316,7 +323,10 @@ public sealed partial class HuggingFaceService
             if (rangeResponse.Content.Headers.ContentRange?.Length is > 0 and var rangeLength) return rangeLength;
             if (rangeResponse.Content.Headers.ContentLength is > 1 and var contentLength) return contentLength;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Trace.TraceInformation($"Hugging Face range size probe failed for {repo}/{path}: {ex.Message}");
+        }
 
         return 0;
     }

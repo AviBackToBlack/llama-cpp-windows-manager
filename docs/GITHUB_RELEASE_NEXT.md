@@ -1,15 +1,15 @@
-# GitHub Release v1.1.3 Draft
+# GitHub Release v1.1.4 Draft
 
 This file is the copy/paste source for the next GitHub release. It tracks
 changes made after the published `v1.1.2` release.
 
 ## Copy/Paste Release Notes
 
-### llama.cpp Windows Manager v1.1.3
+### llama.cpp Windows Manager v1.1.4
 
-v1.1.3 is an unsigned community release candidate focused on safer release
-packaging, clearer model-serving controls, better OpenCode sync, and a more
-useful live Overview dashboard.
+v1.1.4 is an unsigned community release candidate focused on safer release
+packaging, clearer model-serving controls, grouped settings navigation, better
+OpenCode sync, and a more useful live Overview dashboard.
 
 #### Highlights
 
@@ -22,11 +22,18 @@ useful live Overview dashboard.
   disclosure: the app protects its saved key with Windows user protection, while
   synced OpenCode provider config stores the key in plain text because OpenCode
   must read it.
+- Grouped Settings by category so cache, window, OpenCode, model, runtime,
+  network, and log preferences are easier to scan.
+- OpenCode model `limit.output` now follows each model's saved **Max tokens**
+  launch setting when set, with a context-derived default for unlimited model
+  launches.
 - Added explicit Vision head choices and separate MTP head selection for
   compatible `--mtp-head` runtimes.
 - Added Atomic TurboQuant CUDA Windows/WSL runtime package rows.
 - Updated Overview metrics with compact normal and MTP token monitors, a live
-  Slots card, idle-safe live token rates, and normalized GPU metric separators.
+  Slots card, idle-safe live token rates, normalized hardware metric separators,
+  and a Model Status card that separates Loading/Loaded Model from Loading Time
+  while preserving the final load duration.
 
 #### Safety And Hardening
 
@@ -58,8 +65,8 @@ useful live Overview dashboard.
 
 - `dist\LlamaCppWindowsManager-win-x64.zip`
 - `dist\LlamaCppWindowsManager-win-x64.zip.sha256`
-- `dist\installer\LlamaCppWindowsManager-Setup-1.1.3-win-x64.exe`
-- `dist\installer\LlamaCppWindowsManager-Setup-1.1.3-win-x64.exe.sha256`
+- `dist\installer\LlamaCppWindowsManager-Setup-1.1.4-win-x64.exe`
+- `dist\installer\LlamaCppWindowsManager-Setup-1.1.4-win-x64.exe.sha256`
 
 ## Detailed Change Log
 
@@ -127,6 +134,11 @@ useful live Overview dashboard.
 - Added Settings > OpenCode > Sync on launch save so automatic OpenCode config
   rewrites after saved launch settings or variants change can be enabled or
   disabled.
+- Settings now renders preferences in named category sections instead of one
+  large grid with a repeated Group column.
+- OpenCode sync maps each model's saved Max tokens launch setting to
+  `limit.output`; when Max tokens is unlimited, sync falls back to a
+  context-derived output cap.
 - Added a single-button per-model Vision head selector with auto-detect,
   embedded/model-bundled, and explicit external projector choices, so companion
   files such as vision-head or MTP vision GGUFs can be linked intentionally
@@ -149,16 +161,20 @@ useful live Overview dashboard.
   `0.0 t/s (Gen) | 0.0 t/s (Avg) | 0 t (Total)`, with live rates shown as
   `0.0 t/s` during idle periods and average/total segments hidden when those
   values are unavailable.
+- Overview Model Status now displays Loading Model / Loaded Model and Loading
+  Time as separate rows, and keeps the final load duration visible after the
+  model becomes ready.
 - Overview replaces the static Batching card with a live Slots card showing
   active/queued requests and busy decode slots.
-- GPU metric summaries normalize separators as ` | `.
-- Updated README, architecture docs, release-readiness docs, and in-app Help to
-  match the current routing, OpenCode, LAN exposure, startup, vision-head, MTP,
-  and runtime-dashboard behavior.
+- Hardware metric summaries normalize separators as ` | `, show CPU temperature
+  for CPU-backed sessions, and use a vendor-neutral Windows performance-counter
+  fallback so AMD, Intel, and Vulkan-backed sessions show adapter
+  utilization/memory instead of dropping to `Unavailable` when `nvidia-smi` is
+  not available.
 
 ## Verification
 
-Last verified locally on 2026-06-01:
+Full release gate last verified locally on 2026-06-01:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 -IncludePublish -IncludeInstaller
@@ -168,3 +184,14 @@ Result: Release app build succeeded with zero warnings, release-hardening tests
 passed (`432/432`), formatting was clean, no vulnerable packages were found,
 the diff had no whitespace errors, and publish/installer artifact checks passed
 locally.
+
+Additional local checks on 2026-06-03:
+
+```powershell
+dotnet test tests\LocalLlmConsole.Tests\LocalLlmConsole.Tests.csproj --no-restore --filter "Help|Settings|ModelRuntimeStatus|MetricCardFactory|LightTheme"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\publish-app.ps1 -Runtime win-x64 -Configuration Release
+```
+
+Result: focused Help/Settings/status/rendering tests passed (`41/41`), the
+Release publish succeeded, and an unsigned portable `win-x64` test build was
+produced in `dist`.

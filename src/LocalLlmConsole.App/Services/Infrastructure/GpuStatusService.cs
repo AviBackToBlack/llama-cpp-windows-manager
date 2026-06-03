@@ -3,6 +3,8 @@ namespace LocalLlmConsole.Services;
 
 public static class GpuStatusService
 {
+    private const double BytesPerGiB = 1024.0 * 1024 * 1024;
+
     public static string FormatNvidiaSmiCsvLine(string line)
     {
         var parts = line.Split(',').Select(part => part.Trim()).ToArray();
@@ -18,6 +20,57 @@ public static class GpuStatusService
 
     public static string NormalizeMetricSeparators(string text)
         => Regex.Replace(text.Trim(), @"\s*\|\s*", " | ");
+
+    public static IReadOnlyList<string> FormatWindowsGpuStatusJson(string output)
+    {
+        var json = ExtractJsonPayload(output);
+        if (string.IsNullOrWhiteSpace(json)) return Array.Empty<string>();
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var rows = new List<string>();
+            if (document.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var element in document.RootElement.EnumerateArray())
+                    AddWindowsGpuRow(rows, element);
+            }
+            else
+            {
+                AddWindowsGpuRow(rows, document.RootElement);
+            }
+
+            return rows;
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    public static string FormatWindowsCpuTemperatureJson(string output)
+    {
+        var json = ExtractJsonPayload(output);
+        if (string.IsNullOrWhiteSpace(json)) return "";
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var temperature = document.RootElement.ValueKind == JsonValueKind.Array
+                ? document.RootElement.EnumerateArray()
+                    .Select(CpuTemperatureCelsius)
+                    .Where(value => value is not null)
+                    .Max()
+                : CpuTemperatureCelsius(document.RootElement);
+            return temperature is { } value
+                ? $"CPU: {Math.Clamp(value, -20, 125):0.#}C"
+                : "";
+        }
+        catch
+        {
+            return "";
+        }
+    }
 
     public static string FormatIntelArcStatus(string? syclLsLine)
     {
@@ -47,4 +100,98 @@ public static class GpuStatusService
             .Select(line => line.Trim())
             .FirstOrDefault(line => line.Contains("level_zero", StringComparison.OrdinalIgnoreCase)
                 && line.Contains("gpu", StringComparison.OrdinalIgnoreCase)) ?? "";
+
+    private static void AddWindowsGpuRow(List<string> rows, JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object) return;
+
+        var name = CleanGpuName(JsonString(element, "Name"));
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var index = JsonInt(element, "Index") ?? rows.Count;
+        var utilization = JsonDouble(element, "Utilization");
+        var usedBytes = JsonDouble(element, "MemoryUsedBytes");
+        var totalBytes = JsonDouble(element, "MemoryTotalBytes");
+        var parts = new List<string> { name };
+
+        if (utilization is { } util && double.IsFinite(util))
+            parts.Add($"{Math.Clamp(util, 0, 100):0.#}%");
+
+        var memory = FormatGpuMemory(usedBytes, totalBytes);
+        if (!string.IsNullOrWhiteSpace(memory))
+            parts.Add(memory);
+
+        rows.Add(NormalizeMetricSeparators($"GPU {index}: {string.Join(" | ", parts)}"));
+    }
+
+    private static string FormatGpuMemory(double? usedBytes, double? totalBytes)
+    {
+        var hasUsed = usedBytes is { } used && double.IsFinite(used) && used >= 0;
+        var hasTotal = totalBytes is { } total && double.IsFinite(total) && total > 0;
+        if (hasUsed && hasTotal)
+            return $"{usedBytes!.Value / BytesPerGiB:0.0}/{totalBytes!.Value / BytesPerGiB:0.0} GiB";
+        if (hasTotal)
+            return $"{totalBytes!.Value / BytesPerGiB:0.0} GiB";
+        if (hasUsed)
+            return $"{usedBytes!.Value / BytesPerGiB:0.0} GiB used";
+        return "";
+    }
+
+    private static string CleanGpuName(string? name)
+    {
+        var cleaned = Regex.Replace(name ?? "", @"\s+", " ").Trim();
+        return cleaned.Length > 72 ? $"{cleaned[..69]}..." : cleaned;
+    }
+
+    private static double? CpuTemperatureCelsius(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object) return null;
+
+        var celsius = JsonDouble(element, "TemperatureCelsius")
+            ?? JsonDouble(element, "Celsius")
+            ?? JsonDouble(element, "Temperature");
+        if (celsius is { } direct && double.IsFinite(direct))
+            return direct;
+
+        var kelvinTenths = JsonDouble(element, "CurrentTemperature");
+        return kelvinTenths is { } raw && double.IsFinite(raw)
+            ? (raw / 10.0) - 273.15
+            : null;
+    }
+
+    private static string ExtractJsonPayload(string output)
+    {
+        var text = (output ?? "").Trim();
+        if (text.Length == 0) return "";
+
+        var arrayStart = text.IndexOf('[');
+        var objectStart = text.IndexOf('{');
+        var start = arrayStart >= 0 && objectStart >= 0
+            ? Math.Min(arrayStart, objectStart)
+            : Math.Max(arrayStart, objectStart);
+        if (start < 0) return "";
+
+        var arrayEnd = text.LastIndexOf(']');
+        var objectEnd = text.LastIndexOf('}');
+        var end = Math.Max(arrayEnd, objectEnd);
+        return end >= start ? text[start..(end + 1)] : "";
+    }
+
+    private static string? JsonString(JsonElement element, string propertyName)
+        => element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
+            ? property.GetString()
+            : null;
+
+    private static int? JsonInt(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property)) return null;
+        return property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var value) ? value : null;
+    }
+
+    private static double? JsonDouble(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property)) return null;
+        if (property.ValueKind == JsonValueKind.Number && property.TryGetDouble(out var value)) return value;
+        return null;
+    }
 }

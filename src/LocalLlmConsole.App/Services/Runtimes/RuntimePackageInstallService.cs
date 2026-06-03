@@ -93,8 +93,14 @@ public sealed class RuntimePackageInstallService
                 && Directory.Exists(installDir)
                 && RuntimeFileService.IsSafeRuntimeFolder(request.Settings.RuntimeRoot, installDir))
             {
-                try { RuntimeFileService.DeleteSafeRuntimeFolder(request.Settings.RuntimeRoot, installDir); }
-                catch { }
+                try
+                {
+                    RuntimeFileService.DeleteSafeRuntimeFolder(request.Settings.RuntimeRoot, installDir);
+                }
+                catch (Exception cleanupEx)
+                {
+                    Trace.TraceWarning($"Runtime package install cleanup failed for {installDir}: {cleanupEx}");
+                }
             }
             throw;
         }

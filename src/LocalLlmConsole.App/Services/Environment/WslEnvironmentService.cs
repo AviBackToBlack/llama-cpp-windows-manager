@@ -310,7 +310,14 @@ public sealed class WslEnvironmentService
             }
             catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
-                try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch { }
+                try
+                {
+                    if (!process.HasExited) process.Kill(entireProcessTree: true);
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceWarning($"Could not kill timed-out WSL probe: {ex.Message}");
+                }
                 return (-1, "", "Timed out while checking WSL.");
             }
             return (process.ExitCode, CleanOutput(await outputTask), CleanOutput(await errorTask));

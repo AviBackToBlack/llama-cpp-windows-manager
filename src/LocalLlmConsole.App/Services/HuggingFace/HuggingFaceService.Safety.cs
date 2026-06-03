@@ -116,7 +116,10 @@ public sealed partial class HuggingFaceService
             RejectUnsafeExistingFile(path, "partial download");
             File.Delete(path);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Could not delete Hugging Face partial download {path}: {ex.Message}");
+        }
     }
 
     private static long ExpectedBytes(HuggingFaceFile file, long total)

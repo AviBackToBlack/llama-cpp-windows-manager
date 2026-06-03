@@ -35,11 +35,13 @@ if (-not (Test-Path -LiteralPath $Project)) {
 }
 
 if ($Restore) {
-  & $Dotnet restore $Project
+  $restoreArgs = @("restore", $Project)
+  & $Dotnet @restoreArgs
   if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed." }
 }
 
-& $Dotnet build $Project -c $Configuration --no-restore
+$buildArgs = @("build", $Project, "-c", $Configuration, "--no-restore")
+& $Dotnet @buildArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet build failed." }
 
 Write-Host "Built llama.cpp Windows Manager app." -ForegroundColor Green

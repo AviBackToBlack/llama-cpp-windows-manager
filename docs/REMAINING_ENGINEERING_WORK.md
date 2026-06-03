@@ -1,6 +1,6 @@
 # Remaining Engineering Work
 
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 ## Immediate Internal Cleanup
 
@@ -44,7 +44,9 @@ These are broader product items already implied by the release docs:
 - Prefer upstream runtime archive checksums/signatures when llama.cpp publishes them; current runtime packages are downloaded from official GitHub releases and locally fingerprinted after extraction.
 - Before publishing the next artifact, run a final clean-machine smoke pass for
   the new gateway/direct LAN exposure modes, Start with Windows installer task,
-  OpenCode auto-sync toggle, and auto/embedded/explicit Vision head selection.
+  OpenCode auto-sync/output-limit behavior, grouped Settings navigation,
+  Overview load-duration display, and auto/embedded/explicit Vision head
+  selection.
 
 ## Completed This Pass
 
@@ -218,4 +220,16 @@ These are broader product items already implied by the release docs:
   bounded auto-load gateway request bodies, observable WSL runtime cleanup, and
   `-RequireCleanTree` release packaging checks.
 - Updated Overview runtime metrics with compact normal/MTP token monitors,
-  idle-safe live rates, a live Slots card, and normalized GPU metric separators.
+  idle-safe live rates, a live Slots card, CPU temperature for CPU-backed
+  sessions, normalized hardware metric separators, and vendor-neutral GPU
+  summaries for AMD/Intel/Vulkan systems.
+- Split Settings into category sections so app preferences are easier to scan
+  while preserving save behavior against the same editable row collection.
+- Updated Overview Model Status to show Loading/Loaded Model and Loading Time as
+  separate rows, retaining the final completed load duration after readiness.
+- Documented OpenCode `limit.output` behavior and kept sync tied to each model's
+  saved Max tokens launch setting, with a context-derived fallback for
+  unlimited launches.
+- Refreshed README, architecture, release-readiness, release notes, audit notes,
+  remaining-work notes, and in-app Help for the grouped Settings, Overview
+  loading-time, and OpenCode output-limit behavior.

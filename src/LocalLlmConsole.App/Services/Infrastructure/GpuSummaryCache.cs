@@ -4,12 +4,18 @@ public sealed class GpuSummaryCache
 {
     private static readonly TimeSpan Freshness = TimeSpan.FromSeconds(10);
 
+    private string _key = "";
     private string _summary = "Unavailable";
     private DateTimeOffset _capturedAt = DateTimeOffset.MinValue;
 
     public bool TryGet(DateTimeOffset now, out string summary)
+        => TryGet("", now, out summary);
+
+    public bool TryGet(string key, DateTimeOffset now, out string summary)
     {
-        if (_capturedAt != DateTimeOffset.MinValue && now - _capturedAt < Freshness)
+        if (string.Equals(_key, key ?? "", StringComparison.Ordinal)
+            && _capturedAt != DateTimeOffset.MinValue
+            && now - _capturedAt < Freshness)
         {
             summary = _summary;
             return true;
@@ -20,7 +26,11 @@ public sealed class GpuSummaryCache
     }
 
     public string Store(string summary, DateTimeOffset capturedAt)
+        => Store("", summary, capturedAt);
+
+    public string Store(string key, string summary, DateTimeOffset capturedAt)
     {
+        _key = key ?? "";
         _summary = string.IsNullOrWhiteSpace(summary) ? "Unavailable" : GpuStatusService.NormalizeMetricSeparators(summary);
         _capturedAt = capturedAt;
         return _summary;
@@ -28,6 +38,7 @@ public sealed class GpuSummaryCache
 
     public void Clear()
     {
+        _key = "";
         _summary = "Unavailable";
         _capturedAt = DateTimeOffset.MinValue;
     }

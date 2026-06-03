@@ -4,7 +4,7 @@ Audit date: 2026-05-31
 
 ## Executive Summary
 
-Overall release posture: **v1.1.3 is ready as an unsigned community release
+Overall release posture: **v1.1.4 is ready as an unsigned community release
 candidate with explicit SmartScreen and SHA-256 verification notes. Trusted
 code-signing and broader clean-machine/hardware validation remain follow-up
 hardening work, not hidden blockers for the current public release candidate.**
@@ -48,9 +48,13 @@ The core release blockers from the full audit have been addressed in code:
   and OpenCode vision metadata when synced.
 - OpenCode sync can be automatic on launch-setting/variant save or manually
   controlled from the OpenCode page, with Settings and docs calling out that
-  OpenCode provider config stores the synced API key in plain text.
+  OpenCode provider config stores the synced API key in plain text. Synced
+  OpenCode model output limits are derived from per-model Max tokens launch
+  settings.
 - Fresh installer setups offer Start with Windows by default, with a matching
   current-user startup preference in Settings.
+- Settings are grouped by category, and Overview preserves completed model load
+  duration as a separate Loading Time row after a model becomes ready.
 - The local app service now keeps request handlers observed and tolerates
   bounded transient listener errors instead of silently faulting the listener
   loop.
@@ -75,7 +79,7 @@ The core release blockers from the full audit have been addressed in code:
 
 - Severity: Medium
 - Area: Distribution
-- Status: Update UI, staged installer, checksum verification, and signed-app signature continuity are implemented; the public repository and v1.1.3 asset naming are confirmed.
+- Status: Update UI, staged installer, checksum verification, and signed-app signature continuity are implemented; the public repository and v1.1.4 asset naming are confirmed.
 - Required result: Latest GitHub release contains `LlamaCppWindowsManager-win-x64.zip`, matching SHA-256 companion assets, and release notes suitable for the completion popup.
 
 ### WSL and hardware matrix
@@ -145,7 +149,13 @@ low-risk items that were safe to take immediately:
 - Release scripts can be run with `-RequireCleanTree` so publish, installer, and
   release-gate packaging fail on dirty worktrees.
 - Overview runtime metrics now use compact token monitors for normal and MTP
-  streams, a live Slots card, and normalized GPU metric separators.
+  streams, a live Slots card, CPU temperature for CPU-backed sessions,
+  normalized hardware metric separators, and vendor-neutral Windows GPU fallback
+  summaries for AMD/Intel/Vulkan systems.
+- Overview Model Status now separates Loading/Loaded Model from Loading Time and
+  keeps the completed load duration visible after startup.
+- Settings now renders preferences in category sections for easier navigation,
+  and OpenCode sync documents/writes `limit.output` from per-model Max tokens.
 
 Verification for this hardening pass:
 
@@ -175,6 +185,6 @@ checks passed locally.
 
 ## Release Decision
 
-v1.1.3 is acceptable as a clearly unsigned public community release candidate.
+v1.1.4 is acceptable as a clearly unsigned public community release candidate.
 A future trusted/stable Windows distribution should add Authenticode signing,
 broader clean-machine smoke testing, and wider hardware matrix validation.

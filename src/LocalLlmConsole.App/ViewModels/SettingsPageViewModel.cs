@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace LocalLlmConsole.ViewModels;
 
@@ -14,10 +15,14 @@ public sealed record SettingRowDefinition(
 
 public sealed class SettingsPageViewModel
 {
+    private EditableSettingRow? _modelAccessRow;
+    private PropertyChangedEventHandler? _modelAccessChanged;
+
     public ObservableCollection<EditableSettingRow> Rows { get; } = new();
 
     public void ReplaceRows(IReadOnlyList<SettingRowDefinition> definitions)
     {
+        DetachModelAccessHandler();
         Rows.Clear();
         EditableSettingRow? modelAccessRow = null;
         EditableSettingRow? apiKeyRow = null;
@@ -30,12 +35,22 @@ public sealed class SettingsPageViewModel
 
         if (modelAccessRow is null || apiKeyRow is null)
             throw new InvalidOperationException("Settings page definitions are missing required network rows.");
-        modelAccessRow.PropertyChanged += (_, e) =>
+        _modelAccessRow = modelAccessRow;
+        _modelAccessChanged = (_, e) =>
         {
             if (e.PropertyName == nameof(EditableSettingRow.Value))
                 ApplyModelAccessDefaults(apiKeyRow);
         };
+        _modelAccessRow.PropertyChanged += _modelAccessChanged;
         ApplyModelAccessDefaults(apiKeyRow);
+    }
+
+    private void DetachModelAccessHandler()
+    {
+        if (_modelAccessRow is not null && _modelAccessChanged is not null)
+            _modelAccessRow.PropertyChanged -= _modelAccessChanged;
+        _modelAccessRow = null;
+        _modelAccessChanged = null;
     }
 
     private EditableSettingRow AddRow(SettingRowDefinition definition)

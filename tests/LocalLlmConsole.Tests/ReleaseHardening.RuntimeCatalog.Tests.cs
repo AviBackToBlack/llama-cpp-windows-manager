@@ -392,10 +392,10 @@ public sealed partial class ReleaseHardeningTests
     public void RuntimeCatalogSessionStateOwnsMainWindowCatalogBookkeeping()
     {
         var mainWindow = ReadMainWindowSources();
-        var stateSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeCatalogSessionState.cs"));
-        var runtimeCatalogApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeCatalogApplicationService.cs"));
-        var runtimePackageApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimePackageApplicationService.cs"));
-        var runtimeSourceApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeSourceApplicationService.cs"));
+        var stateSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeCatalogSessionState.cs"));
+        var runtimeCatalogApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeCatalogApplicationService.cs"));
+        var runtimePackageApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimePackageApplicationService.cs"));
+        var runtimeSourceApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeSourceApplicationService.cs"));
         var state = new RuntimeCatalogSessionState();
         var runtimeRoot = Path.Combine(CreateTempRoot(), "runtimes");
         var now = DateTimeOffset.UtcNow;
@@ -475,7 +475,7 @@ public sealed partial class ReleaseHardeningTests
     {
         var source = ReadMainWindowSources();
         var runtimeCatalog = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeCatalog.cs"));
-        var dialogFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "RuntimeCustomRepositoryDialogFactory.cs"));
+        var dialogFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Runtimes", "RuntimeCustomRepositoryDialogFactory.cs"));
 
         Assert.Contains("RuntimeCustomRepositoryDialogFactory.Show", runtimeCatalog, StringComparison.Ordinal);
         Assert.Contains("ValidateDraft", dialogFactory, StringComparison.Ordinal);

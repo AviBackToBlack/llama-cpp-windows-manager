@@ -43,10 +43,10 @@ public sealed partial class ReleaseHardeningTests
         var project = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "LocalLlmConsole.App.csproj"));
         var iconPath = FindRepositoryFile("src", "LocalLlmConsole.App", "Assets", "AppIcon.ico");
 
-        Assert.Contains("Title=\"llama.cpp Windows Manager v1.1.3\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"v1.1.3\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Title=\"llama.cpp Windows Manager v1.1.4\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"v1.1.4\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AppDisplayName = \"llama.cpp Windows Manager\"", source, StringComparison.Ordinal);
-        Assert.Contains("AppVersionLabel = \"v1.1.3\"", source, StringComparison.Ordinal);
+        Assert.Contains("AppVersionLabel = \"v1.1.4\"", source, StringComparison.Ordinal);
         Assert.Contains("<AssemblyName>LlamaCppWindowsManager</AssemblyName>", project, StringComparison.Ordinal);
         Assert.Contains("<ApplicationIcon>Assets\\AppIcon.ico</ApplicationIcon>", project, StringComparison.Ordinal);
         Assert.True(new FileInfo(iconPath).Length > 1024);
@@ -116,8 +116,8 @@ public sealed partial class ReleaseHardeningTests
     public void OverviewLoadedSessionRowsSelectModelStatus()
     {
         var source = ReadMainWindowSources();
-        var overviewFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "OverviewPageFactory.cs"));
-        var loadedSessionSelection = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OverviewLoadedSessionSelectionApplicationService.cs"));
+        var overviewFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Overview", "OverviewPageFactory.cs"));
+        var loadedSessionSelection = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "OverviewLoadedSessionSelectionApplicationService.cs"));
 
         Assert.Contains("loadedSessionsGrid.SelectionChanged", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("request.Actions.SelectLoadedSessionRowAsync", overviewFactory, StringComparison.Ordinal);
@@ -197,10 +197,10 @@ public sealed partial class ReleaseHardeningTests
     {
         var source = ReadMainWindowSources();
         var logsWindow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.Logs.cs"));
-        var logWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LogPageWorkflowService.cs"));
-        var logApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LogPageApplicationService.cs"));
-        var appLogApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AppLogApplicationService.cs"));
-        var logsPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "LogsPageState.cs"));
+        var logWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "LogPageWorkflowService.cs"));
+        var logApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "LogPageApplicationService.cs"));
+        var appLogApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AppLogApplicationService.cs"));
+        var logsPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Logs", "LogsPageState.cs"));
 
         Assert.Contains("var logPageApplication = AppServices.LogPageApplication;", source, StringComparison.Ordinal);
         Assert.Contains("logPageApplication!.BuildSelectedDeletionCommand(SelectedLogPaths(), _sessions.Snapshots())", source, StringComparison.Ordinal);
@@ -247,17 +247,17 @@ public sealed partial class ReleaseHardeningTests
     public void ResponsivenessSensitiveFilesystemWorkLeavesDispatcher()
     {
         var mainWindowSource = ReadMainWindowSources();
-        var modelCatalog = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelCatalogService.cs"));
-        var runtimeRegistry = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeRegistryService.cs"));
-        var runtimeCatalogData = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeCatalogDataService.cs"));
-        var openCodeLocalModelWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCodeLocalModelWorkflowService.cs"));
-        var logPageWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LogPageWorkflowService.cs"));
-        var modelCapabilities = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelCapabilityCacheService.cs"));
-        var debouncedAction = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "DebouncedAsyncAction.cs"));
-        var runtimeDashboardRefresh = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDashboardRefreshCoordinator.cs"));
-        var runtimeDashboardRefreshApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDashboardRefreshApplicationService.cs"));
-        var runtimeGpuSummary = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeGpuSummaryApplicationService.cs"));
-        var runtimeReadinessMonitorApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeReadinessMonitorApplicationService.cs"));
+        var modelCatalog = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Models", "ModelCatalogService.cs"));
+        var runtimeRegistry = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeRegistryService.cs"));
+        var runtimeCatalogData = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeCatalogDataService.cs"));
+        var openCodeLocalModelWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "OpenCode", "OpenCodeLocalModelWorkflowService.cs"));
+        var logPageWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "LogPageWorkflowService.cs"));
+        var modelCapabilities = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Models", "ModelCapabilityCacheService.cs"));
+        var debouncedAction = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "DebouncedAsyncAction.cs"));
+        var runtimeDashboardRefresh = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDashboardRefreshCoordinator.cs"));
+        var runtimeDashboardRefreshApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDashboardRefreshApplicationService.cs"));
+        var runtimeGpuSummary = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeGpuSummaryApplicationService.cs"));
+        var runtimeReadinessMonitorApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeReadinessMonitorApplicationService.cs"));
         var factory = ReadAppServiceFactorySources();
 
         Assert.Contains("FindModelFilesAsync", modelCatalog, StringComparison.Ordinal);
@@ -307,8 +307,8 @@ public sealed partial class ReleaseHardeningTests
     {
         var appXaml = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "App.xaml"));
         var source = ReadMainWindowSources();
-        var metricFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "MetricCardFactory.cs"));
-        var overviewFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "OverviewPageFactory.cs"));
+        var metricFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Common", "MetricCardFactory.cs"));
+        var overviewFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Overview", "OverviewPageFactory.cs"));
 
         Assert.Contains("<DropShadowEffect", appXaml, StringComparison.Ordinal);
         Assert.Contains("x:Key=\"MetricCard\"", appXaml, StringComparison.Ordinal);
@@ -335,7 +335,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("var valueRows = new Grid { MinHeight = 34, Tag = label }", metricFactory, StringComparison.Ordinal);
         Assert.Contains("header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto })", metricFactory, StringComparison.Ordinal);
         Assert.Contains("MetricCardFactory.SetMetricText(target, value, emphasizeLoadedStatus)", source, StringComparison.Ordinal);
-        Assert.Contains("gpu = MetricCardFactory.AddMetric(runtimeDashboard, \"GPU\", 0, 1)", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("gpu = MetricCardFactory.AddMetric(runtimeDashboard, \"Hardware\", 0, 1)", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("tokens = MetricCardFactory.AddMetric(runtimeDashboard, \"Tokens\", 1, 0, out tokensLastKnown)", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("mtpTokens = MetricCardFactory.AddMetric(runtimeDashboard, \"MTP tokens\", 1, 1)", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("slots = MetricCardFactory.AddMetric(runtimeDashboard, \"Slots\", 1, 2)", overviewFactory, StringComparison.Ordinal);
@@ -350,8 +350,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("_sessions.SelectedSnapshot()?.LogPath", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_runtimeDashboardTotalTokensLastKnown", source, StringComparison.Ordinal);
         Assert.Contains("string.Equals(label, \"Model status\", StringComparison.Ordinal)", metricFactory, StringComparison.Ordinal);
-        Assert.Contains("\"Loaded:\"", metricFactory, StringComparison.Ordinal);
-        Assert.Contains("\"Loading\"", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("\"Loaded Model:\"", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("\"Loading Model:\"", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("\"Loading:\"", metricFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("SetMetricText(_runtimeDashboardPage.RuntimeMetric", source, StringComparison.Ordinal);
         Assert.Contains("string.Equals(normalized, \"None\", StringComparison.OrdinalIgnoreCase)", metricFactory, StringComparison.Ordinal);
         Assert.Contains("string.Equals(normalized, \"Stopped\", StringComparison.OrdinalIgnoreCase)", metricFactory, StringComparison.Ordinal);
@@ -389,10 +390,10 @@ public sealed partial class ReleaseHardeningTests
     public void OverviewPageFactoryKeepsOverviewLayoutOutOfMainWindow()
     {
         var source = ReadMainWindowSources();
-        var overviewFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "OverviewPageFactory.cs"));
-        var overviewPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "OverviewPageState.cs"));
-        var pageSectionFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "PageSectionFactory.cs"));
-        var runtimeDashboardState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "RuntimeDashboardPageState.cs"));
+        var overviewFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Overview", "OverviewPageFactory.cs"));
+        var overviewPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Overview", "OverviewPageState.cs"));
+        var pageSectionFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Common", "PageSectionFactory.cs"));
+        var runtimeDashboardState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Overview", "RuntimeDashboardPageState.cs"));
 
         Assert.Contains("OverviewPageFactory.Create", source, StringComparison.Ordinal);
         Assert.Contains("private readonly OverviewPageState _overviewPage;", source, StringComparison.Ordinal);
@@ -437,14 +438,14 @@ public sealed partial class ReleaseHardeningTests
     public void MainWindowKeepsPolishedActionPlacementAndOverviewDiagnostics()
     {
         var source = ReadMainWindowSources();
-        var overviewFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "OverviewPageFactory.cs"));
-        var modelsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "ModelsPageFactory.cs"));
-        var modelsRowActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "ModelsPageRowActionController.cs"));
-        var settingsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "SettingsPageFactory.cs"));
-        var huggingFaceGridModeFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "HuggingFaceGridModeFactory.cs"));
+        var overviewFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Overview", "OverviewPageFactory.cs"));
+        var modelsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "ModelsPageFactory.cs"));
+        var modelsRowActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "ModelsPageRowActionController.cs"));
+        var settingsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Settings", "SettingsPageFactory.cs"));
+        var huggingFaceGridModeFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "HuggingFaceGridModeFactory.cs"));
         var overviewViewModel = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "ViewModels", "OverviewPageViewModel.cs"));
-        var modelRuntimeCommands = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeCommandDecisionService.cs"));
-        var runtimeOverviewStatus = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeOverviewStatusService.cs"));
+        var modelRuntimeCommands = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeCommandDecisionService.cs"));
+        var runtimeOverviewStatus = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeOverviewStatusService.cs"));
         var normalized = source.Replace("\r\n", "\n", StringComparison.Ordinal);
         var normalizedOverviewFactory = overviewFactory.Replace("\r\n", "\n", StringComparison.Ordinal);
         var normalizedModelsFactory = modelsFactory.Replace("\r\n", "\n", StringComparison.Ordinal);
@@ -471,7 +472,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("public const string RuntimeMetricsTitle = \"All llama.cpp Metrics\"", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("model = MetricCardFactory.AddMetric(runtimeDashboard, \"Model status\", 0, 0)", overviewFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("gatewayStatusText", overviewFactory, StringComparison.OrdinalIgnoreCase);
-        var gatewayRuntimeApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "GatewayRuntimeApplicationService.cs"));
+        var gatewayRuntimeApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "GatewayRuntimeApplicationService.cs"));
 
         Assert.Contains("actions.StartActivity(request.Model, \"switching to\")", gatewayRuntimeApplication, StringComparison.Ordinal);
         Assert.Contains("Gateway auto-loading", gatewayRuntimeApplication, StringComparison.Ordinal);
@@ -502,9 +503,9 @@ public sealed partial class ReleaseHardeningTests
     public void ModelsGridUsesPerRowActionsOnly()
     {
         var source = ReadMainWindowSources();
-        var modelsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "ModelsPageFactory.cs"));
-        var modelsPageActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "ModelsPageActionController.cs"));
-        var modelsPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "ModelsPageState.cs"));
+        var modelsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "ModelsPageFactory.cs"));
+        var modelsPageActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "ModelsPageActionController.cs"));
+        var modelsPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "ModelsPageState.cs"));
         var launchPanelFactory = ReadLaunchSettingsPanelFactorySources();
 
         Assert.Contains("nameof(ModelGridRow.Name)", modelsFactory, StringComparison.Ordinal);
@@ -546,8 +547,8 @@ public sealed partial class ReleaseHardeningTests
     {
         var folderSettings = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.FolderSettings.cs"));
         var uiHelpers = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.UiHelpers.cs"));
-        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "FolderSettingsApplicationService.cs"));
-        var dialogs = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "FileSystemDialogService.cs"));
+        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "FolderSettingsApplicationService.cs"));
+        var dialogs = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "FileSystemDialogService.cs"));
 
         Assert.Contains("_coreServices.App.FolderSettingsApplication.ChooseModelsFolderAsync", folderSettings, StringComparison.Ordinal);
         Assert.Contains("_coreServices.App.FolderSettingsApplication.ChooseRuntimeFolderAsync", folderSettings, StringComparison.Ordinal);
@@ -571,7 +572,7 @@ public sealed partial class ReleaseHardeningTests
     {
         var windows = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.Windows.cs"));
         var wsl = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.WslActions.cs"));
-        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ToolSetupApplicationService.cs"));
+        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Environment", "ToolSetupApplicationService.cs"));
 
         Assert.Contains("_coreServices.Environment.WindowsToolSetupApplication.Run", windows, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Environment.WslToolSetupApplication.Run", wsl, StringComparison.Ordinal);
@@ -589,8 +590,8 @@ public sealed partial class ReleaseHardeningTests
     public void LifetimeMetricResetPolicyStaysOutOfMainWindow()
     {
         var lifetime = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RefreshAndLifetime.cs"));
-        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LifetimeMetricResetApplicationService.cs"));
-        var metricsApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LifetimeMetricsApplicationService.cs"));
+        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "LifetimeMetricResetApplicationService.cs"));
+        var metricsApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "LifetimeMetricsApplicationService.cs"));
 
         Assert.Contains("_coreServices.App.LifetimeMetricResetApplication.ResetAsync", lifetime, StringComparison.Ordinal);
         Assert.Contains("LifetimeMetricResetActions()", lifetime, StringComparison.Ordinal);
@@ -624,7 +625,7 @@ public sealed partial class ReleaseHardeningTests
         var modelRuntime = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.ModelRuntime.cs"));
         var runtimeDashboard = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeDashboard.cs"));
         var runtimeSession = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeSession.cs"));
-        var modelLookup = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelLookupApplicationService.cs"));
+        var modelLookup = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Models", "ModelLookupApplicationService.cs"));
         var source = string.Join(Environment.NewLine, selection, overview, gateway, openCode, launchRuntime, modelRuntime, runtimeDashboard, runtimeSession);
 
         Assert.Contains("AppServices.ModelLookupApplication", source, StringComparison.Ordinal);
@@ -650,7 +651,7 @@ public sealed partial class ReleaseHardeningTests
     public void ModelCatalogRefreshCompositionStaysOutOfMainWindow()
     {
         var lifetime = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RefreshAndLifetime.cs"));
-        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelCatalogRefreshApplicationService.cs"));
+        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Models", "ModelCatalogRefreshApplicationService.cs"));
 
         Assert.Contains("ModelServices.ModelCatalogRefreshApplication", lifetime, StringComparison.Ordinal);
         Assert.Contains("modelRefresh.RefreshAsync(ModelCatalogRefreshActions())", lifetime, StringComparison.Ordinal);
@@ -668,11 +669,11 @@ public sealed partial class ReleaseHardeningTests
     {
         var source = ReadMainWindowSources();
         var downloadHistorySource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.DownloadHistory.cs"));
-        var downloadHistoryWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "DownloadHistoryWorkflowService.cs"));
-        var downloadHistoryApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "DownloadHistoryApplicationService.cs"));
-        var searchApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "HuggingFaceSearchApplicationService.cs"));
-        var downloadApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "HuggingFaceDownloadApplicationService.cs"));
-        var gridModeFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "HuggingFaceGridModeFactory.cs"));
+        var downloadHistoryWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "HuggingFace", "DownloadHistoryWorkflowService.cs"));
+        var downloadHistoryApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "HuggingFace", "DownloadHistoryApplicationService.cs"));
+        var searchApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "HuggingFace", "HuggingFaceSearchApplicationService.cs"));
+        var downloadApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "HuggingFace", "HuggingFaceDownloadApplicationService.cs"));
+        var gridModeFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "HuggingFaceGridModeFactory.cs"));
 
         Assert.Contains("_coreServices.HuggingFaceServices.HuggingFaceSearchApplication.SearchAsync", source, StringComparison.Ordinal);
         Assert.Contains("HuggingFaceSearchActions(", source, StringComparison.Ordinal);
@@ -750,9 +751,9 @@ public sealed partial class ReleaseHardeningTests
         var source = ReadMainWindowSources();
         var project = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "LocalLlmConsole.App.csproj"));
         var themedMessageBox = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "ThemedMessageBox.cs"));
-        var settingsDefinitions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "SettingsPageDefinitionService.cs"));
-        var settingsPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "SettingsPageState.cs"));
-        var updatesPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "UpdatesPageFactory.cs"));
+        var settingsDefinitions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "SettingsPageDefinitionService.cs"));
+        var settingsPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Settings", "SettingsPageState.cs"));
+        var updatesPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Updates", "UpdatesPageFactory.cs"));
 
         Assert.Contains("x:Name=\"UpdatesNavButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"HelpNavButton\"", xaml, StringComparison.Ordinal);
@@ -795,7 +796,7 @@ public sealed partial class ReleaseHardeningTests
     public void MainWindowDialogCallsGoThroughDialogService()
     {
         var source = ReadMainWindowSources();
-        var dialogs = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "DialogService.cs"));
+        var dialogs = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "DialogService.cs"));
         var factory = ReadAppServiceFactorySources();
 
         Assert.Contains("public sealed class DialogService", dialogs, StringComparison.Ordinal);
@@ -811,7 +812,7 @@ public sealed partial class ReleaseHardeningTests
     public void AppStartupSingleInstanceNoticeUsesServices()
     {
         var app = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "App.xaml.cs"));
-        var singleInstance = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "SingleInstanceApplicationService.cs"));
+        var singleInstance = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "SingleInstanceApplicationService.cs"));
 
         Assert.Contains("private readonly SingleInstanceApplicationService _singleInstance = new(SingleInstanceApplicationService.AcquireMutexLease);", app, StringComparison.Ordinal);
         Assert.Contains("private readonly DialogService _dialogs = new(ThemedMessageBox.Show);", app, StringComparison.Ordinal);
@@ -846,12 +847,12 @@ public sealed partial class ReleaseHardeningTests
     public void SettingsApiKeyCanBeShownAndCopied()
     {
         var settings = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.Settings.cs"));
-        var settingsActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "SettingsPageActionController.cs"));
-        var settingsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "SettingsPageFactory.cs"));
-        var settingsGridColumns = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "SettingsGridColumnFactory.cs"));
-        var settingsDefinitions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "SettingsPageDefinitionService.cs"));
-        var settingsRowActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "SettingsRowActionApplicationService.cs"));
-        var clipboard = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ClipboardService.cs"));
+        var settingsActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Settings", "SettingsPageActionController.cs"));
+        var settingsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Settings", "SettingsPageFactory.cs"));
+        var settingsGridColumns = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Settings", "SettingsGridColumnFactory.cs"));
+        var settingsDefinitions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "SettingsPageDefinitionService.cs"));
+        var settingsRowActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "SettingsRowActionApplicationService.cs"));
+        var clipboard = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Infrastructure", "ClipboardService.cs"));
         var factory = ReadAppServiceFactorySources();
         var rows = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Models", "UiRows.cs"));
 
@@ -890,10 +891,10 @@ public sealed partial class ReleaseHardeningTests
     public void SettingsNumericEditsFailClosed()
     {
         var persistence = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.SettingsPersistence.cs"));
-        var settingsApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AppSettingsApplicationService.cs"));
-        var settingsUpdates = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AppSettingsUpdateService.cs"));
-        var settingsWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AppSettingsWorkflowService.cs"));
-        var preferences = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AppPreferenceService.cs"));
+        var settingsApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AppSettingsApplicationService.cs"));
+        var settingsUpdates = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AppSettingsUpdateService.cs"));
+        var settingsWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AppSettingsWorkflowService.cs"));
+        var preferences = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AppPreferenceService.cs"));
 
         Assert.Contains("TryIntValue", preferences, StringComparison.Ordinal);
         Assert.Contains("Gateway port must be a whole number.", settingsUpdates, StringComparison.Ordinal);
@@ -923,10 +924,10 @@ public sealed partial class ReleaseHardeningTests
     {
         var xaml = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.xaml"));
         var source = ReadMainWindowSources();
-        var helpContent = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "HelpContentFactory.cs"));
-        var helpPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "HelpPageFactory.cs"));
-        var helpSections = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "HelpSectionService.cs"));
-        var helpNavigation = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "HelpNavigationApplicationService.cs"));
+        var helpContent = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Help", "HelpContentFactory.cs"));
+        var helpPageFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Help", "HelpPageFactory.cs"));
+        var helpSections = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "HelpSectionService.cs"));
+        var helpNavigation = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "HelpNavigationApplicationService.cs"));
         var sections = new HelpSectionService();
 
         Assert.Contains("ShowHelp_Click", source, StringComparison.Ordinal);
@@ -997,23 +998,23 @@ public sealed partial class ReleaseHardeningTests
     {
         var source = ReadMainWindowSources();
         var themedMessageBox = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "ThemedMessageBox.cs"));
-        var runtimeDeletionPlanner = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeDeletionPlanner.cs"));
-        var runtimeBuildDeletionApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeBuildDeletionApplicationService.cs"));
-        var runtimeJobControls = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeBuildJobControlService.cs"));
-        var settingsGridColumns = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "SettingsGridColumnFactory.cs"));
-        var pageSectionFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "PageSectionFactory.cs"));
-        var lifetimeFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "LifetimePageFactory.cs"));
-        var lifetimePageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "LifetimePageState.cs"));
-        var modelsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "ModelsPageFactory.cs"));
-        var runtimesFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "RuntimesPageFactory.cs"));
-        var runtimesPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "RuntimesPageState.cs"));
-        var logsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "LogsPageFactory.cs"));
-        var logsActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "LogsPageActionController.cs"));
+        var runtimeDeletionPlanner = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeDeletionPlanner.cs"));
+        var runtimeBuildDeletionApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeBuildDeletionApplicationService.cs"));
+        var runtimeJobControls = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeBuildJobControlService.cs"));
+        var settingsGridColumns = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Settings", "SettingsGridColumnFactory.cs"));
+        var pageSectionFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Common", "PageSectionFactory.cs"));
+        var lifetimeFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Lifetime", "LifetimePageFactory.cs"));
+        var lifetimePageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Lifetime", "LifetimePageState.cs"));
+        var modelsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "ModelsPageFactory.cs"));
+        var runtimesFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Runtimes", "RuntimesPageFactory.cs"));
+        var runtimesPageState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Runtimes", "RuntimesPageState.cs"));
+        var logsFactory = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Logs", "LogsPageFactory.cs"));
+        var logsActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Logs", "LogsPageActionController.cs"));
         var logsPartial = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.Logs.cs"));
         var downloadHistoryPartial = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.DownloadHistory.cs"));
-        var runtimesRowActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "RuntimesPageRowActionController.cs"));
-        var logWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LogPageWorkflowService.cs"));
-        var advancedSections = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "AdvancedSectionStateController.cs"));
+        var runtimesRowActions = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Runtimes", "RuntimesPageRowActionController.cs"));
+        var logWorkflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "LogPageWorkflowService.cs"));
+        var advancedSections = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AdvancedSectionStateController.cs"));
         var advancedState = new AdvancedSectionStateController();
 
         Assert.Contains("Delete Selected", logsFactory, StringComparison.Ordinal);
@@ -1097,7 +1098,7 @@ public sealed partial class ReleaseHardeningTests
     {
         var source = ReadMainWindowSources();
         var runtimeCatalog = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeCatalog.cs"));
-        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeCatalogCommandApplicationService.cs"));
+        var application = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeCatalogCommandApplicationService.cs"));
 
         Assert.Contains("var runtimeCatalogCommands = RuntimeServices.RuntimeCatalogCommands;", runtimeCatalog, StringComparison.Ordinal);
         Assert.Contains("runtimeCatalogCommands.ChangeCudaPackagePreferenceAsync", runtimeCatalog, StringComparison.Ordinal);
@@ -1644,6 +1645,19 @@ public sealed partial class ReleaseHardeningTests
         apiKeyRow.Value = "";
         accessRow.Value = "Gateway LAN only";
         Assert.True(apiKeyRow.Value.Length >= 32);
+        var oldApiKeyRow = apiKeyRow;
+        var oldAccessRow = accessRow;
+        settingsVm.ReplaceRows(
+        [
+            new SettingRowDefinition("Network", "LAN exposure", "modelAccessMode", "Local only", "choice", ["Local only", "Gateway LAN only"]),
+            new SettingRowDefinition("Network", "API key", "modelApiKey", "", "secret", Action: "Generate")
+        ]);
+        var replacementApiKeyRow = settingsVm.Rows.Single(row => row.Key == "modelApiKey");
+        oldApiKeyRow.Value = "";
+        replacementApiKeyRow.Value = "";
+        oldAccessRow.Value = "Direct models LAN only";
+        Assert.Equal("", replacementApiKeyRow.Value);
+        Assert.Equal("", oldApiKeyRow.Value);
 
         var openCodeVm = new OpenCodePageViewModel();
         openCodeVm.ReplaceLocalModels([model]);
@@ -1658,9 +1672,13 @@ public sealed partial class ReleaseHardeningTests
         Assert.True(openCodeVm.AgentChoices[^1].IsAddNew);
 
         var updatesVm = new UpdatesPageViewModel();
+        var updateChanges = new List<string?>();
+        updatesVm.PropertyChanged += (_, e) => updateChanges.Add(e.PropertyName);
 
         Assert.Equal("Check For Updates", updatesVm.ActionText);
         Assert.Contains("No update check", updatesVm.StatusDetails, StringComparison.Ordinal);
+        updatesVm.CheckInFlight = true;
+        Assert.Contains(nameof(UpdatesPageViewModel.CheckInFlight), updateChanges);
 
         updatesVm.SetLatestUpdate(new AppUpdateInfo(
             true,
@@ -1678,6 +1696,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("v1.0 -> v1.1.2", updatesVm.StatusText, StringComparison.Ordinal);
         Assert.Contains("Release v1.1.2", updatesVm.LatestReleaseText, StringComparison.Ordinal);
         Assert.True(updatesVm.LatestReleaseText.Length < 1900);
+        Assert.Contains(nameof(UpdatesPageViewModel.LatestUpdate), updateChanges);
+        Assert.Contains(nameof(UpdatesPageViewModel.ActionText), updateChanges);
+        Assert.Contains(nameof(UpdatesPageViewModel.StatusDetails), updateChanges);
     }
 
 
@@ -1685,6 +1706,8 @@ public sealed partial class ReleaseHardeningTests
     public void MainWindowViewModelTracksPageStatusAndBusyState()
     {
         var vm = new MainWindowViewModel();
+        var changes = new List<string?>();
+        vm.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
         var source = ReadMainWindowSources();
         var controller = new UiBusyStateController();
         var pageEnabled = true;
@@ -1704,6 +1727,10 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.Equal("Models", vm.CurrentPage);
         Assert.Equal("Ready", vm.DisplayStatusText);
+        Assert.Contains(nameof(MainWindowViewModel.CurrentPage), changes);
+        Assert.Contains(nameof(MainWindowViewModel.StatusText), changes);
+        Assert.Contains(nameof(MainWindowViewModel.DisplayStatusText), changes);
+        Assert.Contains(nameof(MainWindowViewModel.IsBusy), changes);
 
         controller.Begin(
             pageEnabled,

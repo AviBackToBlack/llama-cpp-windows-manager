@@ -59,9 +59,9 @@ public sealed partial class ReleaseHardeningTests
     public void ModelRuntimeUsesFixedModelPortsForStableOpenCodeEndpoints()
     {
         var source = ReadMainWindowSources();
-        var coordinator = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "RuntimeSessionCoordinator.cs"));
-        var preparation = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeLaunchPreparationService.cs"));
-        var loadApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeLoadApplicationService.cs"));
+        var coordinator = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeSessionCoordinator.cs"));
+        var preparation = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeLaunchPreparationService.cs"));
+        var loadApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeLoadApplicationService.cs"));
         var renderSelectedProfile = loadApplication.IndexOf("await actions.RenderLaunchSettingsAsync();", StringComparison.Ordinal);
         var resolveRuntime = loadApplication.IndexOf("_runtimeSelection.Resolve(runtimes, request.SelectedRuntimeId, request.FallbackRuntime)", StringComparison.Ordinal);
 
@@ -81,12 +81,12 @@ public sealed partial class ReleaseHardeningTests
     {
         var source = ReadMainWindowSources();
         var runtimeSelection = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.LaunchSettingsRuntimeSelection.cs"));
-        var runtimeSelectionService = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LaunchRuntimeSelectionService.cs"));
-        var workflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelLaunchSettingsWorkflowService.cs"));
-        var saveApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelLaunchSettingsSaveApplicationService.cs"));
-        var renderApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "LaunchSettingsRenderApplicationService.cs"));
-        var headSelectionApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelLaunchHeadSelectionApplicationService.cs"));
-        var variantSaveApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelLaunchVariantSaveApplicationService.cs"));
+        var runtimeSelectionService = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "LaunchRuntimeSelectionService.cs"));
+        var workflow = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Models", "ModelLaunchSettingsWorkflowService.cs"));
+        var saveApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Models", "ModelLaunchSettingsSaveApplicationService.cs"));
+        var renderApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "LaunchSettingsRenderApplicationService.cs"));
+        var headSelectionApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Models", "ModelLaunchHeadSelectionApplicationService.cs"));
+        var variantSaveApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Models", "ModelLaunchVariantSaveApplicationService.cs"));
         var renderStart = source.IndexOf("private async Task RenderSelectedModelLaunchSettingsAsync", StringComparison.Ordinal);
         var saveDefaultsStart = source.IndexOf("private async Task SaveLaunchDefaultsFromControlsAsync", StringComparison.Ordinal);
         var saveForModelStart = source.IndexOf("private async Task SaveLaunchSettingsForSelectedModelAsync", StringComparison.Ordinal);
@@ -143,8 +143,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("Missing runtime ({state.MissingRuntimeId})", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "ViewModels", "LaunchSettingsViewModel.cs")), StringComparison.Ordinal);
         Assert.DoesNotContain("Missing runtime ({selectedRuntimeId})", runtimeSelection, StringComparison.Ordinal);
         Assert.Contains("public LaunchRuntimeSelectorState BuildSelectorState(", runtimeSelectionService, StringComparison.Ordinal);
-        Assert.Contains("_runtimeSelection.Resolve(runtimes, request.SelectedRuntimeId, request.FallbackRuntime)", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeLoadApplicationService.cs")), StringComparison.Ordinal);
-        Assert.Contains("_runtimeSelection.MissingRuntimeStatus(runtimes, request.SelectedRuntimeId)", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "ModelRuntimeLoadApplicationService.cs")), StringComparison.Ordinal);
+        Assert.Contains("_runtimeSelection.Resolve(runtimes, request.SelectedRuntimeId, request.FallbackRuntime)", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeLoadApplicationService.cs")), StringComparison.Ordinal);
+        Assert.Contains("_runtimeSelection.MissingRuntimeStatus(runtimes, request.SelectedRuntimeId)", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "ModelRuntimeLoadApplicationService.cs")), StringComparison.Ordinal);
         Assert.DoesNotContain("Saved runtime '{runtimeId}' is missing.", runtimeSelection, StringComparison.Ordinal);
     }
 

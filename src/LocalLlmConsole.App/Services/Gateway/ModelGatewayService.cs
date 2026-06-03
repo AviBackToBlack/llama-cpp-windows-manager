@@ -90,7 +90,7 @@ public sealed class ModelGatewayService : IModelGatewayHost
                 {
                     _requestHandlers.Remove(completed);
                 }
-                _ = completed.Exception;
+                TraceFaultedTask(completed, "Model gateway request handler failed.");
             },
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
@@ -164,12 +164,14 @@ public sealed class ModelGatewayService : IModelGatewayHost
         }
         catch (Exception ex)
         {
+            Trace.TraceError($"Model gateway request failed: {ex}");
             try
             {
                 await ModelGatewayResponseWriter.WriteJsonAsync(context, 500, new { error = new { message = ex.Message, type = "gateway_error" } }, CancellationToken.None);
             }
-            catch
+            catch (Exception writeEx)
             {
+                Trace.TraceWarning($"Model gateway failed to write error response: {writeEx}");
                 ModelGatewayResponseWriter.TryClose(context.Response);
             }
         }
@@ -286,8 +288,15 @@ public sealed class ModelGatewayService : IModelGatewayHost
         {
             await task;
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"Model gateway background task completed with an observed exception: {ex}");
         }
+    }
+
+    private static void TraceFaultedTask(Task task, string message)
+    {
+        if (!task.IsFaulted || task.Exception is null) return;
+        Trace.TraceError($"{message} {task.Exception}");
     }
 }

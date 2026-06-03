@@ -9,7 +9,23 @@ public sealed record RuntimeMetricDisplaySnapshot(
     string MtpTokens,
     string Slots,
     string Settings,
-    DateTimeOffset CapturedAt);
+    DateTimeOffset CapturedAt,
+    double? GeneratedTokens,
+    double? PromptTokens,
+    double? MtpGeneratedTokens,
+    double? MtpAcceptedTokens,
+    double? AverageGenerationRate,
+    double? AveragePromptRate,
+    double? AverageMtpGeneratedRate,
+    double? AverageMtpAcceptedRate,
+    DateTimeOffset? GeneratedTokensCapturedAt,
+    DateTimeOffset? PromptTokensCapturedAt,
+    DateTimeOffset? MtpGeneratedTokensCapturedAt,
+    DateTimeOffset? MtpAcceptedTokensCapturedAt,
+    DateTimeOffset? AverageGenerationRateCapturedAt,
+    DateTimeOffset? AveragePromptRateCapturedAt,
+    DateTimeOffset? AverageMtpGeneratedRateCapturedAt,
+    DateTimeOffset? AverageMtpAcceptedRateCapturedAt);
 
 public sealed record RuntimeMetricSummaryResult(
     string Tokens,
@@ -23,17 +39,7 @@ public sealed record RuntimeMetricSummaryResult(
 
 public sealed class RuntimeMetricSummaryTracker
 {
-    private string _lastMetricRuntimeKey = "";
-    private double? _lastPredictedTokenCounter;
-    private double? _lastPromptTokenCounter;
-    private double? _lastMtpGeneratedTokenCounter;
-    private double? _lastMtpAcceptedTokenCounter;
-    private DateTimeOffset? _lastMetricPollAt;
-    private string _lastSlotRuntimeKey = "";
-    private double? _lastSlotPromptProcessedCounter;
-    private double? _lastSlotGeneratedCounter;
-    private DateTimeOffset? _lastSlotPollAt;
-    private RuntimeMetricDisplaySnapshot? _lastDisplay;
+    private readonly Dictionary<string, RuntimeMetricSummaryState> _states = new(StringComparer.Ordinal);
 
     public RuntimeMetricSummaryResult Apply(
         string runtimeKey,
@@ -43,17 +49,17 @@ public sealed class RuntimeMetricSummaryTracker
         RuntimeMtpTokenSnapshot? mtpTokenSnapshot,
         DateTimeOffset? capturedAt = null)
     {
-        if (!string.Equals(runtimeKey, _lastMetricRuntimeKey, StringComparison.Ordinal))
-        {
-            ResetCounters();
-            _lastMetricRuntimeKey = runtimeKey;
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeKey);
+        ArgumentNullException.ThrowIfNull(samples);
+        ArgumentNullException.ThrowIfNull(metricsSettings);
+
+        var state = StateFor(runtimeKey);
+        var previous = state.LastDisplay;
 
         if (samples.Count == 0
             && slotSnapshot is null
             && mtpTokenSnapshot is null
-            && _lastDisplay is { } snapshot
-            && string.Equals(snapshot.RuntimeKey, runtimeKey, StringComparison.Ordinal))
+            && previous is { } snapshot)
         {
             return new RuntimeMetricSummaryResult(
                 snapshot.Tokens,
@@ -63,7 +69,7 @@ public sealed class RuntimeMetricSummaryTracker
                 snapshot.Slots,
                 snapshot.Settings,
                 UsedLastKnown: true,
-                snapshot.CapturedAt);
+                LastKnownCapturedAt(snapshot));
         }
 
         var now = capturedAt ?? DateTimeOffset.UtcNow;
@@ -74,10 +80,10 @@ public sealed class RuntimeMetricSummaryTracker
         var promptTokens = RuntimeDashboardService.PromptTokenCounter(samples);
         var promptSeconds = RuntimeMetrics.Sum(samples, ["prompt", "seconds", "total"], [])
             ?? RuntimeMetrics.Sum(samples, ["prompt", "time"], []);
-        var displayMtpGeneratedTokens = RuntimeDashboardService.MaxNullable(
+        var observedMtpGeneratedTokens = RuntimeDashboardService.MaxNullable(
             RuntimeDashboardService.MaxNullable(RuntimeDashboardService.MtpGeneratedTokenCounter(samples), slotSnapshot?.MtpGeneratedTokens),
             mtpTokenSnapshot?.GeneratedTokens);
-        var displayMtpAcceptedTokens = RuntimeDashboardService.MaxNullable(
+        var observedMtpAcceptedTokens = RuntimeDashboardService.MaxNullable(
             RuntimeDashboardService.MaxNullable(RuntimeDashboardService.MtpAcceptedTokenCounter(samples), slotSnapshot?.MtpAcceptedTokens),
             mtpTokenSnapshot?.AcceptedTokens);
         var mtpGeneratedSeconds = RuntimeDashboardService.MtpGeneratedSecondsCounter(samples)
@@ -86,27 +92,26 @@ public sealed class RuntimeMetricSummaryTracker
             ?? mtpTokenSnapshot?.AcceptedSeconds
             ?? mtpGeneratedSeconds;
 
-        var liveGenerationRate = RuntimeDashboardService.CounterRate(predictedTokens, _lastPredictedTokenCounter, now, _lastMetricPollAt, 0.5);
-        var livePromptRate = RuntimeDashboardService.CounterRate(promptTokens, _lastPromptTokenCounter, now, _lastMetricPollAt, 0.5);
-        var liveMtpGeneratedRate = RuntimeDashboardService.CounterRate(displayMtpGeneratedTokens, _lastMtpGeneratedTokenCounter, now, _lastMetricPollAt, 0.5);
-        var liveMtpAcceptedRate = RuntimeDashboardService.CounterRate(displayMtpAcceptedTokens, _lastMtpAcceptedTokenCounter, now, _lastMetricPollAt, 0.5);
-        _lastPredictedTokenCounter = predictedTokens;
-        _lastPromptTokenCounter = promptTokens;
-        _lastMtpGeneratedTokenCounter = displayMtpGeneratedTokens;
-        _lastMtpAcceptedTokenCounter = displayMtpAcceptedTokens;
-        _lastMetricPollAt = now;
+        var liveGenerationRate = CounterRateAndRemember(predictedTokens, ref state.LastPredictedTokenCounter, ref state.LastPredictedTokenPollAt, now);
+        var livePromptRate = CounterRateAndRemember(promptTokens, ref state.LastPromptTokenCounter, ref state.LastPromptTokenPollAt, now);
+        var liveMtpGeneratedRate = CounterRateAndRemember(observedMtpGeneratedTokens, ref state.LastMtpGeneratedTokenCounter, ref state.LastMtpGeneratedTokenPollAt, now);
+        var liveMtpAcceptedRate = CounterRateAndRemember(observedMtpAcceptedTokens, ref state.LastMtpAcceptedTokenCounter, ref state.LastMtpAcceptedTokenPollAt, now);
 
-        var (slotPromptRate, slotGenerationRate) = SlotLiveRates(slotSnapshot, now, runtimeKey);
+        var (slotPromptRate, slotGenerationRate) = SlotLiveRates(state, slotSnapshot, now);
         liveGenerationRate = slotGenerationRate ?? liveGenerationRate;
         livePromptRate = slotPromptRate ?? livePromptRate;
 
-        var averageGenerationRate = RuntimeMetrics.First(samples, ["predicted", "tokens", "seconds"], ["total"])
+        var observedAverageGenerationRate = RuntimeMetrics.First(samples, ["predicted", "tokens", "seconds"], ["total"])
             ?? RuntimeMetrics.First(samples, ["generation", "tokens", "seconds"], ["total"])
             ?? RuntimeDashboardService.Rate(predictedTokens, predictedSeconds);
-        var averagePromptRate = RuntimeMetrics.First(samples, ["prompt", "tokens", "seconds"], ["total"])
+        var observedAveragePromptRate = RuntimeMetrics.First(samples, ["prompt", "tokens", "seconds"], ["total"])
             ?? RuntimeDashboardService.Rate(promptTokens, promptSeconds);
-        var averageMtpGeneratedRate = RuntimeDashboardService.Rate(displayMtpGeneratedTokens, mtpGeneratedSeconds);
-        var averageMtpAcceptedRate = RuntimeDashboardService.Rate(displayMtpAcceptedTokens, mtpAcceptedSeconds);
+        var observedAverageMtpGeneratedRate = RuntimeDashboardService.Rate(observedMtpGeneratedTokens, mtpGeneratedSeconds);
+        var observedAverageMtpAcceptedRate = RuntimeDashboardService.Rate(observedMtpAcceptedTokens, mtpAcceptedSeconds);
+        var displayAverageGenerationRate = observedAverageGenerationRate ?? previous?.AverageGenerationRate;
+        var displayAveragePromptRate = observedAveragePromptRate ?? previous?.AveragePromptRate;
+        var displayAverageMtpGeneratedRate = observedAverageMtpGeneratedRate ?? previous?.AverageMtpGeneratedRate;
+        var displayAverageMtpAcceptedRate = observedAverageMtpAcceptedRate ?? previous?.AverageMtpAcceptedRate;
         var kvUsage = RuntimeMetrics.First(samples, ["kv", "cache", "usage"], []);
         var kvTokens = RuntimeMetrics.Sum(samples, ["kv", "cache", "tokens"], [])
             ?? RuntimeMetrics.Sum(samples, ["kv", "tokens"], []);
@@ -116,30 +121,69 @@ public sealed class RuntimeMetricSummaryTracker
             ?? (metricsSettings.ContextSize > 0 ? (double?)metricsSettings.ContextSize : null);
         kvTokens ??= slotSnapshot?.ContextTokens;
 
-        var displayGeneratedTokens = RuntimeDashboardService.MaxNullable(predictedTokens, slotSnapshot?.GeneratedTokens);
-        var displayPromptTokens = RuntimeDashboardService.MaxNullable(promptTokens, slotSnapshot?.PromptTokensProcessed);
+        var observedGeneratedTokens = RuntimeDashboardService.MaxNullable(predictedTokens, slotSnapshot?.GeneratedTokens);
+        var observedPromptTokens = RuntimeDashboardService.MaxNullable(promptTokens, slotSnapshot?.PromptTokensProcessed);
+        var displayGeneratedTokens = RuntimeDashboardService.MaxNullable(observedGeneratedTokens, previous?.GeneratedTokens);
+        var displayPromptTokens = RuntimeDashboardService.MaxNullable(observedPromptTokens, previous?.PromptTokens);
+        var displayMtpGeneratedTokens = RuntimeDashboardService.MaxNullable(observedMtpGeneratedTokens, previous?.MtpGeneratedTokens);
+        var displayMtpAcceptedTokens = RuntimeDashboardService.MaxNullable(observedMtpAcceptedTokens, previous?.MtpAcceptedTokens);
+        var usedPreviousGeneratedTokens = UsedPreviousCounter(observedGeneratedTokens, previous?.GeneratedTokens, displayGeneratedTokens);
+        var usedPreviousPromptTokens = UsedPreviousCounter(observedPromptTokens, previous?.PromptTokens, displayPromptTokens);
+        var usedPreviousMtpGeneratedTokens = UsedPreviousCounter(observedMtpGeneratedTokens, previous?.MtpGeneratedTokens, displayMtpGeneratedTokens);
+        var usedPreviousMtpAcceptedTokens = UsedPreviousCounter(observedMtpAcceptedTokens, previous?.MtpAcceptedTokens, displayMtpAcceptedTokens);
+        var usedPreviousAverageGenerationRate = UsedPreviousAverage(observedAverageGenerationRate, previous?.AverageGenerationRate);
+        var usedPreviousAveragePromptRate = UsedPreviousAverage(observedAveragePromptRate, previous?.AveragePromptRate);
+        var usedPreviousAverageMtpGeneratedRate = UsedPreviousAverage(observedAverageMtpGeneratedRate, previous?.AverageMtpGeneratedRate);
+        var usedPreviousAverageMtpAcceptedRate = UsedPreviousAverage(observedAverageMtpAcceptedRate, previous?.AverageMtpAcceptedRate);
+        var usedLastKnown = usedPreviousGeneratedTokens
+            || usedPreviousPromptTokens
+            || usedPreviousMtpGeneratedTokens
+            || usedPreviousMtpAcceptedTokens
+            || usedPreviousAverageGenerationRate
+            || usedPreviousAveragePromptRate
+            || usedPreviousAverageMtpGeneratedRate
+            || usedPreviousAverageMtpAcceptedRate;
+        var generatedTokensCapturedAt = DisplayValueCapturedAt(observedGeneratedTokens, displayGeneratedTokens, previous?.GeneratedTokensCapturedAt ?? previous?.CapturedAt, now);
+        var promptTokensCapturedAt = DisplayValueCapturedAt(observedPromptTokens, displayPromptTokens, previous?.PromptTokensCapturedAt ?? previous?.CapturedAt, now);
+        var mtpGeneratedTokensCapturedAt = DisplayValueCapturedAt(observedMtpGeneratedTokens, displayMtpGeneratedTokens, previous?.MtpGeneratedTokensCapturedAt ?? previous?.CapturedAt, now);
+        var mtpAcceptedTokensCapturedAt = DisplayValueCapturedAt(observedMtpAcceptedTokens, displayMtpAcceptedTokens, previous?.MtpAcceptedTokensCapturedAt ?? previous?.CapturedAt, now);
+        var averageGenerationRateCapturedAt = DisplayValueCapturedAt(observedAverageGenerationRate, displayAverageGenerationRate, previous?.AverageGenerationRateCapturedAt ?? previous?.CapturedAt, now);
+        var averagePromptRateCapturedAt = DisplayValueCapturedAt(observedAveragePromptRate, displayAveragePromptRate, previous?.AveragePromptRateCapturedAt ?? previous?.CapturedAt, now);
+        var averageMtpGeneratedRateCapturedAt = DisplayValueCapturedAt(observedAverageMtpGeneratedRate, displayAverageMtpGeneratedRate, previous?.AverageMtpGeneratedRateCapturedAt ?? previous?.CapturedAt, now);
+        var averageMtpAcceptedRateCapturedAt = DisplayValueCapturedAt(observedAverageMtpAcceptedRate, displayAverageMtpAcceptedRate, previous?.AverageMtpAcceptedRateCapturedAt ?? previous?.CapturedAt, now);
+        var lastKnownCapturedAt = OldestCapturedAt(
+            usedPreviousGeneratedTokens ? generatedTokensCapturedAt : null,
+            usedPreviousPromptTokens ? promptTokensCapturedAt : null,
+            usedPreviousMtpGeneratedTokens ? mtpGeneratedTokensCapturedAt : null,
+            usedPreviousMtpAcceptedTokens ? mtpAcceptedTokensCapturedAt : null,
+            usedPreviousAverageGenerationRate ? averageGenerationRateCapturedAt : null,
+            usedPreviousAveragePromptRate ? averagePromptRateCapturedAt : null,
+            usedPreviousAverageMtpGeneratedRate ? averageMtpGeneratedRateCapturedAt : null,
+            usedPreviousAverageMtpAcceptedRate ? averageMtpAcceptedRateCapturedAt : null);
 
-        var generationRateText = $"Gen {RuntimeDashboardService.RateLabel(liveGenerationRate, averageGenerationRate)}\nPrompt {RuntimeDashboardService.RateLabel(livePromptRate, averagePromptRate)}";
+        var generationRateText = $"Gen {RuntimeDashboardService.RateLabel(liveGenerationRate, displayAverageGenerationRate)}\nPrompt {RuntimeDashboardService.RateLabel(livePromptRate, displayAveragePromptRate)}";
         var totalTokensText = RuntimeDashboardService.TokenSummaryLabel(displayGeneratedTokens, displayPromptTokens);
         var tokensText = RuntimeDashboardService.TokenActivitySummaryLabel(
             liveGenerationRate,
-            averageGenerationRate,
+            displayAverageGenerationRate,
             livePromptRate,
-            averagePromptRate,
+            displayAveragePromptRate,
             displayGeneratedTokens,
             displayPromptTokens);
         var mtpTokensText = MtpTokensText(
             metricsSettings,
             liveMtpGeneratedRate,
-            averageMtpGeneratedRate,
+            displayAverageMtpGeneratedRate,
             liveMtpAcceptedRate,
-            averageMtpAcceptedRate,
+            displayAverageMtpAcceptedRate,
             displayMtpGeneratedTokens,
             displayMtpAcceptedTokens);
         var slotsText = RuntimeDashboardService.RuntimeSlotsLabel(samples);
         var settingsText = RuntimeDashboardService.RuntimeSettingsLabel(kvUsage, kvTokens, contextSize, metricsSettings.ContextSize);
+        var snapshotCapturedAt = usedLastKnown && previous is not null ? previous.CapturedAt : now;
 
         Remember(
+            state,
             runtimeKey,
             samples,
             tokensText,
@@ -152,7 +196,19 @@ public sealed class RuntimeMetricSummaryTracker
             displayPromptTokens,
             displayMtpGeneratedTokens,
             displayMtpAcceptedTokens,
-            now);
+            displayAverageGenerationRate,
+            displayAveragePromptRate,
+            displayAverageMtpGeneratedRate,
+            displayAverageMtpAcceptedRate,
+            generatedTokensCapturedAt,
+            promptTokensCapturedAt,
+            mtpGeneratedTokensCapturedAt,
+            mtpAcceptedTokensCapturedAt,
+            averageGenerationRateCapturedAt,
+            averagePromptRateCapturedAt,
+            averageMtpGeneratedRateCapturedAt,
+            averageMtpAcceptedRateCapturedAt,
+            snapshotCapturedAt);
         return new RuntimeMetricSummaryResult(
             tokensText,
             generationRateText,
@@ -160,61 +216,49 @@ public sealed class RuntimeMetricSummaryTracker
             mtpTokensText,
             slotsText,
             settingsText,
-            UsedLastKnown: false,
-            LastKnownCapturedAt: null);
+            usedLastKnown,
+            usedLastKnown ? lastKnownCapturedAt : null);
     }
 
     public IReadOnlyList<PrometheusSample> LastKnownSamples(string runtimeKey)
-        => _lastDisplay is { Samples.Count: > 0 } snapshot
-           && string.Equals(snapshot.RuntimeKey, runtimeKey, StringComparison.Ordinal)
+        => _states.TryGetValue(runtimeKey, out var state)
+           && state.LastDisplay is { Samples.Count: > 0 } snapshot
             ? snapshot.Samples
             : [];
 
     public void Reset()
     {
-        ResetCounters();
-        _lastMetricRuntimeKey = "";
-        _lastDisplay = null;
+        _states.Clear();
     }
 
-    private (double? PromptRate, double? GenerationRate) SlotLiveRates(RuntimeSlotSnapshot? snapshot, DateTimeOffset now, string runtimeKey)
+    private static (double? PromptRate, double? GenerationRate) SlotLiveRates(
+        RuntimeMetricSummaryState state,
+        RuntimeSlotSnapshot? snapshot,
+        DateTimeOffset now)
     {
         if (snapshot is null)
-        {
-            _lastSlotRuntimeKey = runtimeKey;
-            _lastSlotPromptProcessedCounter = null;
-            _lastSlotGeneratedCounter = null;
-            _lastSlotPollAt = null;
             return (null, null);
-        }
-
-        if (!string.Equals(runtimeKey, _lastSlotRuntimeKey, StringComparison.Ordinal))
-        {
-            _lastSlotRuntimeKey = runtimeKey;
-            _lastSlotPromptProcessedCounter = null;
-            _lastSlotGeneratedCounter = null;
-            _lastSlotPollAt = null;
-        }
 
         double? promptRate = null;
         double? generationRate = null;
-        if (_lastSlotPollAt is not null)
+        if (state.LastSlotPollAt is not null)
         {
-            var elapsed = (now - _lastSlotPollAt.Value).TotalSeconds;
+            var elapsed = (now - state.LastSlotPollAt.Value).TotalSeconds;
             if (elapsed >= 0.25)
             {
-                promptRate = RuntimeDashboardService.DeltaRate(snapshot.PromptTokensProcessed, _lastSlotPromptProcessedCounter, elapsed, includeZero: true);
-                generationRate = RuntimeDashboardService.DeltaRate(snapshot.GeneratedTokens, _lastSlotGeneratedCounter, elapsed, includeZero: true);
+                promptRate = RuntimeDashboardService.DeltaRate(snapshot.PromptTokensProcessed, state.LastSlotPromptProcessedCounter, elapsed, includeZero: true);
+                generationRate = RuntimeDashboardService.DeltaRate(snapshot.GeneratedTokens, state.LastSlotGeneratedCounter, elapsed, includeZero: true);
             }
         }
 
-        _lastSlotPromptProcessedCounter = snapshot.PromptTokensProcessed;
-        _lastSlotGeneratedCounter = snapshot.GeneratedTokens;
-        _lastSlotPollAt = now;
+        state.LastSlotPromptProcessedCounter = snapshot.PromptTokensProcessed;
+        state.LastSlotGeneratedCounter = snapshot.GeneratedTokens;
+        state.LastSlotPollAt = now;
         return (promptRate, generationRate);
     }
 
-    private void Remember(
+    private static void Remember(
+        RuntimeMetricSummaryState state,
         string runtimeKey,
         IReadOnlyList<PrometheusSample> samples,
         string tokensText,
@@ -227,22 +271,38 @@ public sealed class RuntimeMetricSummaryTracker
         double? displayPromptTokens,
         double? displayMtpGeneratedTokens,
         double? displayMtpAcceptedTokens,
+        double? averageGenerationRate,
+        double? averagePromptRate,
+        double? averageMtpGeneratedRate,
+        double? averageMtpAcceptedRate,
+        DateTimeOffset? generatedTokensCapturedAt,
+        DateTimeOffset? promptTokensCapturedAt,
+        DateTimeOffset? mtpGeneratedTokensCapturedAt,
+        DateTimeOffset? mtpAcceptedTokensCapturedAt,
+        DateTimeOffset? averageGenerationRateCapturedAt,
+        DateTimeOffset? averagePromptRateCapturedAt,
+        DateTimeOffset? averageMtpGeneratedRateCapturedAt,
+        DateTimeOffset? averageMtpAcceptedRateCapturedAt,
         DateTimeOffset capturedAt)
     {
         if (displayGeneratedTokens is null
             && displayPromptTokens is null
             && displayMtpGeneratedTokens is null
             && displayMtpAcceptedTokens is null
+            && averageGenerationRate is null
+            && averagePromptRate is null
+            && averageMtpGeneratedRate is null
+            && averageMtpAcceptedRate is null
             && samples.Count == 0)
             return;
 
         var cachedSamples = samples.Count > 0
             ? samples.ToArray()
-            : _lastDisplay is { } previous && string.Equals(previous.RuntimeKey, runtimeKey, StringComparison.Ordinal)
+            : state.LastDisplay is { } previous
                 ? previous.Samples
                 : [];
 
-        _lastDisplay = new RuntimeMetricDisplaySnapshot(
+        state.LastDisplay = new RuntimeMetricDisplaySnapshot(
             runtimeKey,
             cachedSamples,
             tokensText,
@@ -251,7 +311,23 @@ public sealed class RuntimeMetricSummaryTracker
             mtpTokensText,
             slotsText,
             settingsText,
-            capturedAt);
+            capturedAt,
+            displayGeneratedTokens,
+            displayPromptTokens,
+            displayMtpGeneratedTokens,
+            displayMtpAcceptedTokens,
+            averageGenerationRate,
+            averagePromptRate,
+            averageMtpGeneratedRate,
+            averageMtpAcceptedRate,
+            generatedTokensCapturedAt,
+            promptTokensCapturedAt,
+            mtpGeneratedTokensCapturedAt,
+            mtpAcceptedTokensCapturedAt,
+            averageGenerationRateCapturedAt,
+            averagePromptRateCapturedAt,
+            averageMtpGeneratedRateCapturedAt,
+            averageMtpAcceptedRateCapturedAt);
     }
 
     private static string MtpTokensText(
@@ -263,14 +339,8 @@ public sealed class RuntimeMetricSummaryTracker
         double? generatedTotal,
         double? acceptedTotal)
     {
-        if (generatedTotal is null && acceptedTotal is null)
-        {
-            if (!MtpConfigured(metricsSettings))
-                return "Inactive";
-
-            liveGeneratedRate ??= 0;
-            liveAcceptedRate ??= 0;
-        }
+        if (generatedTotal is null && acceptedTotal is null && !MtpConfigured(metricsSettings))
+            return "Inactive";
 
         return RuntimeDashboardService.MtpTokenSummaryLabel(
             liveGeneratedRate,
@@ -285,16 +355,89 @@ public sealed class RuntimeMetricSummaryTracker
         => LaunchSettingMetadataService.NormalizeSpeculativeType(metricsSettings.SpeculativeType)
             .Contains("mtp", StringComparison.OrdinalIgnoreCase);
 
-    private void ResetCounters()
+    private RuntimeMetricSummaryState StateFor(string runtimeKey)
     {
-        _lastPredictedTokenCounter = null;
-        _lastPromptTokenCounter = null;
-        _lastMtpGeneratedTokenCounter = null;
-        _lastMtpAcceptedTokenCounter = null;
-        _lastMetricPollAt = null;
-        _lastSlotRuntimeKey = "";
-        _lastSlotPromptProcessedCounter = null;
-        _lastSlotGeneratedCounter = null;
-        _lastSlotPollAt = null;
+        if (!_states.TryGetValue(runtimeKey, out var state))
+        {
+            state = new RuntimeMetricSummaryState();
+            _states[runtimeKey] = state;
+        }
+
+        return state;
+    }
+
+    private static double? CounterRateAndRemember(
+        double? current,
+        ref double? previous,
+        ref DateTimeOffset? previousPollAt,
+        DateTimeOffset now)
+    {
+        var rate = RuntimeDashboardService.CounterRate(current, previous, now, previousPollAt, 0.5);
+        if (current is not null)
+        {
+            previous = current;
+            previousPollAt = now;
+        }
+
+        return rate;
+    }
+
+    private static bool UsedPreviousCounter(double? observed, double? previous, double? display)
+        => previous is not null
+           && display == previous
+           && (observed is null || observed.Value < previous.Value);
+
+    private static bool UsedPreviousAverage(double? observed, double? previous)
+        => observed is null && previous is not null;
+
+    private static DateTimeOffset? DisplayValueCapturedAt(
+        double? observed,
+        double? display,
+        DateTimeOffset? previousCapturedAt,
+        DateTimeOffset now)
+    {
+        if (display is null) return null;
+        return observed is not null && observed.Value == display.Value ? now : previousCapturedAt;
+    }
+
+    private static DateTimeOffset? LastKnownCapturedAt(RuntimeMetricDisplaySnapshot snapshot)
+        => OldestCapturedAt(
+               snapshot.GeneratedTokensCapturedAt,
+               snapshot.PromptTokensCapturedAt,
+               snapshot.MtpGeneratedTokensCapturedAt,
+               snapshot.MtpAcceptedTokensCapturedAt,
+               snapshot.AverageGenerationRateCapturedAt,
+               snapshot.AveragePromptRateCapturedAt,
+               snapshot.AverageMtpGeneratedRateCapturedAt,
+               snapshot.AverageMtpAcceptedRateCapturedAt)
+           ?? snapshot.CapturedAt;
+
+    private static DateTimeOffset? OldestCapturedAt(params DateTimeOffset?[] capturedAt)
+    {
+        DateTimeOffset? oldest = null;
+        foreach (var timestamp in capturedAt)
+        {
+            if (timestamp is null) continue;
+            if (oldest is null || timestamp.Value < oldest.Value)
+                oldest = timestamp;
+        }
+
+        return oldest;
+    }
+
+    private sealed class RuntimeMetricSummaryState
+    {
+        public double? LastPredictedTokenCounter;
+        public DateTimeOffset? LastPredictedTokenPollAt;
+        public double? LastPromptTokenCounter;
+        public DateTimeOffset? LastPromptTokenPollAt;
+        public double? LastMtpGeneratedTokenCounter;
+        public DateTimeOffset? LastMtpGeneratedTokenPollAt;
+        public double? LastMtpAcceptedTokenCounter;
+        public DateTimeOffset? LastMtpAcceptedTokenPollAt;
+        public double? LastSlotPromptProcessedCounter;
+        public double? LastSlotGeneratedCounter;
+        public DateTimeOffset? LastSlotPollAt;
+        public RuntimeMetricDisplaySnapshot? LastDisplay;
     }
 }

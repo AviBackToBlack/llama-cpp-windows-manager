@@ -23,7 +23,7 @@ public sealed partial class OpenCodeConfigService
     private static void SaveConfigObject(string configPath, JsonObject config)
     {
         config.Remove("attachment");
-        ConfigFileSafetyService.WriteTextWithBackup(configPath, FormatNode(config) + Environment.NewLine, Encoding.UTF8, "OpenCode config file");
+        ConfigFileSafetyService.WriteTextWithBackup(configPath, FormatNode(config) + Environment.NewLine, Utf8NoBom, "OpenCode config file");
     }
 
     private static JsonObject DefaultConfigObject() => new()

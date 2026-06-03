@@ -17,7 +17,6 @@ public sealed record OverviewModelSelectionApplicationActions(
     Func<string, RuntimeSessionSelectResult> SelectModel,
     Action<AppSettings?> SetActiveRuntimeSettings,
     Func<Task> SaveActiveRuntimeSessionsAsync,
-    Action ResetMetricCounters,
     Func<Task> RefreshRuntimeMetricsAsync,
     Action<string> SetStatus);
 
@@ -38,7 +37,6 @@ public sealed class OverviewModelSelectionApplicationService
             ? await SelectLoadedModelAsync(model, request.IsActive, actions)
             : OverviewModelSelectionOutcome.NotLoaded;
 
-        actions.ResetMetricCounters();
         if (!request.IsLoaded)
             actions.SetStatus($"{model.Name} is not loaded. Load it to expose an OpenAI-compatible endpoint.");
         await actions.RefreshRuntimeMetricsAsync();
@@ -72,7 +70,6 @@ public sealed class OverviewModelSelectionApplicationService
         ArgumentNullException.ThrowIfNull(actions.SelectModel);
         ArgumentNullException.ThrowIfNull(actions.SetActiveRuntimeSettings);
         ArgumentNullException.ThrowIfNull(actions.SaveActiveRuntimeSessionsAsync);
-        ArgumentNullException.ThrowIfNull(actions.ResetMetricCounters);
         ArgumentNullException.ThrowIfNull(actions.RefreshRuntimeMetricsAsync);
         ArgumentNullException.ThrowIfNull(actions.SetStatus);
     }

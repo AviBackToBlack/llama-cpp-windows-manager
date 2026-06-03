@@ -52,6 +52,11 @@ public sealed class LaunchSettingsFormControls
     public WpfComboBox? CacheTypeVCombo { get; init; }
     public WpfComboBox? KvOffloadCombo { get; init; }
     public WpfComboBox? KvUnifiedCombo { get; init; }
+    public WpfComboBox? PromptCacheCombo { get; init; }
+    public WpfTextBox? PromptCacheRamMbBox { get; init; }
+    public WpfComboBox? ContextCheckpointsCombo { get; init; }
+    public WpfTextBox? ContextCheckpointCountBox { get; init; }
+    public WpfTextBox? ContextCheckpointEveryNTokensBox { get; init; }
     public WpfComboBox? ContinuousBatchingCombo { get; init; }
     public WpfComboBox? JinjaCombo { get; init; }
     public WpfComboBox? MmapCombo { get; init; }
@@ -68,14 +73,15 @@ public sealed class LaunchSettingsFormControls
         TemperatureBox, TopKBox, TopPBox, MinPBox, MaxTokensBox, SeedBox, RepeatLastNBox,
         RepeatPenaltyBox, PresencePenaltyBox, FrequencyPenaltyBox, RopeScaleBox, RopeFreqBaseBox,
         RopeFreqScaleBox, SpecDraftModelPathBox, MtpHeadPathBox, SpecDraftGpuLayersBox, SpecDraftMinTokensBox,
-        SpecDraftMaxTokensBox, SpecDraftPSplitBox, SpecDraftPMinBox
+        SpecDraftMaxTokensBox, SpecDraftPSplitBox, SpecDraftPMinBox, PromptCacheRamMbBox,
+        ContextCheckpointCountBox, ContextCheckpointEveryNTokensBox
     ];
 
     public IEnumerable<WpfComboBox?> ComboBoxes =>
     [
         MetricsCombo, ReasoningCombo, ReasoningFormatCombo, VisionCombo, FlashAttentionCombo,
-        CacheTypeKCombo, CacheTypeVCombo, KvOffloadCombo, KvUnifiedCombo, ContinuousBatchingCombo,
-        JinjaCombo, MmapCombo, MlockCombo, RopeScalingCombo, SpeculativeTypeCombo,
+        CacheTypeKCombo, CacheTypeVCombo, KvOffloadCombo, KvUnifiedCombo, PromptCacheCombo,
+        ContextCheckpointsCombo, ContinuousBatchingCombo, JinjaCombo, MmapCombo, MlockCombo, RopeScalingCombo, SpeculativeTypeCombo,
         SpecDraftCacheTypeKCombo, SpecDraftCacheTypeVCombo
     ];
 }
@@ -105,6 +111,11 @@ public static class LaunchSettingsFormBinder
             CacheTypeV = ComboValue(controls.CacheTypeVCombo),
             KvOffload = ComboValue(controls.KvOffloadCombo),
             KvUnified = ComboValue(controls.KvUnifiedCombo),
+            PromptCacheMode = ComboValue(controls.PromptCacheCombo),
+            PromptCacheRamMb = ReadInt(controls.PromptCacheRamMbBox, "Prompt cache MB", min: -1),
+            ContextCheckpointsMode = ComboValue(controls.ContextCheckpointsCombo),
+            ContextCheckpointCount = ReadInt(controls.ContextCheckpointCountBox, "Checkpoint count", min: 0),
+            ContextCheckpointEveryNTokens = ReadInt(controls.ContextCheckpointEveryNTokensBox, "Checkpoint spacing", min: -1),
             ContinuousBatching = ComboValue(controls.ContinuousBatchingCombo),
             JinjaMode = ComboValue(controls.JinjaCombo),
             MmapMode = ComboValue(controls.MmapCombo),
@@ -182,6 +193,11 @@ public static class LaunchSettingsFormBinder
         SetCombo(controls.CacheTypeVCombo, settings.CacheTypeV);
         SetCombo(controls.KvOffloadCombo, settings.KvOffload);
         SetCombo(controls.KvUnifiedCombo, settings.KvUnified);
+        SetCombo(controls.PromptCacheCombo, settings.PromptCacheMode);
+        SetText(controls.PromptCacheRamMbBox, settings.PromptCacheRamMb);
+        SetCombo(controls.ContextCheckpointsCombo, settings.ContextCheckpointsMode);
+        SetText(controls.ContextCheckpointCountBox, settings.ContextCheckpointCount);
+        SetText(controls.ContextCheckpointEveryNTokensBox, settings.ContextCheckpointEveryNTokens);
         SetCombo(controls.ContinuousBatchingCombo, settings.ContinuousBatching);
         SetCombo(controls.JinjaCombo, settings.JinjaMode);
         SetCombo(controls.MmapCombo, settings.MmapMode);
@@ -210,6 +226,12 @@ public static class LaunchSettingsFormBinder
             throw new InvalidOperationException("Draft split probability must be -1 for default or between 0 and 1.");
         if (next.SpecDraftPMin < 0 && Math.Abs(next.SpecDraftPMin + 1) > 0.000_001)
             throw new InvalidOperationException("Draft min probability must be -1 for default or between 0 and 1.");
+        if (string.Equals(next.PromptCacheMode, "on", StringComparison.OrdinalIgnoreCase) && next.PromptCacheRamMb == 0)
+            throw new InvalidOperationException("Prompt cache MB must be -1 or greater than 0 when prompt cache is on.");
+        if (string.Equals(next.ContextCheckpointsMode, "on", StringComparison.OrdinalIgnoreCase) && next.ContextCheckpointCount < 1)
+            throw new InvalidOperationException("Checkpoint count must be at least 1 when checkpoints are on.");
+        if (string.Equals(next.ContextCheckpointsMode, "on", StringComparison.OrdinalIgnoreCase) && next.ContextCheckpointEveryNTokens < 1)
+            throw new InvalidOperationException("Checkpoint spacing must be at least 1 when checkpoints are on.");
         if (next.SpecDraftMaxTokens > 0 && next.SpecDraftMinTokens > next.SpecDraftMaxTokens)
             throw new InvalidOperationException("Draft min tokens cannot be larger than draft max tokens.");
         if (next.VisionImageMaxTokens > 0 && next.VisionImageMinTokens > next.VisionImageMaxTokens)

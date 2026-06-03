@@ -145,9 +145,14 @@ public sealed class AppUpdateService
             File.Delete(path);
             return notice;
         }
-        catch
+        catch (Exception ex)
         {
-            try { File.Delete(path); } catch { }
+            Trace.TraceWarning($"Could not consume installed update notice {path}: {ex.Message}");
+            try { File.Delete(path); }
+            catch (Exception deleteEx)
+            {
+                Trace.TraceWarning($"Could not delete installed update notice {path}: {deleteEx.Message}");
+            }
             return null;
         }
     }

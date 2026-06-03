@@ -32,8 +32,9 @@ public static class SecretProtector
             var bytes = ProtectedData.Unprotect(protectedBytes, Entropy, DataProtectionScope.CurrentUser);
             return Encoding.UTF8.GetString(bytes);
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"Could not unprotect a DPAPI-protected setting; returning an empty value. {ex.Message}");
             return "";
         }
     }

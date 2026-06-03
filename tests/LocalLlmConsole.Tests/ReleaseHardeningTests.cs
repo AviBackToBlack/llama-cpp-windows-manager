@@ -129,7 +129,7 @@ public sealed partial class ReleaseHardeningTests
 
     private static string ReadLaunchSettingsPanelFactorySources()
     {
-        var factoryPath = FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "LaunchSettingsPanelFactory.cs");
+        var factoryPath = FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "LaunchSettingsPanelFactory.cs");
         var factoryRoot = Path.GetDirectoryName(factoryPath)!;
         return string.Join(
             Environment.NewLine,

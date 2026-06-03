@@ -41,7 +41,14 @@ public static class RuntimePackageInstallFileService
         }
         catch
         {
-            try { File.Delete(destination); } catch { }
+            try
+            {
+                File.Delete(destination);
+            }
+            catch (Exception deleteEx)
+            {
+                Trace.TraceWarning($"Could not delete failed runtime package download {destination}: {deleteEx.Message}");
+            }
             throw;
         }
     }

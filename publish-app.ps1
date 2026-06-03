@@ -3,7 +3,7 @@ param(
   [string] $Runtime = "win-x64",
   [string] $Configuration = "Release",
   [string] $CertificateThumbprint = "",
-  [string] $TimestampServer = "http://timestamp.digicert.com",
+  [string] $TimestampServer = "https://timestamp.digicert.com",
   [switch] $RequireSigned,
   [switch] $RequireCleanTree
 )
@@ -104,14 +104,22 @@ if (Test-Path -LiteralPath $PublishDir) {
   Remove-DistPath -Path $PublishDir -Label "publish folder" -Recurse
 }
 
-& $Dotnet publish $Project `
-  -c $Configuration `
-  -r $Runtime `
-  --self-contained true `
-  -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true `
-  -p:EnableCompressionInSingleFile=true `
-  -o $PublishDir
+$publishArgs = @(
+  "publish",
+  $Project,
+  "-c",
+  $Configuration,
+  "-r",
+  $Runtime,
+  "--self-contained",
+  "true",
+  "-p:PublishSingleFile=true",
+  "-p:IncludeNativeLibrariesForSelfExtract=true",
+  "-p:EnableCompressionInSingleFile=true",
+  "-o",
+  $PublishDir
+)
+& $Dotnet @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed." }
 
 Get-ChildItem -Path $PublishDir -Recurse -Filter *.pdb -File -ErrorAction SilentlyContinue |

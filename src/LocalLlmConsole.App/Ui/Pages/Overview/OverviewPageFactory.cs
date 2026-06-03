@@ -181,7 +181,7 @@ public static class OverviewPageFactory
             runtimeDashboard.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         model = MetricCardFactory.AddMetric(runtimeDashboard, "Model status", 0, 0);
-        gpu = MetricCardFactory.AddMetric(runtimeDashboard, "GPU", 0, 1);
+        gpu = MetricCardFactory.AddMetric(runtimeDashboard, "Hardware", 0, 1);
         requests = MetricCardFactory.AddMetric(runtimeDashboard, "Settings", 0, 2);
         tokens = MetricCardFactory.AddMetric(runtimeDashboard, "Tokens", 1, 0, out tokensLastKnown);
         mtpTokens = MetricCardFactory.AddMetric(runtimeDashboard, "MTP tokens", 1, 1);

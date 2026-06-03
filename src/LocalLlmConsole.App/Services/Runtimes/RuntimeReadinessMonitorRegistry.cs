@@ -49,7 +49,10 @@ public sealed class RuntimeReadinessMonitorRegistry : IDisposable
     private static void CancelAndDispose(CancellationTokenSource cancellation)
     {
         try { cancellation.Cancel(); }
-        catch { }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Runtime readiness monitor cancellation failed: {ex.Message}");
+        }
         cancellation.Dispose();
     }
 }

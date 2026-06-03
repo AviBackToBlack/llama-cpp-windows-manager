@@ -61,14 +61,14 @@ public sealed class ModelRuntimeStatusController
     {
         ArgumentNullException.ThrowIfNull(expiredAsync);
 
-        StopLoadedStatusTimer(clearLoadedStatus: false);
+        StopLoadedStatusTimerCore(clearLoadedStatus: false);
         _loadedStatusTimer = _timerFactory.Create(TimeSpan.FromSeconds(4));
         _loadedStatusTimer.Tick += async (_, _) => await expiredAsync();
         _loadedStatusTimer.Start();
     }
 
-    public void StopLoadedStatusTimer()
-        => StopLoadedStatusTimer(clearLoadedStatus: true);
+    public void StopLoadedStatusTimer(bool clearLoadedStatus = true)
+        => StopLoadedStatusTimerCore(clearLoadedStatus);
 
     private void StopLoadingTimer()
     {
@@ -76,7 +76,7 @@ public sealed class ModelRuntimeStatusController
         _loadingTimer = null;
     }
 
-    private void StopLoadedStatusTimer(bool clearLoadedStatus)
+    private void StopLoadedStatusTimerCore(bool clearLoadedStatus)
     {
         _loadedStatusTimer?.Stop();
         _loadedStatusTimer = null;

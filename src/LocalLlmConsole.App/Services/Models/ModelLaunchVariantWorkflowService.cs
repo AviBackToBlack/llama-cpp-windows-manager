@@ -82,6 +82,9 @@ public sealed class ModelLaunchVariantWorkflowService
     private async Task TryRemoveIncompleteAliasAsync(ModelRecord alias, string modelsRoot)
     {
         try { await _catalog.DeleteAsync(alias, modelsRoot); }
-        catch { }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Could not remove incomplete model alias {alias.Id}: {ex.Message}");
+        }
     }
 }
