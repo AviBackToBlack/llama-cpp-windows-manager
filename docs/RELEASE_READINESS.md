@@ -100,9 +100,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 
   GPU performance counters for AMD/Intel/Vulkan-backed sessions, and does not
   show stale cached hardware data after switching runtimes.
 - Confirm the Settings API key Generate action creates a new model API key.
-- Confirm Settings > OpenCode > Sync on launch save controls whether saved
-  launch settings and saved variants automatically rewrite OpenCode local model
-  entries.
+- Confirm Settings > OpenCode > Auto-sync entries controls whether Settings
+  saves, saved launch settings, and saved variants automatically rewrite
+  OpenCode local model entries.
 - Confirm Settings is separated into named category sections rather than one
   large flat settings grid.
 - Confirm Settings explains that OpenCode sync copies the model API key into
@@ -152,9 +152,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 
 - Confirm OpenCode local model entries can use either the shared gateway
   provider or direct per-model providers/endpoints, remain stable across app
   restarts, and include vision support when launch settings prove it.
-- Confirm OpenCode local model `limit.output` follows the model's saved
-  **Max tokens** launch setting when it is greater than zero, and falls back to
-  the app's context-derived output cap when **Max tokens** is unlimited.
+- Confirm OpenCode local model `limit.output` follows Settings > OpenCode >
+  Limit output after saving Settings with Auto-sync entries enabled or updating
+  an entry from OpenCode.
 - Confirm CPU-only Ubuntu/WSL llama.cpp source build path succeeds after Install CPU Tools, or fails early if Git/CMake/compiler tools are still missing inside Ubuntu.
 - Confirm CUDA Ubuntu/WSL llama.cpp source build path succeeds after Install CUDA on supported NVIDIA hardware, or fails early with a clear driver/toolkit error.
 - Confirm Vulkan Ubuntu/WSL llama.cpp source build path succeeds after Install Vulkan on supported WSL Vulkan hardware, or fails early with a clear driver/toolkit error.

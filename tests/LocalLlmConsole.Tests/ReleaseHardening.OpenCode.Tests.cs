@@ -808,9 +808,48 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("http://127.0.0.1:8082/v1", provider?["options"]?["baseURL"]?.ToString());
         Assert.Equal("gateway-key", provider?["options"]?["apiKey"]?.ToString());
         Assert.Equal("8192", provider?["models"]?[firstId.Split('/')[1]]?["limit"]?["context"]?.ToString());
-        Assert.Equal(OpenCodeConfigService.DefaultOutputLimit.ToString(), provider?["models"]?[firstId.Split('/')[1]]?["limit"]?["output"]?.ToString());
+        Assert.Null(provider?["models"]?[firstId.Split('/')[1]]?["limit"]?["output"]);
         Assert.Equal("16384", provider?["models"]?[secondId.Split('/')[1]]?["limit"]?["context"]?.ToString());
         Assert.Equal("8192", provider?["models"]?[secondId.Split('/')[1]]?["limit"]?["output"]?.ToString());
+    }
+
+    [Fact]
+    public void OpenCodeGatewayModelSyncWritesConfiguredOutputLimit()
+    {
+        var root = CreateTempRoot();
+        var service = new OpenCodeConfigService(root);
+        var configPath = Path.Combine(root, "opencode.jsonc");
+        var model = new ModelRecord("model-a", "First Model", Path.Combine(root, "models", "first-model.gguf"), OwnershipKind.AppOwned, "{}", DateTimeOffset.UtcNow);
+        var modelId = OpenCodeConfigService.LocalModelIdFor(model);
+        File.WriteAllText(configPath, $$"""
+        {
+          "$schema": "https://opencode.ai/config.json",
+          "provider": {
+            "local-llm-console": {
+              "options": {
+                "baseURL": "http://127.0.0.1:8082/v1",
+                "apiKey": "manual-key"
+              },
+              "models": {
+                "{{modelId}}": {
+                  "name": "First Model",
+                  "limit": {
+                    "context": 8192,
+                    "output": 12345
+                  }
+                }
+              }
+            }
+          }
+        }
+        """);
+
+        service.AddOrUpdateLocalModel(configPath, model, "http://127.0.0.1:8082/v1", "gateway-key", 16384, 4096, useGatewayProvider: true);
+
+        var config = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(configPath))!;
+        var modelObject = config["provider"]?[OpenCodeConfigService.LocalProviderId]?["models"]?[modelId];
+        Assert.Equal("16384", modelObject?["limit"]?["context"]?.ToString());
+        Assert.Equal("4096", modelObject?["limit"]?["output"]?.ToString());
     }
 
     [Fact]
@@ -841,6 +880,7 @@ public sealed partial class ReleaseHardeningTests
             AutoLoadGatewayPort = 8082,
             ContextSize = 0,
             MaxTokens = -1,
+            OpenCodeOutputLimit = 12345,
             ModelApiKey = "abcdefghijklmnopqrstuvwxyz123456"
         };
         var launchSettings = settings with { Port = 8084 };
@@ -851,9 +891,10 @@ public sealed partial class ReleaseHardeningTests
         var directDraft = sync.CreateDraft(new OpenCodeLocalModelDraftRequest(configPath, model, settings, launchSettings, limits, UseGatewayProvider: false));
 
         Assert.Equal(32768, limits.ContextSize);
-        Assert.Equal(8192, limits.OutputLimit);
+        Assert.Equal(12345, limits.OutputLimit);
         Assert.Contains("http://127.0.0.1:8082/v1", gatewayDraft.Snippet, StringComparison.Ordinal);
         Assert.Contains("http://127.0.0.1:8084/v1", directDraft.Snippet, StringComparison.Ordinal);
+        Assert.Contains("\"output\": 12345", gatewayDraft.Snippet, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -947,6 +988,7 @@ public sealed partial class ReleaseHardeningTests
             Port = 8081,
             ContextSize = 0,
             MaxTokens = -1,
+            OpenCodeOutputLimit = 12345,
             ModelApiKey = "abcdefghijklmnopqrstuvwxyz123456"
         };
         var profile = ModelLaunchSettings.FromAppSettings(settings) with
@@ -1050,9 +1092,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal([8101, 8091], ensuredPorts);
         Assert.Equal(1, profileReads);
         Assert.Equal(32768, limitsFromCapabilities.ContextSize);
-        Assert.Equal(8192, limitsFromCapabilities.OutputLimit);
+        Assert.Equal(12345, limitsFromCapabilities.OutputLimit);
         Assert.Equal(8192, limitsFromSettings.ContextSize);
-        Assert.Equal(2048, limitsFromSettings.OutputLimit);
+        Assert.Equal(12345, limitsFromSettings.OutputLimit);
         Assert.Equal(1, capabilitiesRead);
         Assert.Contains("http://127.0.0.1:8082/v1", draft.Snippet, StringComparison.Ordinal);
         Assert.Contains("limit", draft.Snippet, StringComparison.Ordinal);
@@ -1096,6 +1138,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("http://127.0.0.1:8082/v1", provider?["options"]?["baseURL"]?.ToString());
         Assert.Equal("abcdefghijklmnopqrstuvwxyz123456", provider?["options"]?["apiKey"]?.ToString());
         Assert.Equal("8192", provider?["models"]?[OpenCodeConfigService.LocalModelIdFor(first)]?["limit"]?["context"]?.ToString());
+        Assert.Equal("4096", provider?["models"]?[OpenCodeConfigService.LocalModelIdFor(first)]?["limit"]?["output"]?.ToString());
         Assert.Equal("8192", provider?["models"]?[OpenCodeConfigService.LocalModelIdFor(second)]?["limit"]?["output"]?.ToString());
     }
 
@@ -1699,7 +1742,8 @@ public sealed partial class ReleaseHardeningTests
             AutoLoadGatewayPort = 8082,
             Port = 8081,
             ContextSize = 4096,
-            MaxTokens = 1024
+            MaxTokens = 1024,
+            OpenCodeOutputLimit = 12345
         };
         var first = new ModelRecord("first", "First Model", Path.Combine(root, "first.gguf"), OwnershipKind.External, "{}", DateTimeOffset.UtcNow);
         var second = new ModelRecord("second", "Second Model", Path.Combine(root, "second.gguf"), OwnershipKind.External, "{}", DateTimeOffset.UtcNow);
@@ -1724,7 +1768,7 @@ public sealed partial class ReleaseHardeningTests
             (_, launchSettings, _) =>
             {
                 resolvedPorts.Add(launchSettings.Port);
-                return ValueTask.FromResult(new OpenCodeModelLimits(launchSettings.ContextSize, launchSettings.MaxTokens));
+                return ValueTask.FromResult(new OpenCodeModelLimits(launchSettings.ContextSize, launchSettings.OpenCodeOutputLimit));
             }),
             TestContext.Current.CancellationToken);
 
@@ -1738,8 +1782,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal([8091, 8081], resolvedPorts);
         Assert.Equal("http://127.0.0.1:8082/v1", gatewayProvider?["options"]?["baseURL"]?.ToString());
         Assert.Equal("8192", gatewayProvider?["models"]?[OpenCodeConfigService.LocalModelIdFor(first)]?["limit"]?["context"]?.ToString());
-        Assert.Equal("2048", gatewayProvider?["models"]?[OpenCodeConfigService.LocalModelIdFor(first)]?["limit"]?["output"]?.ToString());
+        Assert.Equal("12345", gatewayProvider?["models"]?[OpenCodeConfigService.LocalModelIdFor(first)]?["limit"]?["output"]?.ToString());
         Assert.Equal("4096", gatewayProvider?["models"]?[OpenCodeConfigService.LocalModelIdFor(second)]?["limit"]?["context"]?.ToString());
+        Assert.Equal("12345", gatewayProvider?["models"]?[OpenCodeConfigService.LocalModelIdFor(second)]?["limit"]?["output"]?.ToString());
 
         openCode.AddOrUpdateLocalModel(files.ConfigPath, first, "http://127.0.0.1:8099/v1", "old-key", 4096, 1024);
         var directSettings = settings with
@@ -1763,7 +1808,7 @@ public sealed partial class ReleaseHardeningTests
 
 
     [Fact]
-    public void OpenCodeGatewayProviderHealthFindsBrokenSync()
+    public void OpenCodeGatewayProviderHealthAllowsSyncedOutputLimit()
     {
         var root = CreateTempRoot();
         var service = new OpenCodeConfigService(root);
@@ -1791,14 +1836,16 @@ public sealed partial class ReleaseHardeningTests
         }
         """);
 
-        var broken = service.InspectLocalGatewayProvider(configPath, [model], "http://127.0.0.1:8082/v1");
+        var beforeSync = service.InspectLocalGatewayProvider(configPath, [model], "http://127.0.0.1:8082/v1");
         service.AddOrUpdateLocalModel(configPath, model, "http://127.0.0.1:8082/v1", "gateway-key", 8192, 4096, useGatewayProvider: true);
-        var healthy = service.InspectLocalGatewayProvider(configPath, [model], "http://127.0.0.1:8082/v1");
+        var afterSync = service.InspectLocalGatewayProvider(configPath, [model], "http://127.0.0.1:8082/v1");
+        var config = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(configPath))!;
 
-        Assert.False(broken.Ok);
-        Assert.Contains("output", broken.Detail, StringComparison.OrdinalIgnoreCase);
-        Assert.True(healthy.Ok);
-        Assert.Contains("healthy", healthy.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.False(beforeSync.Ok);
+        Assert.Contains("need output limits", beforeSync.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.True(afterSync.Ok);
+        Assert.Contains("healthy", afterSync.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("4096", config["provider"]?[OpenCodeConfigService.LocalProviderId]?["models"]?[modelId]?["limit"]?["output"]?.ToString());
     }
 
 

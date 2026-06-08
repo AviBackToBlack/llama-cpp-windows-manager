@@ -62,7 +62,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(13, snapshot.GeneratedTokens);
         Assert.Equal(20, snapshot.PromptTokens);
         Assert.Equal(28, snapshot.ContextTokens);
-        Assert.Equal(6144, snapshot.ContextSize);
+        Assert.Equal(4096, snapshot.ContextSize);
         Assert.Equal(9, snapshot.MtpGeneratedTokens);
         Assert.Equal(6, snapshot.MtpAcceptedTokens);
         Assert.Equal(2, RuntimeDashboardService.DeltaRate(14, 10, 2, includeZero: false));
@@ -100,7 +100,10 @@ public sealed partial class ReleaseHardeningTests
             new RuntimeMtpTokenSnapshot(297, 171),
             RuntimeDashboardService.ParseMtpTokenStats("draft acceptance rate = 0.57576 (  171 accepted /   297 generated)"));
         Assert.Equal("2.0 t/s (3.0 avg)", RuntimeDashboardService.RateLabel(2, 3));
-        Assert.Equal("Context 6,144\nKV cache 50%, 28 tokens", RuntimeDashboardService.RuntimeSettingsLabel(.5, 28, 6144, 4096));
+        Assert.Equal("Context 6,144 total\nKV cache 50%, 28 tokens", RuntimeDashboardService.RuntimeSettingsLabel(.5, 28, 6144, 4096));
+        Assert.Equal("Context 195,584 total\nSlots: 3 enabled\nKV cache 8,325 tokens", RuntimeDashboardService.RuntimeSettingsLabel(null, 8325, 586752, 195584, 3, "on"));
+        Assert.Equal("Context 586,752 total\nSlots: 3 enabled\nKV cache Unknown", RuntimeDashboardService.RuntimeSettingsLabel(null, null, 195584, 195584, 3, "off"));
+        Assert.Equal("Context 195,584 total\nSlots: 3 enabled\nKV cache Unknown", RuntimeDashboardService.RuntimeSettingsLabel(null, null, 195584, 0, 3));
     }
 
 

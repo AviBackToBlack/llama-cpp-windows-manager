@@ -45,7 +45,8 @@ public partial class MainWindow
         if (result.GeneratedApiKey)
         {
             _settings = result.PersistedSettings;
-            await SyncOpenCodeLocalProviderAsync(result.Settings);
+            if (result.Settings.AutoSaveOpenCodeOnLaunchSettingsSave)
+                await SyncOpenCodeLocalProviderAsync(result.Settings);
         }
         return result.Settings;
     }

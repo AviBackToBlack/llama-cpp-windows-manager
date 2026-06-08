@@ -42,6 +42,7 @@ public sealed class LaunchSettingsFormControls
     public WpfTextBox? SpecDraftMaxTokensBox { get; init; }
     public WpfTextBox? SpecDraftPSplitBox { get; init; }
     public WpfTextBox? SpecDraftPMinBox { get; init; }
+    public WpfTextBox? CustomParametersBox { get; init; }
 
     public WpfComboBox? MetricsCombo { get; init; }
     public WpfComboBox? ReasoningCombo { get; init; }
@@ -74,7 +75,7 @@ public sealed class LaunchSettingsFormControls
         RepeatPenaltyBox, PresencePenaltyBox, FrequencyPenaltyBox, RopeScaleBox, RopeFreqBaseBox,
         RopeFreqScaleBox, SpecDraftModelPathBox, MtpHeadPathBox, SpecDraftGpuLayersBox, SpecDraftMinTokensBox,
         SpecDraftMaxTokensBox, SpecDraftPSplitBox, SpecDraftPMinBox, PromptCacheRamMbBox,
-        ContextCheckpointCountBox, ContextCheckpointEveryNTokensBox
+        ContextCheckpointCountBox, ContextCheckpointEveryNTokensBox, CustomParametersBox
     ];
 
     public IEnumerable<WpfComboBox?> ComboBoxes =>
@@ -144,7 +145,8 @@ public static class LaunchSettingsFormBinder
             SpecDraftPSplit = ReadDouble(controls.SpecDraftPSplitBox, "Draft split probability", min: -1, max: 1),
             SpecDraftPMin = ReadDouble(controls.SpecDraftPMinBox, "Draft min probability", min: -1, max: 1),
             SpecDraftCacheTypeK = ComboValue(controls.SpecDraftCacheTypeKCombo),
-            SpecDraftCacheTypeV = ComboValue(controls.SpecDraftCacheTypeVCombo)
+            SpecDraftCacheTypeV = ComboValue(controls.SpecDraftCacheTypeVCombo),
+            CustomParameters = controls.CustomParametersBox?.Text.Trim() ?? ""
         };
 
         ValidateCrossFieldRules(next);
@@ -184,6 +186,7 @@ public static class LaunchSettingsFormBinder
         SetText(controls.SpecDraftMaxTokensBox, settings.SpecDraftMaxTokens);
         SetText(controls.SpecDraftPSplitBox, settings.SpecDraftPSplit);
         SetText(controls.SpecDraftPMinBox, settings.SpecDraftPMin);
+        SetText(controls.CustomParametersBox, settings.CustomParameters);
         SetCombo(controls.MetricsCombo, settings.EnableMetrics ? "on" : "off");
         SetCombo(controls.ReasoningCombo, settings.ReasoningMode);
         SetCombo(controls.ReasoningFormatCombo, settings.ReasoningFormat);
@@ -236,6 +239,7 @@ public static class LaunchSettingsFormBinder
             throw new InvalidOperationException("Draft min tokens cannot be larger than draft max tokens.");
         if (next.VisionImageMaxTokens > 0 && next.VisionImageMinTokens > next.VisionImageMaxTokens)
             throw new InvalidOperationException("Image min tokens cannot be larger than image max tokens.");
+        _ = LocalLlmConsole.Services.CustomLaunchParameterParser.Parse(next.CustomParameters);
     }
 
     private static void SetText(WpfTextBox? box, int value) => SetText(box, value.ToString(CultureInfo.InvariantCulture));

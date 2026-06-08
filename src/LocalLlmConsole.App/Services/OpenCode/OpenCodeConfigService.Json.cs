@@ -61,9 +61,15 @@ public sealed partial class OpenCodeConfigService
         bool supportsVision)
     {
         var modelObject = new JsonObject { ["name"] = model.Name };
-        var limit = new JsonObject { ["output"] = NormalizeOutputLimit(outputLimit) };
-        if (contextSize > 0) limit["context"] = contextSize;
-        modelObject["limit"] = limit;
+        if (contextSize > 0 || outputLimit > 0)
+        {
+            var limit = new JsonObject();
+            if (contextSize > 0)
+                limit["context"] = contextSize;
+            if (outputLimit > 0)
+                limit["output"] = outputLimit;
+            modelObject["limit"] = limit;
+        }
         ApplyVisionSupport(modelObject, supportsVision);
         return modelObject;
     }
@@ -84,9 +90,6 @@ public sealed partial class OpenCodeConfigService
             ["output"] = new JsonArray("text")
         };
     }
-
-    private static int NormalizeOutputLimit(int outputLimit)
-        => outputLimit > 0 ? outputLimit : DefaultOutputLimit;
 
     private static JsonObject EnsureObject(JsonObject parent, string key)
     {

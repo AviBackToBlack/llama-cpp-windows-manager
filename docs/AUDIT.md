@@ -46,11 +46,10 @@ The core release blockers from the full audit have been addressed in code:
   embedded/model-bundled, or explicit vision head/projector choices, vision
   image token allowances, separate MTP head choices for compatible runtimes,
   and OpenCode vision metadata when synced.
-- OpenCode sync can be automatic on launch-setting/variant save or manually
-  controlled from the OpenCode page, with Settings and docs calling out that
+- OpenCode sync can be automatic on Settings, launch-setting, or variant save
+  or manually controlled from the OpenCode page, with Settings and docs calling out that
   OpenCode provider config stores the synced API key in plain text. Synced
-  OpenCode model output limits are derived from per-model Max tokens launch
-  settings.
+  OpenCode model output limits come from Settings > OpenCode > Limit output.
 - Fresh installer setups offer Start with Windows by default, with a matching
   current-user startup preference in Settings.
 - Settings are grouped by category, and Overview preserves completed model load
@@ -155,7 +154,8 @@ low-risk items that were safe to take immediately:
 - Overview Model Status now separates Loading/Loaded Model from Loading Time and
   keeps the completed load duration visible after startup.
 - Settings now renders preferences in category sections for easier navigation,
-  and OpenCode sync documents/writes `limit.output` from per-model Max tokens.
+  and OpenCode sync documents/writes `limit.output` from the OpenCode Limit
+  output setting.
 
 Verification for this hardening pass:
 

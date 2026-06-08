@@ -72,7 +72,6 @@ public partial class MainWindow
 
     private void StopModelLoadingTimer(bool showLoadedDuration = false, string loadedModelName = "")
     {
-        StopModelLoadedStatusTimer();
         var loadedStatus = _coreServices.Models.ModelRuntimeStatus.StopLoading(showLoadedDuration, loadedModelName, DateTimeOffset.Now);
         if (loadedStatus is not null)
             ShowModelLoadedStatus();
@@ -82,12 +81,6 @@ public partial class MainWindow
     {
         var selectedStatus = _coreServices.Models.ModelRuntimeStatus.LoadedStatusFor(SelectedOverviewModel()?.Id);
         ApplyModelRuntimeStatusRenderPlan(_coreServices.Models.ModelRuntimeStatusRender.LoadedStatus(selectedStatus));
-
-        _coreServices.Models.ModelRuntimeStatus.StartLoadedStatusTimer(async () =>
-        {
-            StopModelLoadedStatusTimer(clearLoadedStatus: false);
-            await RefreshRuntimeMetricsAsync();
-        });
     }
 
     private void StopModelLoadedStatusTimer(bool clearLoadedStatus = true)

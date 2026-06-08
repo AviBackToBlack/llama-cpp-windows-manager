@@ -106,6 +106,8 @@ public static partial class LaunchSettingsPanelFactory
         builder.AddLaunchSetting(serverGrid, "Continuous batch", continuousBatchingCombo);
         var metricsCombo = LaunchCombo(LaunchSettingMetadataService.OnOffOptions);
         builder.AddLaunchSetting(serverGrid, "Metrics", metricsCombo);
+        var customParametersBox = LaunchTextBox(settings.CustomParameters);
+        builder.AddAdvancedLaunchSetting(serverGrid, "Custom params", customParametersBox);
         AddLaunchSection(panel, builder, "Server", serverGrid, isAdvancedSection: true);
 
         return new LaunchSettingsFormControls
@@ -164,7 +166,8 @@ public static partial class LaunchSettingsPanelFactory
             RopeScalingCombo = ropeScalingCombo,
             SpeculativeTypeCombo = speculativeTypeCombo,
             SpecDraftCacheTypeKCombo = specDraftCacheTypeKCombo,
-            SpecDraftCacheTypeVCombo = specDraftCacheTypeVCombo
+            SpecDraftCacheTypeVCombo = specDraftCacheTypeVCombo,
+            CustomParametersBox = customParametersBox
         };
     }
 

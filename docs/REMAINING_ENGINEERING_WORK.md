@@ -171,8 +171,9 @@ These are broader product items already implied by the release docs:
   the loaded `StateStore` directly for plain runtime and job list reads.
 - Added Start with Windows settings and checked-by-default installer task for
   fresh installs.
-- Added Settings > OpenCode > Sync on launch save to control automatic OpenCode
-  local model rewrites after saved launch settings or variants change.
+- Added Settings > OpenCode > Auto-sync entries to control automatic OpenCode
+  local model rewrites after Settings saves, saved launch settings, or variants
+  change.
 - Added auto-detected, embedded/model-bundled, and explicit per-model Vision
   head/projector selection plus OpenCode vision support metadata for launch
   profiles with usable vision support.
@@ -227,9 +228,8 @@ These are broader product items already implied by the release docs:
   while preserving save behavior against the same editable row collection.
 - Updated Overview Model Status to show Loading/Loaded Model and Loading Time as
   separate rows, retaining the final completed load duration after readiness.
-- Documented OpenCode `limit.output` behavior and kept sync tied to each model's
-  saved Max tokens launch setting, with a context-derived fallback for
-  unlimited launches.
+- Documented OpenCode `limit.output` behavior and kept sync tied to the
+  Settings > OpenCode > Limit output preference.
 - Refreshed README, architecture, release-readiness, release notes, audit notes,
   remaining-work notes, and in-app Help for the grouped Settings, Overview
   loading-time, and OpenCode output-limit behavior.

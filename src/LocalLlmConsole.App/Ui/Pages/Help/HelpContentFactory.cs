@@ -108,12 +108,18 @@ public static class HelpContentFactory
 
     private static void AddModelsHelp(StackPanel panel, Action<string> navigate)
     {
-        AddHelpArticle(panel, "How model discovery works", "Scan Models Folder recursively registers GGUF files under the configured models folder. It skips symlinks and junctions, and treats obvious helper files such as mmproj, projector, clip, vision-head, or mtp-vision GGUFs as companions rather than main models.");
+        AddHelpArticle(panel, "How model discovery works", "Scan Models Folder recursively registers GGUF files under the configured models folder. It skips symlinks and junctions, and treats obvious helper files such as mmproj, projector, clip, vision-head, mtp-, draft-, or spec- GGUFs as companions rather than main models.");
         AddHelpDefinitionList(panel,
             ("Downloaded models", "Saved under the app models folder and treated as app-owned. Removing them from the app can remove their downloaded folder."),
             ("Manually copied models", "Put the .gguf anywhere under the models folder, then scan. External imports keep the file where it is."),
-            ("Vision heads", "The app can auto-detect nearby mmproj/projector companions, use embedded/model-bundled vision when the GGUF and runtime support it, or save a specific external Vision head path per model."),
-            ("MTP and draft heads", "Nearby .gguf files with mtp, draft, or spec in the name can be auto-detected for speculative decoding. Use MTP head with Spec type atomic-mtp for compatible Atomic forks that accept --mtp-head; use Draft model with draft-* modes for upstream-style draft decoding."));
+            ("Nearby companions", "Nearby means the main model folder, direct child folders, or the parent folder."),
+            ("Vision heads", "Auto-detect matches names containing mmproj, projector, clip, vision-head, visual-head, image-head, head-vision, head-visual, head-image, mtp-vision, or vision-mtp."),
+            ("MTP and draft heads", "Auto-detect matches names starting with mtp-, draft-, or spec-, or containing -mtp-head, mtp-head, -draft-, or -spec-. Underscores and dots are treated like hyphens."),
+            ("Draft model vs MTP head", "Use Draft model with upstream draft-* modes such as draft-mtp. Use MTP head only with Spec type atomic-mtp for compatible Atomic forks that accept --mtp-head."));
+        AddHelpBullets(panel,
+            "Names that only say assistant are not auto-detected as draft/MTP companions.",
+            "For Gemma 4 draft-mtp assistant files, use a name like mtp-gemma-4-31b-it-qat-q4_0-assistant.gguf.",
+            "MTP assistant GGUFs are separate from Vision head / --mmproj projector files.");
 
         AddHelpArticle(panel, "Why some settings appear for every model", "GGUF metadata is useful but incomplete. It often cannot prove whether a model supports vision, a reasoning tag format, RoPE overrides, speculative decoding, flash attention, or a runtime-specific cache mode before llama.cpp actually starts.");
         AddHelpBullets(panel,
@@ -131,11 +137,12 @@ public static class HelpContentFactory
             ("GPU layers", "Higher values offload more layers to GPU. If loading fails with memory errors, reduce this first."),
             ("Batch and micro batch", "Higher batch can be faster but uses more memory. Lower micro batch when CUDA or Vulkan runs out of memory."),
             ("K cache and V cache", "Lower precision saves memory but can reduce quality or fail on some runtimes."),
-            ("Max tokens", "-1 leaves llama.cpp unlimited for direct serving. OpenCode sync uses positive Max tokens as limit.output; when Max tokens is unlimited, the app writes a context-derived OpenCode output cap."),
+            ("Max tokens", "-1 leaves llama.cpp unlimited for direct serving. OpenCode output caps are controlled separately by Settings > OpenCode > Limit output."),
             ("Reasoning", "auto is safest. Use a specific reasoning format only when a model family needs it."),
             ("RoPE scaling", "Long-context experiments can reduce quality or fail. Leave auto unless the model card recommends a setting."),
             ("Spec type", "Use none unless you have a known-compatible draft, Atomic MTP, or n-gram mode for that runtime. Spec type atomic-mtp emits --mtp-head and is intended for compatible Atomic forks."),
             ("MTP head", "Assistant/head GGUF used by compatible MTP forks. It is separate from Vision head and is not passed as --mmproj."),
+            ("Custom params", "Advanced raw llama-server flags appended after the app-generated launch args. Quote values with spaces, for example --n-cpu-moe 999 or --model-draft \"D:\\Models\\draft model.gguf\"."),
             ("Port", "This is the model's direct API port. It must not equal the gateway port."));
         AddHelpActions(panel, navigate, ("Open Models", "models"));
     }
@@ -174,7 +181,8 @@ public static class HelpContentFactory
             ("Cache", "Read-only size display. Clear removes disposable cache files only when no download or runtime build is using them."),
             ("Minimize behavior", "Taskbar only, Tray only, or Tray + taskbar."),
             ("Start with Windows", "Yes registers the app for the current user's Windows startup apps. Fresh installer setups offer this checked by default."),
-            ("Sync on launch save", "Yes automatically rewrites OpenCode local model entries after saved launch settings or saved variants change."),
+            ("Auto-sync entries", "Yes automatically rewrites OpenCode local model entries after Settings saves, saved launch settings, or saved variants change. No leaves existing OpenCode config untouched unless you add or update entries from OpenCode."),
+            ("Limit output", "Whole number written to OpenCode local model entries as limit.output when Settings are saved or OpenCode entries are synced."),
             ("Auto unload idle min", "Whole number from 0 to 10080. 0 disables idle auto-unload."),
             ("Delete source after build", "Yes or No. Yes removes runtime source folders after successful source builds."),
             ("LAN exposure", "Local only keeps everything on 127.0.0.1. Gateway LAN only exposes just the shared router. Direct models LAN only exposes per-model ports. Gateway + direct LAN exposes both."),
@@ -186,7 +194,7 @@ public static class HelpContentFactory
         AddHelpBullets(panel,
             "Changing gateway settings restarts the gateway after Save Settings.",
             "Changing the API key syncs local OpenCode provider credentials when possible.",
-            "Turning Sync on launch save off leaves existing OpenCode entries untouched until you sync or add them from OpenCode.",
+            "Turning Auto-sync entries off leaves existing OpenCode entries untouched unless you add or update them from OpenCode.",
             "LAN exposure opens the selected serving endpoints beyond localhost. Use it only on networks you trust.");
         AddHelpActions(panel, navigate, ("Open Settings", "settings"));
     }
@@ -206,7 +214,7 @@ public static class HelpContentFactory
         AddHelpBullets(panel,
             "Gateway mode is best when you want OpenCode to request any configured model through one address and let the app load it on demand.",
             "Direct mode is best when you manually keep one or more models loaded and want OpenCode entries to point at their saved per-model ports.",
-            "OpenCode output limits come from each model's saved Max tokens launch setting when it is positive. Unlimited model launches use a context-derived OpenCode limit.output value instead.",
+            "OpenCode output limits come from Settings > OpenCode > Limit output, so they are independent of llama.cpp Max tokens.",
             "Vision-capable OpenCode entries are marked as image-capable when the saved launch settings include vision plus embedded, detected, or explicit projector support.",
             "The gateway itself listens on one port, then proxies each request to the requested model's direct runtime port after ensuring that model is loaded.",
             "Prefer keeping loaded models keeps existing direct sessions running and performs a conservative VRAM admission check before adding another GPU model. Single active model unloads other sessions first.",

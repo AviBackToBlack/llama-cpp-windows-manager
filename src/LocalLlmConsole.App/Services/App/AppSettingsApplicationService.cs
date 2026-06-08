@@ -100,7 +100,8 @@ public sealed class AppSettingsApplicationService
         actions.ApplyTheme(result.Settings.ThemeMode);
         actions.ApplyLaunchSettingsToControls();
         await actions.RestartGatewayAsync();
-        await actions.SyncOpenCodeAsync(result.Settings);
+        if (result.Settings.AutoSaveOpenCodeOnLaunchSettingsSave)
+            await actions.SyncOpenCodeAsync(result.Settings);
         var status = result.GeneratedApiKey ? "Settings saved. A model API key was generated." : "Settings saved.";
         if (!startupRegistration.Success)
             status = $"{status} {startupRegistration.StatusMessage}";

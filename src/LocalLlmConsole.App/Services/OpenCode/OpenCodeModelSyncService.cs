@@ -42,11 +42,10 @@ public sealed class OpenCodeModelSyncService
         if (contextSize <= 0)
             contextSize = capabilities.ContextLength;
 
-        var outputLimit = launchSettings.MaxTokens > 0
-            ? launchSettings.MaxTokens
-            : contextSize > 0
-                ? Math.Clamp(contextSize / 4, 4096, OpenCodeConfigService.DefaultOutputLimit)
-                : 8192;
+        var outputLimit = Math.Clamp(
+            launchSettings.OpenCodeOutputLimit,
+            1,
+            AppSettings.MaxOpenCodeOutputLimit);
 
         return new OpenCodeModelLimits(
             contextSize,

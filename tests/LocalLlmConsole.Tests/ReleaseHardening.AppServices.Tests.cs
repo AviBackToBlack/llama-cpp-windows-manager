@@ -30,6 +30,7 @@ public sealed partial class ReleaseHardeningTests
             ["minimizeBehavior"] = "Tray + taskbar",
             ["startWithWindows"] = "Yes",
             ["autoSaveOpenCodeOnLaunchSettingsSave"] = "No",
+            ["openCodeOutputLimit"] = "12345",
             ["autoUnloadIdleMinutes"] = "99999",
             ["deleteRuntimeSourceAfterSuccessfulBuild"] = "Yes",
             ["maxLogFileSizeMb"] = "99999"
@@ -54,6 +55,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("trayAndTaskbar", result.Settings.MinimizeBehavior);
         Assert.True(result.Settings.StartWithWindows);
         Assert.False(result.Settings.AutoSaveOpenCodeOnLaunchSettingsSave);
+        Assert.Equal(12345, result.Settings.OpenCodeOutputLimit);
         Assert.Equal(10080, result.Settings.AutoUnloadIdleMinutes);
         Assert.True(result.Settings.DeleteRuntimeSourceAfterSuccessfulBuild);
         Assert.Equal(4096, result.Settings.MaxLogFileSizeMb);
@@ -89,6 +91,12 @@ public sealed partial class ReleaseHardeningTests
                 ["autoLoadGatewayPort"] = "8082"
             },
             new HashSet<int> { 8082 }));
+        var badOpenCodeOutput = service.Build(new AppSettingsUpdateRequest(
+            current,
+            root,
+            "system",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["openCodeOutputLimit"] = "0" },
+            new HashSet<int>()));
 
         Assert.False(weakKey.Success);
         Assert.Contains("API key", weakKey.StatusMessage, StringComparison.OrdinalIgnoreCase);
@@ -96,6 +104,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("Gateway port must be a whole number.", badGatewayPort.StatusMessage);
         Assert.False(conflictingGatewayPort.Success);
         Assert.Contains("already used", conflictingGatewayPort.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.False(badOpenCodeOutput.Success);
+        Assert.Contains("OpenCode limit output", badOpenCodeOutput.StatusMessage, StringComparison.Ordinal);
     }
 
 
@@ -115,6 +125,7 @@ public sealed partial class ReleaseHardeningTests
             ["autoLoadGatewayPort"] = "8090",
             ["autoLoadGatewayPolicy"] = "Single active model",
             ["minimizeBehavior"] = "Tray + taskbar",
+            ["openCodeOutputLimit"] = "16384",
             ["autoUnloadIdleMinutes"] = "15",
             ["deleteRuntimeSourceAfterSuccessfulBuild"] = "No",
             ["maxLogFileSizeMb"] = "64"
@@ -135,6 +146,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.True(saved.Settings.AutoLoadGatewayEnabled);
         Assert.Equal(8090, saved.Settings.AutoLoadGatewayPort);
         Assert.Equal("singleActive", saved.Settings.AutoLoadGatewayPolicy);
+        Assert.Equal(16384, saved.Settings.OpenCodeOutputLimit);
+        Assert.Equal(16384, loaded.OpenCodeOutputLimit);
         Assert.Equal(saved.Settings.ModelApiKey, loaded.ModelApiKey);
         Assert.True(Directory.Exists(saved.Settings.ModelsRoot));
         Assert.True(Directory.Exists(saved.Settings.RuntimeRoot));
@@ -183,7 +196,8 @@ public sealed partial class ReleaseHardeningTests
             AutoLoadGatewayEnabled = true,
             AutoLoadGatewayPort = 8082,
             ContextSize = 4096,
-            MaxTokens = 1024
+            MaxTokens = 1024,
+            OpenCodeOutputLimit = 12345
         };
         var model = new ModelRecord(
             "model-a",
@@ -208,6 +222,7 @@ public sealed partial class ReleaseHardeningTests
                 ["autoLoadGatewayEnabled"] = "Yes",
                 ["autoLoadGatewayPort"] = "8082",
                 ["autoLoadGatewayPolicy"] = "Single active model",
+                ["openCodeOutputLimit"] = "12345",
                 ["modelApiKey"] = settings.ModelApiKey
             },
             []), TestContext.Current.CancellationToken);
@@ -218,7 +233,7 @@ public sealed partial class ReleaseHardeningTests
             (_, launchSettings, _) =>
             {
                 resolvedPorts.Add(launchSettings.Port);
-                return ValueTask.FromResult(new OpenCodeModelLimits(launchSettings.ContextSize, launchSettings.MaxTokens));
+                return ValueTask.FromResult(new OpenCodeModelLimits(launchSettings.ContextSize, launchSettings.OpenCodeOutputLimit));
             }), TestContext.Current.CancellationToken);
         var config = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(root, "opencode.jsonc")))!;
         var provider = config["provider"]?[OpenCodeConfigService.LocalProviderId];
@@ -231,7 +246,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal([8091], resolvedPorts);
         Assert.Equal("http://127.0.0.1:8082/v1", provider?["options"]?["baseURL"]?.ToString());
         Assert.Equal("8192", provider?["models"]?[OpenCodeConfigService.LocalModelIdFor(model)]?["limit"]?["context"]?.ToString());
-        Assert.Equal("2048", provider?["models"]?[OpenCodeConfigService.LocalModelIdFor(model)]?["limit"]?["output"]?.ToString());
+        Assert.Equal("12345", provider?["models"]?[OpenCodeConfigService.LocalModelIdFor(model)]?["limit"]?["output"]?.ToString());
     }
 
     [Fact]
@@ -271,7 +286,7 @@ public sealed partial class ReleaseHardeningTests
             new AppSettingsOpenCodeSyncApplicationRequest(
                 settings,
                 (_, _) => ValueTask.FromResult<ModelLaunchSettings?>(null),
-                (_, launchSettings, _) => ValueTask.FromResult(new OpenCodeModelLimits(launchSettings.ContextSize, launchSettings.MaxTokens))),
+                (_, launchSettings, _) => ValueTask.FromResult(new OpenCodeModelLimits(launchSettings.ContextSize, launchSettings.OpenCodeOutputLimit))),
             SyncActions(openCodePageActive: false),
             TestContext.Current.CancellationToken);
         var appliedCalls = calls.ToArray();
@@ -280,7 +295,7 @@ public sealed partial class ReleaseHardeningTests
             new AppSettingsOpenCodeSyncApplicationRequest(
                 settings,
                 (_, _) => throw new InvalidOperationException("profile failed"),
-                (_, launchSettings, _) => ValueTask.FromResult(new OpenCodeModelLimits(launchSettings.ContextSize, launchSettings.MaxTokens))),
+                (_, launchSettings, _) => ValueTask.FromResult(new OpenCodeModelLimits(launchSettings.ContextSize, launchSettings.OpenCodeOutputLimit))),
             SyncActions(openCodePageActive: true),
             TestContext.Current.CancellationToken);
 
@@ -352,6 +367,7 @@ public sealed partial class ReleaseHardeningTests
                 ["modelApiKey"] = "short"
             },
             []), Actions(settingsPageActive: true), TestContext.Current.CancellationToken);
+        var failedCalls = calls.ToArray();
 
         Assert.Equal(AppSettingsSaveApplicationOutcome.Saved, saved);
         Assert.Equal("dark", appliedSettings?.ThemeMode);
@@ -365,8 +381,33 @@ public sealed partial class ReleaseHardeningTests
             "status:Settings saved.",
             "show"
         ], savedCalls);
+
+        calls.Clear();
+        appliedSettings = null;
+        var savedWithoutOpenCodeSync = await application.SaveEditedAndApplyAsync(new AppSettingsSaveApplicationRequest(
+            settings with { AutoSaveOpenCodeOnLaunchSettingsSave = false },
+            "dark",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["modelApiKey"] = settings.ModelApiKey,
+                ["autoLoadGatewayPort"] = "8088",
+                ["autoSaveOpenCodeOnLaunchSettingsSave"] = "No"
+            },
+            []), Actions(settingsPageActive: true), TestContext.Current.CancellationToken);
+        var savedWithoutOpenCodeSyncCalls = calls.ToArray();
+        calls.Clear();
         Assert.Equal(AppSettingsSaveApplicationOutcome.Failed, failed);
-        Assert.Equal(["status:Model API key must be at least 32 non-whitespace characters."], calls);
+        Assert.Equal(AppSettingsSaveApplicationOutcome.Saved, savedWithoutOpenCodeSync);
+        Assert.False(appliedSettings?.AutoSaveOpenCodeOnLaunchSettingsSave);
+        Assert.Equal([
+            "apply:dark:8088",
+            "theme:dark",
+            "launch",
+            "gateway",
+            "status:Settings saved.",
+            "show"
+        ], savedWithoutOpenCodeSyncCalls);
+        Assert.Equal(["status:Model API key must be at least 32 non-whitespace characters."], failedCalls);
 
         AppSettingsSaveApplicationActions Actions(bool settingsPageActive)
             => new(
@@ -403,8 +444,10 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains(rows, row => row.Key == "autoLoadGatewayPort" && row.ToolTip.Contains("1 to 65535", StringComparison.Ordinal));
         Assert.Contains(rows, row => row.Key == "autoLoadGatewayPolicy" && row.ToolTip.Contains("Single active model", StringComparison.Ordinal));
         Assert.Contains(rows, row => row.Key == "startWithWindows" && row.Type == "choice" && row.ToolTip.Contains("startup", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(rows, row => row.Key == "autoSaveOpenCodeOnLaunchSettingsSave" && row.Type == "choice" && row.Group == "OpenCode");
+        Assert.Contains(rows, row => row.Key == "autoSaveOpenCodeOnLaunchSettingsSave" && row.Label == "Auto-sync entries" && row.Type == "choice" && row.Group == "OpenCode");
         Assert.Contains(rows, row => row.Key == "autoSaveOpenCodeOnLaunchSettingsSave" && row.ToolTip.Contains("OpenCode provider config stores the synced API key in plain text", StringComparison.Ordinal));
+        Assert.Contains(rows, row => row.Key == "openCodeOutputLimit" && row.Label == "Limit output" && row.Group == "OpenCode");
+        Assert.Contains(rows, row => row.Key == "openCodeOutputLimit" && row.ToolTip.Contains("limit.output", StringComparison.Ordinal));
         Assert.Contains(rows, row => row.Key == "modelApiKey" && row.Type == "secret" && row.Action == "Generate");
         Assert.Contains(rows, row => row.Key == "modelApiKey" && row.ToolTip.Contains("OpenCode sync copies this key into OpenCode provider config in plain text", StringComparison.Ordinal));
         Assert.DoesNotContain(rows, row => string.IsNullOrWhiteSpace(row.ToolTip));
@@ -1764,6 +1807,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("builder.AddAdvancedLaunchSetting(generationGrid, \"Repeat pen\", repeatPenaltyBox);", launchPanelFactory, StringComparison.Ordinal);
         Assert.Contains("builder.AddAdvancedLaunchSetting(generationGrid, \"Presence\", presencePenaltyBox);", launchPanelFactory, StringComparison.Ordinal);
         Assert.Contains("builder.AddAdvancedLaunchSetting(generationGrid, \"Frequency\", frequencyPenaltyBox);", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("builder.AddAdvancedLaunchSetting(serverGrid, \"Custom params\", customParametersBox);", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("CustomParametersBox = customParametersBox", launchPanelFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("Performance & Memory - Advanced", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Speculative / MTP - Advanced", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Generation Defaults - Advanced", source, StringComparison.Ordinal);
@@ -1871,6 +1916,8 @@ public sealed partial class ReleaseHardeningTests
             LaunchSettingsFormBinder.ValidateCrossFieldRules(settings with { ContextCheckpointsMode = "on", ContextCheckpointCount = 0 })).Message, StringComparison.Ordinal);
         Assert.Contains("Checkpoint spacing", Assert.Throws<InvalidOperationException>(() =>
             LaunchSettingsFormBinder.ValidateCrossFieldRules(settings with { ContextCheckpointsMode = "on", ContextCheckpointEveryNTokens = -1 })).Message, StringComparison.Ordinal);
+        Assert.Contains("unterminated quote", Assert.Throws<InvalidOperationException>(() =>
+            LaunchSettingsFormBinder.ValidateCrossFieldRules(settings with { CustomParameters = "\"oops" })).Message, StringComparison.OrdinalIgnoreCase);
     }
 
 
@@ -2009,6 +2056,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.True(LaunchSettingMetadataService.IsAtomicMtpSpeculativeType("mtp"));
         Assert.Equal("mtp", LaunchSettingMetadataService.LlamaSpeculativeTypeArgument("atomic-mtp"));
         Assert.Contains("--mtp-head", LaunchSettingMetadataService.Tooltip("MTP head"), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--n-cpu-moe", LaunchSettingMetadataService.Tooltip("Custom params"), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("separating args with spaces", LaunchSettingMetadataService.Tooltip("Custom params"), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("dynamic-resolution vision", LaunchSettingMetadataService.Tooltip("Image min"), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("model default", LaunchSettingMetadataService.Tooltip("Image max"), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("auto", LaunchSettingMetadataService.AutoOnOffOptions[0]);

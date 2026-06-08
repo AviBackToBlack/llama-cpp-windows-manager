@@ -371,6 +371,8 @@ public sealed partial class ReleaseHardeningTests
         var loadingModelMatches = tracker.IsLoadingModel("MODEL-1");
         var loaded = tracker.StopLoading(showLoadedDuration: true, loadedModelName: "", startedAt.AddSeconds(5));
         var loadedVisible = tracker.StatusFor(null, "No model", startedAt.AddSeconds(6));
+        var redundantStop = tracker.StopLoading(showLoadedDuration: false, loadedModelName: "", startedAt.AddSeconds(7));
+        var loadedAfterRedundantStop = tracker.StatusFor(null, "No model", startedAt.AddSeconds(7));
         tracker.ClearLoadedStatus();
         var cleared = tracker.StatusFor(null, "No model", startedAt.AddSeconds(6));
         var loadingPlan = renderService.LoadingTick(loading);
@@ -391,6 +393,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(ModelRuntimeStatusKind.Loaded, loaded.Kind);
         Assert.Equal("Loaded Model: Qwen\nLoading Time: 5s", loaded.MetricText);
         Assert.Equal(ModelRuntimeStatusKind.Loaded, loadedVisible.Kind);
+        Assert.Null(redundantStop);
+        Assert.Equal("Loaded Model: Qwen\nLoading Time: 5s", loadedAfterRedundantStop.MetricText);
         Assert.Equal(ModelRuntimeStatusKind.Fallback, cleared.Kind);
         Assert.True(loadingPlan.ShouldRender);
         Assert.True(loadingPlan.UpdateProgress);
@@ -464,6 +468,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.False(controller.HasLoadedStatusTimer);
         Assert.False(timerFactory.Timers[1].Started);
         Assert.Equal("Loaded Model: Qwen\nLoading Time: 4s", controller.StatusFor("model-1", "No model", startedAt.AddSeconds(5)).MetricText);
+        Assert.Null(controller.StopLoading(showLoadedDuration: false, loadedModelName: "", startedAt.AddSeconds(6)));
+        Assert.Equal("Loaded Model: Qwen\nLoading Time: 4s", controller.StatusFor("model-1", "No model", startedAt.AddSeconds(6)).MetricText);
         controller.StopLoadedStatusTimer();
         Assert.Equal("No model", controller.StatusFor("model-1", "No model", startedAt.AddSeconds(5)).MetricText);
 
@@ -471,7 +477,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.DoesNotContain("DispatcherUiTimerFactory", controllerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("new ModelRuntimeStatusController()", state, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Models.ModelRuntimeStatus", source, StringComparison.Ordinal);
-        Assert.Contains("_coreServices.Models.ModelRuntimeStatus.StartLoadedStatusTimer", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("_coreServices.Models.ModelRuntimeStatus.StartLoadedStatusTimer", lifecycle, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Models.ModelRuntimeStatus.StopLoadedStatusTimer(clearLoadedStatus)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_modelLoadingTimer", state + lifecycle, StringComparison.Ordinal);
         Assert.DoesNotContain("_modelLoadedStatusTimer", state + lifecycle, StringComparison.Ordinal);

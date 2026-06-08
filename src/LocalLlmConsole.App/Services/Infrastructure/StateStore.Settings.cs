@@ -60,6 +60,7 @@ public sealed partial class StateStore
             MinimizeBehavior = StringValue("minimizeBehavior", defaults.MinimizeBehavior),
             StartWithWindows = BoolValue("startWithWindows", defaults.StartWithWindows),
             AutoSaveOpenCodeOnLaunchSettingsSave = BoolValue("autoSaveOpenCodeOnLaunchSettingsSave", defaults.AutoSaveOpenCodeOnLaunchSettingsSave),
+            OpenCodeOutputLimit = Math.Clamp(IntValue("openCodeOutputLimit", defaults.OpenCodeOutputLimit), 1, AppSettings.MaxOpenCodeOutputLimit),
             ModelAccessMode = AppPreferenceService.ModelAccessMode(StringValue("modelAccessMode", defaults.ModelAccessMode)),
             AutoLoadGatewayEnabled = BoolValue("autoLoadGatewayEnabled", defaults.AutoLoadGatewayEnabled),
             AutoLoadGatewayPort = Math.Clamp(IntValue("autoLoadGatewayPort", defaults.AutoLoadGatewayPort), 1, 65535),
@@ -123,7 +124,8 @@ public sealed partial class StateStore
             SpecDraftPMin = DoubleValue("specDraftPMin", defaults.SpecDraftPMin),
             SpecDraftCacheTypeK = StringValue("specDraftCacheTypeK", defaults.SpecDraftCacheTypeK),
             SpecDraftCacheTypeV = StringValue("specDraftCacheTypeV", defaults.SpecDraftCacheTypeV),
-            CudaPackagePreference = AppPreferenceService.CudaPackagePreference(StringValue("cudaPackagePreference", defaults.CudaPackagePreference))
+            CudaPackagePreference = AppPreferenceService.CudaPackagePreference(StringValue("cudaPackagePreference", defaults.CudaPackagePreference)),
+            CustomParameters = StringValue("customParameters", defaults.CustomParameters)
         };
 
         var migratedLegacyLaunchDefaults = false;
@@ -185,6 +187,7 @@ public sealed partial class StateStore
             ("minimizeBehavior", settings.MinimizeBehavior),
             ("startWithWindows", settings.StartWithWindows),
             ("autoSaveOpenCodeOnLaunchSettingsSave", settings.AutoSaveOpenCodeOnLaunchSettingsSave),
+            ("openCodeOutputLimit", settings.OpenCodeOutputLimit),
             ("modelAccessMode", AppPreferenceService.ModelAccessMode(settings.ModelAccessMode)),
             ("autoLoadGatewayEnabled", settings.AutoLoadGatewayEnabled),
             ("autoLoadGatewayPort", settings.AutoLoadGatewayPort),
@@ -248,7 +251,8 @@ public sealed partial class StateStore
             ("specDraftPMin", settings.SpecDraftPMin),
             ("specDraftCacheTypeK", settings.SpecDraftCacheTypeK),
             ("specDraftCacheTypeV", settings.SpecDraftCacheTypeV),
-            ("cudaPackagePreference", AppPreferenceService.CudaPackagePreference(settings.CudaPackagePreference))
+            ("cudaPackagePreference", AppPreferenceService.CudaPackagePreference(settings.CudaPackagePreference)),
+            ("customParameters", settings.CustomParameters)
         };
 
         await WithConnectionAsync(async () =>

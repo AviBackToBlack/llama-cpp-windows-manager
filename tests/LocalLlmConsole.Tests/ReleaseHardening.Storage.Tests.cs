@@ -175,7 +175,8 @@ public sealed partial class ReleaseHardeningTests
             ContextCheckpointsMode = "on",
             ContextCheckpointCount = 48,
             ContextCheckpointEveryNTokens = 512,
-            CudaPackagePreference = "compatibility"
+            CudaPackagePreference = "compatibility",
+            CustomParameters = "--n-cpu-moe 999"
         };
 
         await store.SaveAppSettingsAsync(settings);
@@ -189,6 +190,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(48, loaded.ContextCheckpointCount);
         Assert.Equal(512, loaded.ContextCheckpointEveryNTokens);
         Assert.Equal("compatibility", loaded.CudaPackagePreference);
+        Assert.Equal("--n-cpu-moe 999", loaded.CustomParameters);
     }
 
     [Fact]
@@ -365,7 +367,8 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
             Temperature = 0.8,
             MicroBatchSize = 256,
             VisionImageMinTokens = 256,
-            VisionImageMaxTokens = 1024
+            VisionImageMaxTokens = 1024,
+            CustomParameters = "--device-draft CUDA1"
         }));
 
         var loaded = await store.GetModelLaunchSettingsAsync("model-1");
@@ -380,6 +383,7 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
         Assert.Equal(256, loaded.MicroBatchSize);
         Assert.Equal(256, loaded.VisionImageMinTokens);
         Assert.Equal(1024, loaded.VisionImageMaxTokens);
+        Assert.Equal("--device-draft CUDA1", loaded.CustomParameters);
     }
 
 

@@ -45,10 +45,9 @@ library replacement.
   live, average, and total values for normal and MTP token streams on the
   Overview page.
 - Optionally writes and syncs OpenCode local model/provider entries through the
-  shared gateway or direct per-model endpoints; automatic sync on launch-save can
-  be disabled. OpenCode `limit.output` is derived from each model's saved
-  **Max tokens** launch setting, falling back to a context-derived default when
-  that setting is unlimited.
+  shared gateway or direct per-model endpoints; automatic OpenCode entry sync can
+  be disabled. OpenCode `limit.output` is controlled by **Settings > OpenCode >
+  Limit output** and is written when OpenCode settings are saved or synced.
 - Offers a Start with Windows installer task, enabled by default for fresh
   installs, plus the same setting inside the app.
 - Stores settings, jobs, models, runtimes, migrations, and history in SQLite.
@@ -111,16 +110,48 @@ The normal path is prebuilt-first:
    loaded or switches to a single active model.
 6. Open **OpenCode** and add each local model. The app can write gateway-backed
    entries or direct per-model entries, and can auto-sync those entries when
-   saved launch settings or saved variants change. The app's saved API key is
+   Settings, saved launch settings, or saved variants change. The app's saved API key is
    protected in llama.cpp Windows Manager settings, but OpenCode provider config
    stores the synced key in plain text so OpenCode can call the local endpoint.
-   To control OpenCode's output cap, edit the model's **Max tokens** launch
-   setting and sync the OpenCode entry again.
+   To control OpenCode's output cap, edit **Settings > OpenCode > Limit output**
+   and save Settings with **Auto-sync entries** enabled, or update the entry from
+   the OpenCode page.
 
 Use **Show advanced** in Runtimes only when you need to download source and build
 a custom fork, branch, patch, or runtime target without a prebuilt package. The
 **Windows** and **WSL Linux** setup pages live under **Tools** and
 are mainly for advanced source builds or troubleshooting missing toolchains.
+
+## Companion GGUF Auto-Detection
+
+The app scans nearby GGUF files for model companions. Nearby means the main
+model's folder, direct child folders, or the parent folder. Companion files are
+not registered as main models when their names clearly identify them as helper
+files.
+
+Vision/projector companions are detected when the filename contains one of:
+`mmproj`, `projector`, `clip`, `vision-head`, `visual-head`, `image-head`,
+`head-vision`, `head-visual`, `head-image`, `mtp-vision`, or `vision-mtp`.
+Use these with the Vision head setting or embedded/model-bundled vision.
+
+Speculative draft and MTP companions are detected when the filename starts with
+`mtp-`, `draft-`, or `spec-`, or contains `-mtp-head`, `mtp-head`, `-draft-`,
+or `-spec-`. Underscores and dots are treated like hyphens for matching. Names
+that only say `assistant` are not auto-detected, so prefer names such as
+`mtp-gemma-4-31b-it-qat-q4_0-assistant.gguf` for upstream `draft-mtp`.
+
+For official upstream `llama.cpp` draft modes, set **Spec type** to a
+`draft-*` value such as `draft-mtp` and use **Draft model** or auto-detect. For
+compatible Atomic MTP forks that accept `--mtp-head`, use **Spec type** =
+`atomic-mtp` and **MTP head** instead. MTP assistant GGUFs are separate from
+Vision head / `--mmproj` projectors.
+
+Advanced launch settings include **Server > Custom params** for raw
+`llama-server` flags that do not yet have a first-class app field. These values
+are saved with the launch profile and appended after the app-generated
+arguments, so examples like `--n-cpu-moe 999` work after you save and restart
+the model. Quote values with spaces, for example
+`--model-draft "D:\Models\draft model.gguf"`.
 
 ## Runtime Compatibility
 
@@ -143,7 +174,7 @@ End users should receive a release artifact, not the source tree.
 Preferred artifact:
 
 ```text
-dist\installer\LlamaCppWindowsManager-Setup-1.1.4-win-x64.exe
+dist\installer\LlamaCppWindowsManager-Setup-1.1.5-win-x64.exe
 ```
 
 Portable artifacts:

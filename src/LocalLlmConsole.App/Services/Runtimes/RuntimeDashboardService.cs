@@ -63,7 +63,7 @@ public static class RuntimeDashboardService
             promptTokens = SumNullable(promptTokens, ReadDouble(slotNode, "n_prompt_tokens", "prompt_tokens"));
             var slotContextTokens = slotPromptProcessed + (slotGenerated ?? 0);
             contextTokens = SumNullable(contextTokens, slotContextTokens > 0 ? slotContextTokens : null);
-            contextSize = SumNullable(contextSize, ReadDouble(slotNode, "n_ctx", "context_size", "ctx_size"));
+            contextSize = MaxNullable(contextSize, ReadDouble(slotNode, "n_ctx", "context_size", "ctx_size"));
             mtpGeneratedTokens = SumNullable(mtpGeneratedTokens, ReadMtpGeneratedTokens(slotNode));
             mtpAcceptedTokens = SumNullable(mtpAcceptedTokens, ReadMtpAcceptedTokens(slotNode));
         }
@@ -157,8 +157,23 @@ public static class RuntimeDashboardService
         return live is not null ? $"{FormatTokenRate(live.Value)} t/s" : $"{FormatTokenRate(average!.Value)} avg";
     }
 
-    public static string RuntimeSettingsLabel(double? kvUsage, double? kvTokens, double? contextSize, int launchContextSize)
-        => $"Context {ContextSizeLabel(contextSize, launchContextSize)}\nKV cache {KvCacheLabel(kvUsage, kvTokens)}";
+    public static string RuntimeSettingsLabel(
+        double? kvUsage,
+        double? kvTokens,
+        double? contextSize,
+        int launchContextSize,
+        int parallelSlots = 1,
+        string kvUnified = "auto")
+    {
+        var lines = new List<string>
+        {
+            $"Context {ContextSizeLabel(contextSize, launchContextSize, parallelSlots, kvUnified)}"
+        };
+        if (parallelSlots > 1)
+            lines.Add($"Slots: {parallelSlots:N0} enabled");
+        lines.Add($"KV cache {KvCacheLabel(kvUsage, kvTokens)}");
+        return string.Join("\n", lines);
+    }
 
     public static string RuntimeSlotsLabel(IReadOnlyList<PrometheusSample> samples)
     {
@@ -214,10 +229,36 @@ public static class RuntimeDashboardService
            ?? RuntimeMetrics.Sum(samples, ["draft", "acc", "seconds", "total"], [])
            ?? RuntimeMetrics.Sum(samples, ["speculative", "acc", "seconds", "total"], []);
 
-    public static string ContextSizeLabel(double? contextSize, int launchContextSize)
+    public static string ContextSizeLabel(
+        double? contextSize,
+        int launchContextSize,
+        int parallelSlots = 1,
+        string kvUnified = "auto")
     {
-        if (contextSize is > 0) return contextSize.Value.ToString("N0");
-        return launchContextSize == 0 ? "Model default" : launchContextSize.ToString("N0");
+        var slots = Math.Max(1, parallelSlots);
+        var baseContext = slots > 1
+            ? launchContextSize > 0
+                ? (double?)launchContextSize
+                : contextSize is > 0
+                    ? contextSize
+                    : null
+            : contextSize is > 0
+                ? contextSize
+                : launchContextSize > 0
+                    ? launchContextSize
+                    : null;
+
+        if (baseContext is not null)
+        {
+            var totalContext = string.Equals(kvUnified, "off", StringComparison.OrdinalIgnoreCase)
+                ? baseContext.Value * slots
+                : baseContext.Value;
+            return $"{totalContext:N0} total";
+        }
+
+        return slots > 1 && string.Equals(kvUnified, "off", StringComparison.OrdinalIgnoreCase)
+            ? $"Model default x {slots:N0} slots"
+            : "Model default";
     }
 
     public static double? ReadDouble(JsonObject obj, params string[] keys)

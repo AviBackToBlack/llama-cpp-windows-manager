@@ -179,7 +179,13 @@ public sealed class RuntimeMetricSummaryTracker
             displayMtpGeneratedTokens,
             displayMtpAcceptedTokens);
         var slotsText = RuntimeDashboardService.RuntimeSlotsLabel(samples);
-        var settingsText = RuntimeDashboardService.RuntimeSettingsLabel(kvUsage, kvTokens, contextSize, metricsSettings.ContextSize);
+        var settingsText = RuntimeDashboardService.RuntimeSettingsLabel(
+            kvUsage,
+            kvTokens,
+            contextSize,
+            metricsSettings.ContextSize,
+            metricsSettings.ParallelSlots,
+            metricsSettings.KvUnified);
         var snapshotCapturedAt = usedLastKnown && previous is not null ? previous.CapturedAt : now;
 
         Remember(

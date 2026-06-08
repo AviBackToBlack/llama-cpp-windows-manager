@@ -249,12 +249,11 @@ public static class RuntimeAdapter
         if (contextCheckpointsMode == "on")
         {
             args.AddRange(["--ctx-checkpoints", request.ContextCheckpointCount.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
-            args.AddRange(["--checkpoint-every-n-tokens", request.ContextCheckpointEveryNTokens.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
+            args.AddRange(["--checkpoint-min-step", request.ContextCheckpointEveryNTokens.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
         }
         else if (contextCheckpointsMode == "off")
         {
             args.AddRange(["--ctx-checkpoints", "0"]);
-            args.AddRange(["--checkpoint-every-n-tokens", "-1"]);
         }
         if (request.ContinuousBatching == "on")
             args.Add("--cont-batching");

@@ -59,6 +59,7 @@ public static class LaunchSettingMetadataService
         "Memory map" => "Loads model weights using memory mapping. Usually faster startup and lower RAM pressure.",
         "Memory lock" => "Prevents model memory from being swapped to disk. Can help stability, but uses locked RAM.",
         "Metrics" => "Exposes llama.cpp metrics so Overview can show runtime stats.",
+        "Custom params" => "Additional llama-server flags appended after the app-generated launch arguments. Add more than one by separating args with spaces, for example --n-cpu-moe 999 --device-draft CUDA1. Quote values with spaces.",
         "Temperature" => "Controls randomness. Lower is more focused; higher is more creative.",
         "Top K" => "Limits each next-token choice to the best K candidates. 0 disables this limit.",
         "Top P" => "Keeps only the most likely tokens up to this probability mass. Lower is more focused.",

@@ -386,7 +386,45 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("--api-key", args);
         Assert.DoesNotContain("--cache-ram", args);
         Assert.DoesNotContain("--ctx-checkpoints", args);
-        Assert.DoesNotContain("--checkpoint-every-n-tokens", args);
+        Assert.DoesNotContain("--checkpoint-min-step", args);
+    }
+
+    [Fact]
+    public void CustomLaunchParameterParserPreservesQuotedWindowsPathsAndEscapes()
+    {
+        var args = CustomLaunchParameterParser.Parse("""--n-cpu-moe 999 --device-draft CUDA1 --model-draft "D:\Models\draft model.gguf" --flag\ with\ spaces 'single quoted value'""");
+
+        Assert.Equal([
+            "--n-cpu-moe",
+            "999",
+            "--device-draft",
+            "CUDA1",
+            "--model-draft",
+            @"D:\Models\draft model.gguf",
+            "--flag with spaces",
+            "single quoted value"
+        ], args);
+        Assert.Empty(CustomLaunchParameterParser.Parse(""));
+        Assert.Contains("unterminated quote", Assert.Throws<InvalidOperationException>(() =>
+            CustomLaunchParameterParser.Parse("\"oops")).Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RuntimeAdapterAppendsCustomExtraArgs()
+    {
+        var args = RuntimeAdapter.BuildArgs(ValidLaunchRequest() with
+        {
+            ExtraArgs = CustomLaunchParameterParser.Parse("--n-cpu-moe 999 --device-draft CUDA1 --model-draft \"D:\\Models\\draft model.gguf\"")
+        });
+
+        Assert.Equal([
+            "--n-cpu-moe",
+            "999",
+            "--device-draft",
+            "CUDA1",
+            "--model-draft",
+            @"D:\Models\draft model.gguf"
+        ], args.TakeLast(6).ToArray());
     }
 
     [Fact]
@@ -410,14 +448,13 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("16384", onArgs);
         Assert.Contains("--ctx-checkpoints", onArgs);
         Assert.Contains("48", onArgs);
-        Assert.Contains("--checkpoint-every-n-tokens", onArgs);
+        Assert.Contains("--checkpoint-min-step", onArgs);
         Assert.Contains("512", onArgs);
 
         Assert.Contains("--cache-ram", offArgs);
         Assert.Contains("0", offArgs);
         Assert.Contains("--ctx-checkpoints", offArgs);
-        Assert.Contains("--checkpoint-every-n-tokens", offArgs);
-        Assert.Contains("-1", offArgs);
+        Assert.DoesNotContain("--checkpoint-min-step", offArgs);
     }
 
 

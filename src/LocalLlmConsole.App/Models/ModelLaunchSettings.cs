@@ -54,7 +54,8 @@ public sealed record ModelLaunchSettings(
     int PromptCacheRamMb = AppSettings.DefaultPromptCacheRamMb,
     string ContextCheckpointsMode = AppSettings.DefaultContextCheckpointsMode,
     int ContextCheckpointCount = AppSettings.DefaultContextCheckpointCount,
-    int ContextCheckpointEveryNTokens = AppSettings.DefaultContextCheckpointEveryNTokens)
+    int ContextCheckpointEveryNTokens = AppSettings.DefaultContextCheckpointEveryNTokens,
+    string CustomParameters = "")
 {
     public static ModelLaunchSettings FromAppSettings(AppSettings settings, string runtimeId = "") => new(
         settings.ContextSize,
@@ -110,7 +111,8 @@ public sealed record ModelLaunchSettings(
         settings.PromptCacheRamMb,
         settings.ContextCheckpointsMode,
         settings.ContextCheckpointCount,
-        settings.ContextCheckpointEveryNTokens);
+        settings.ContextCheckpointEveryNTokens,
+        settings.CustomParameters);
 
     public AppSettings ApplyTo(AppSettings settings) => settings with
     {
@@ -166,6 +168,7 @@ public sealed record ModelLaunchSettings(
         PromptCacheRamMb = PromptCacheRamMb,
         ContextCheckpointsMode = ContextCheckpointsMode,
         ContextCheckpointCount = ContextCheckpointCount,
-        ContextCheckpointEveryNTokens = ContextCheckpointEveryNTokens
+        ContextCheckpointEveryNTokens = ContextCheckpointEveryNTokens,
+        CustomParameters = CustomParameters ?? ""
     };
 }

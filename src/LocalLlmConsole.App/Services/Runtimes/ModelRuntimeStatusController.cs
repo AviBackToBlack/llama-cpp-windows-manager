@@ -52,8 +52,13 @@ public sealed class ModelRuntimeStatusController
         string loadedModelName,
         DateTimeOffset now)
     {
-        StopLoadedStatusTimer();
+        var hadLoadingStatus = _tracker.HasLoadingStatus;
+        if (hadLoadingStatus)
+            StopLoadedStatusTimer();
         StopLoadingTimer();
+        if (!hadLoadingStatus)
+            return null;
+
         return _tracker.StopLoading(showLoadedDuration, loadedModelName, now);
     }
 

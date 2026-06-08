@@ -216,10 +216,14 @@ public sealed partial class OpenCodeConfigService
             models[modelId] = modelObject;
         }
         modelObject["name"] = model.Name;
-        var limit = EnsureObject(modelObject, "limit");
-        if (contextSize > 0)
-            limit["context"] = contextSize;
-        limit["output"] = NormalizeOutputLimit(outputLimit);
+        if (contextSize > 0 || outputLimit > 0)
+        {
+            var limit = EnsureObject(modelObject, "limit");
+            if (contextSize > 0)
+                limit["context"] = contextSize;
+            if (outputLimit > 0)
+                limit["output"] = outputLimit;
+        }
         ApplyVisionSupport(modelObject, supportsVision);
 
         var fullId = $"{providerId}/{modelId}";

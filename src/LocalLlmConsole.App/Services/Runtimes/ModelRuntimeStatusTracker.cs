@@ -51,10 +51,13 @@ public sealed class ModelRuntimeStatusTracker
         string loadedModelName,
         DateTimeOffset now)
     {
+        var hadLoadingStatus = HasLoadingStatus;
+        if (!hadLoadingStatus)
+            return null;
+
         ClearLoadedStatus();
 
-        var hadLoadingStatus = HasLoadingStatus;
-        var elapsed = hadLoadingStatus ? now - _loadingStartedAt : TimeSpan.Zero;
+        var elapsed = now - _loadingStartedAt;
         var modelId = _loadingModelId;
         var modelName = string.IsNullOrWhiteSpace(loadedModelName) ? _loadingModelName : loadedModelName;
 

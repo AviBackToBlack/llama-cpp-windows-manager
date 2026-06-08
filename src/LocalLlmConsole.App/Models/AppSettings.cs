@@ -9,6 +9,7 @@ public sealed record AppSettings(
     string MinimizeBehavior,
     bool StartWithWindows,
     bool AutoSaveOpenCodeOnLaunchSettingsSave,
+    int OpenCodeOutputLimit,
     string ModelAccessMode,
     bool AutoLoadGatewayEnabled,
     int AutoLoadGatewayPort,
@@ -72,7 +73,8 @@ public sealed record AppSettings(
     int PromptCacheRamMb = 8192,
     string ContextCheckpointsMode = "auto",
     int ContextCheckpointCount = 32,
-    int ContextCheckpointEveryNTokens = 256)
+    int ContextCheckpointEveryNTokens = 256,
+    string CustomParameters = "")
 {
     public const int DefaultContextSize = 131_072;
     public const int DefaultGpuLayers = 999;
@@ -80,6 +82,8 @@ public sealed record AppSettings(
     public const string DefaultCacheType = "q8_0";
     public const double DefaultTemperature = 0.65;
     public const int DefaultMaxTokens = -1;
+    public const int DefaultOpenCodeOutputLimit = OpenCodeConfigService.DefaultOutputLimit;
+    public const int MaxOpenCodeOutputLimit = 1_048_576;
     public const int DefaultSeed = -1;
     public const int DefaultRepeatLastN = 64;
     public const double DefaultRepeatPenalty = 1.0;
@@ -114,6 +118,7 @@ public sealed record AppSettings(
         "taskbarOnly",
         false,
         true,
+        DefaultOpenCodeOutputLimit,
         "local",
         true,
         8082,

@@ -69,7 +69,7 @@ public static class MetricCardFactory
         header.Children.Add(lastKnown);
         stack.Children.Add(header);
         var valueRows = new Grid { MinHeight = 34, Tag = label };
-        valueRows.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(74) });
+        valueRows.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(MetricLabelColumnWidth(label)) });
         valueRows.ColumnDefinitions.Add(new ColumnDefinition());
         SetMetricText(valueRows, "...");
         stack.Children.Add(valueRows);
@@ -186,6 +186,11 @@ public static class MetricCardFactory
 
         return ("", text);
     }
+
+    private static double MetricLabelColumnWidth(string label)
+        => string.Equals(label, "Model status", StringComparison.Ordinal)
+            ? 98
+            : 74;
 
     public static bool IsNeutralMetricStatus(string text)
     {

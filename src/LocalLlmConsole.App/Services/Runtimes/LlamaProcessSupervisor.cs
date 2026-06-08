@@ -95,6 +95,11 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         var launchHost = allowDirectLanAccess
             ? string.IsNullOrWhiteSpace(settings.Host) ? "0.0.0.0" : settings.Host
             : "127.0.0.1";
+        var extraArgs = new List<string>();
+        if (settings.EnableMetrics)
+            extraArgs.Add("--metrics");
+        extraArgs.AddRange(CustomLaunchParameterParser.Parse(settings.CustomParameters));
+
         var request = new RuntimeLaunchRequest
         {
             Mode = runtime.Mode,
@@ -158,7 +163,7 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
             SpecDraftPMin = settings.SpecDraftPMin,
             SpecDraftCacheTypeK = settings.SpecDraftCacheTypeK,
             SpecDraftCacheTypeV = settings.SpecDraftCacheTypeV,
-            ExtraArgs = settings.EnableMetrics ? new[] { "--metrics" } : Array.Empty<string>()
+            ExtraArgs = extraArgs
         };
         _lastApiKey = settings.ModelApiKey ?? "";
         var args = RuntimeAdapter.BuildArgs(request);

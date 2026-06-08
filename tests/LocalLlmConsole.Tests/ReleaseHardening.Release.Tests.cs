@@ -10,14 +10,14 @@ namespace LocalLlmConsole.Tests;
 public sealed partial class ReleaseHardeningTests
 {
     [Fact]
-    public void ProjectDeclaresVersionOneOneFourMetadata()
+    public void ProjectDeclaresVersionOneOneFiveMetadata()
     {
         var project = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "LocalLlmConsole.App.csproj"));
 
-        Assert.Contains("<Version>1.1.4</Version>", project, StringComparison.Ordinal);
-        Assert.Contains("<AssemblyVersion>1.1.4.0</AssemblyVersion>", project, StringComparison.Ordinal);
-        Assert.Contains("<FileVersion>1.1.4.0</FileVersion>", project, StringComparison.Ordinal);
-        Assert.Contains("<InformationalVersion>v1.1.4</InformationalVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<Version>1.1.5</Version>", project, StringComparison.Ordinal);
+        Assert.Contains("<AssemblyVersion>1.1.5.0</AssemblyVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<FileVersion>1.1.5.0</FileVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<InformationalVersion>v1.1.5</InformationalVersion>", project, StringComparison.Ordinal);
     }
 
 
