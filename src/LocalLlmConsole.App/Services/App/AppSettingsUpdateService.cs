@@ -37,7 +37,7 @@ public sealed class AppSettingsUpdateService
                 // When re-enabling, restore the key we backed up when disabling
                 if (!string.IsNullOrWhiteSpace(current.ModelApiKeyBackup))
                     apiKey = current.ModelApiKeyBackup.Trim();
-                
+
                 if (string.IsNullOrWhiteSpace(apiKey))
                 {
                     apiKey = ApiSecurity.GenerateHexToken(32);
