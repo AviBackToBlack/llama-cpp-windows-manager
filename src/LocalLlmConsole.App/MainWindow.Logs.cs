@@ -100,7 +100,7 @@ public partial class MainWindow
         var logPageApplication = AppServices.LogPageApplication;
         if (logPageApplication is null)
         {
-            SetStatus("Logs are not ready yet.");
+            SetStatus(Loc.T("Status.LogsNotReady"));
             return;
         }
 

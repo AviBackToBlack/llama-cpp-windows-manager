@@ -3,7 +3,7 @@ namespace LocalLlmConsole.ViewModels;
 public sealed class MainWindowViewModel : ObservableViewModel
 {
     private string _currentPage = "Overview";
-    private string _statusText = "Starting...";
+    private string _statusText = Localization.Loc.T("Status.Starting");
     private bool _isBusy;
 
     public OverviewPageViewModel Overview { get; } = new();
@@ -45,7 +45,7 @@ public sealed class MainWindowViewModel : ObservableViewModel
         private set => SetProperty(ref _isBusy, value);
     }
 
-    public string DisplayStatusText => string.IsNullOrWhiteSpace(StatusText) ? "Ready" : StatusText;
+    public string DisplayStatusText => string.IsNullOrWhiteSpace(StatusText) ? Localization.Loc.T("Status.Ready") : StatusText;
 
     public void SetStatus(string text) => StatusText = text ?? "";
 
@@ -55,8 +55,8 @@ public sealed class MainWindowViewModel : ObservableViewModel
         if (IsBusy)
         {
             busyMessage = string.IsNullOrWhiteSpace(StatusText)
-                ? "Please wait for the current action to finish."
-                : $"Please wait: {StatusText}";
+                ? Localization.Loc.T("Status.PleaseWait")
+                : Localization.Loc.T("Status.PleaseWaitFor", StatusText);
             return false;
         }
 

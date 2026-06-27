@@ -59,6 +59,7 @@ public sealed record RuntimeLaunchRequest
     public string Host { get; init; } = "127.0.0.1";
     public bool AllowNetworkAccess { get; init; }
     public string ApiKey { get; init; } = "";
+    public bool RequireApiKeyAuth { get; init; }
     public int Port { get; init; } = 8081;
     public int ContextSize { get; init; }
     public int GpuLayers { get; init; }

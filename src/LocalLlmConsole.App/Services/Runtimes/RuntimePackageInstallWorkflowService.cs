@@ -5,7 +5,8 @@ public sealed record RuntimePackageInstallWorkflowRequest(
     AppSettings Settings,
     long MaxLogBytes,
     Func<Task>? JobsChangedAsync = null,
-    CancellationToken CancellationToken = default);
+    CancellationToken CancellationToken = default,
+    bool RequireChecksum = true);
 
 public sealed record RuntimePackageInstallWorkflowResult(
     RuntimePackageUpdateState UpdateState,
@@ -66,7 +67,8 @@ public sealed class RuntimePackageInstallWorkflowService
                     logPath,
                     request.MaxLogBytes,
                     request.CancellationToken)),
-                request.CancellationToken));
+                request.CancellationToken,
+                RequireChecksum: request.RequireChecksum));
             await UpdateJobAsync(request, job, JobStatus.Completed, request.Preset, "install", result.RuntimeFolder, result.StatusMessage);
             return new RuntimePackageInstallWorkflowResult(result.UpdateState, result.RuntimeFolder, result.StatusMessage, job);
         }

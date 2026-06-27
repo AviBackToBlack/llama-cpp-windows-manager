@@ -421,7 +421,7 @@ public sealed partial class ReleaseHardeningTests
                 () =>
                 {
                     calls.Add("gateway");
-                    return Task.CompletedTask;
+                    return Task.FromResult(true);
                 },
                 syncedSettings =>
                 {

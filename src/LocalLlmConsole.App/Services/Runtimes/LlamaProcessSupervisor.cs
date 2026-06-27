@@ -13,6 +13,7 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
     private readonly WslRuntimeStopService _wslRuntimeStop;
     private readonly NativeRuntimeStopService _nativeRuntimeStop;
     private Process? _process;
+    private ProcessJobObjectService? _jobObject;
     private BoundedLogWriter? _log;
     private bool _attached;
     private bool _recovered;
@@ -99,6 +100,7 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         if (settings.EnableMetrics)
             extraArgs.Add("--metrics");
         extraArgs.AddRange(CustomLaunchParameterParser.Parse(settings.CustomParameters));
+        ValidateCustomArgs(extraArgs, settings);
 
         var request = new RuntimeLaunchRequest
         {
@@ -109,7 +111,8 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
             WslDistro = runtime.Mode == RuntimeMode.Wsl ? settings.WslDistro : "",
             Host = launchHost,
             AllowNetworkAccess = allowDirectLanAccess,
-            ApiKey = settings.ModelApiKey,
+            ApiKey = settings.RequireApiKeyAuth ? settings.ModelApiKey : "",
+            RequireApiKeyAuth = settings.RequireApiKeyAuth,
             Port = settings.Port,
             ContextSize = settings.ContextSize,
             GpuLayers = settings.GpuLayers,
@@ -192,6 +195,15 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         psi.WindowStyle = ProcessWindowStyle.Hidden;
         psi.RedirectStandardOutput = true;
         psi.RedirectStandardError = true;
+        // Pass API key via environment variable (LLAMA_API_KEY) instead of CLI arg
+        // to keep it out of process command lines visible in Task Manager / WMI.
+        if (!string.IsNullOrWhiteSpace(_lastApiKey))
+        {
+            psi.Environment["LLAMA_API_KEY"] = _lastApiKey;
+            // For WSL, tell the interop layer to forward this env var into the Linux session.
+            if (runtime.Mode == RuntimeMode.Wsl)
+                psi.Environment["WSLENV"] = "LLAMA_API_KEY";
+        }
         if (runtime.Mode == RuntimeMode.Native)
         {
             psi.WorkingDirectory = Path.GetDirectoryName(runtime.ExecutablePath) ?? Environment.CurrentDirectory;
@@ -200,6 +212,11 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         }
         if (runtime.Mode == RuntimeMode.Native)
         {
+            // Bind native child process to a Windows Job Object with KILL_ON_JOB_CLOSE.
+            // If the app crashes or is force-killed, the OS terminates llama-server.exe
+            // automatically — no orphaned processes.
+            _jobObject?.Dispose();
+            _jobObject = new ProcessJobObjectService();
             foreach (var arg in args) psi.ArgumentList.Add(arg);
         }
         _process = new Process { StartInfo = psi, EnableRaisingEvents = true };
@@ -219,9 +236,12 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
                 State = LlamaRuntimeState.Failed;
                 throw new InvalidOperationException("Failed to start llama-server.");
             }
+            _jobObject?.AssignProcess(_process.Handle);
         }
         catch
         {
+            _jobObject?.Dispose();
+            _jobObject = null;
             State = LlamaRuntimeState.Failed;
             throw;
         }
@@ -244,6 +264,29 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
     {
         if (LlamaRuntimeOutputObserver.Observe(line, _log, _lastApiKey))
             TrySetLoadedFromLoading();
+    }
+
+    private static readonly HashSet<string> _disallowedCustomArgs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "--host", "--port", "--api-key"
+    };
+
+    private static void ValidateCustomArgs(IReadOnlyList<string> extraArgs, AppSettings settings)
+    {
+        foreach (var arg in extraArgs)
+        {
+            foreach (var disallowed in _disallowedCustomArgs)
+            {
+                if (string.Equals(arg, disallowed, StringComparison.OrdinalIgnoreCase)
+                    || arg.StartsWith(disallowed + "=", StringComparison.OrdinalIgnoreCase)
+                    || arg.StartsWith(disallowed + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Custom parameter '{arg}' is not allowed because it would override a security-critical setting " +
+                        $"({disallowed}). Remove it from launch settings and use the app's built-in controls instead.");
+                }
+            }
+        }
     }
 
     private bool TrySetLoadedFromLoading()

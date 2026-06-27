@@ -44,7 +44,7 @@ public static class WindowsPageFactory
 
         var root = new DockPanel { Margin = new Thickness(16) };
         var toolbar = Bar();
-        toolbar.Children.Add(Button("Refresh", request.Actions.RefreshAsync, request.ButtonToolTip));
+        toolbar.Children.Add(Button(Loc.T("Logs.RefreshButton"), request.Actions.RefreshAsync, request.ButtonToolTip));
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
 
@@ -55,11 +55,11 @@ public static class WindowsPageFactory
         body.Children.Add(statusGrid);
 
         body.Children.Add(Text(
-            "Native Windows builds use Git, CMake, and Visual Studio C++ Build Tools. CUDA, Vulkan, and Intel Arc SYCL runtimes require their Windows SDK/toolkit in addition to the CPU build tools.",
+            Loc.T("Windows.DescriptionText"),
             muted: true));
 
         var toolsGrid = ToolsGrid(request);
-        body.Children.Add(PageSectionFactory.GridSection("Native Windows tools", toolsGrid));
+        body.Children.Add(PageSectionFactory.GridSection(Loc.T("Windows.ToolsSectionTitle"), toolsGrid));
 
         root.Children.Add(Scroll(body, new Thickness(16)));
 
@@ -86,28 +86,28 @@ public static class WindowsPageFactory
     {
         var panel = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         panel.Children.Add(ToolActionRow(
-            "CPU tools",
-            "Install Git, CMake, and Visual Studio C++ Build Tools for native llama.cpp CPU builds.",
+            Loc.T("Windows.Tool.CpuLabel"),
+            Loc.T("Windows.Tool.CpuDescription"),
             out installCpuToolsButton,
-            "Install CPU Tools",
+            Loc.T("Windows.Tool.InstallCpuButton"),
             request.Actions.InstallCpuToolsAsync));
         panel.Children.Add(ToolActionRow(
-            "CUDA tools",
-            "Install NVIDIA CUDA Toolkit for native llama.cpp CUDA builds. The Windows NVIDIA driver must also be installed.",
+            Loc.T("Windows.Tool.CudaLabel"),
+            Loc.T("Windows.Tool.CudaDescription"),
             out installCudaToolkitButton,
-            "Install CUDA",
+            Loc.T("Windows.Tool.InstallCudaButton"),
             request.Actions.InstallCudaToolkitAsync));
         panel.Children.Add(ToolActionRow(
-            "Vulkan tools",
-            "Install the Vulkan SDK for native llama.cpp Vulkan builds. The GPU driver must expose Vulkan on Windows.",
+            Loc.T("Windows.Tool.VulkanLabel"),
+            Loc.T("Windows.Tool.VulkanDescription"),
             out installVulkanToolsButton,
-            "Install Vulkan",
+            Loc.T("Windows.Tool.InstallVulkanButton"),
             request.Actions.InstallVulkanToolsAsync));
         panel.Children.Add(ToolActionRow(
-            "Intel oneAPI",
-            "Install Intel oneAPI Base Toolkit for native llama.cpp SYCL builds on Intel Arc and supported Intel GPUs.",
+            Loc.T("Windows.Tool.SyclLabel"),
+            Loc.T("Windows.Tool.SyclDescription"),
             out installSyclToolsButton,
-            "Install oneAPI",
+            Loc.T("Windows.Tool.InstallSyclButton"),
             request.Actions.InstallSyclToolsAsync));
         return panel;
     }
@@ -120,21 +120,21 @@ public static class WindowsPageFactory
         statusGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         statusGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         statusGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        statusMetric = MetricCardFactory.AddMetric(statusGrid, "Windows status", 0, 0);
-        cpuMetric = MetricCardFactory.AddMetric(statusGrid, "CPU build", 0, 1);
-        cudaMetric = MetricCardFactory.AddMetric(statusGrid, "CUDA build", 1, 0);
-        vulkanMetric = MetricCardFactory.AddMetric(statusGrid, "Vulkan build", 1, 1);
-        syclMetric = MetricCardFactory.AddMetric(statusGrid, "Intel Arc SYCL", 2, 0);
+        statusMetric = MetricCardFactory.AddMetric(statusGrid, Loc.T("Windows.StatusCard.WindowsStatus"), 0, 0);
+        cpuMetric = MetricCardFactory.AddMetric(statusGrid, Loc.T("Windows.StatusCard.CpuBuild"), 0, 1);
+        cudaMetric = MetricCardFactory.AddMetric(statusGrid, Loc.T("Windows.StatusCard.CudaBuild"), 1, 0);
+        vulkanMetric = MetricCardFactory.AddMetric(statusGrid, Loc.T("Windows.StatusCard.VulkanBuild"), 1, 1);
+        syclMetric = MetricCardFactory.AddMetric(statusGrid, Loc.T("Windows.StatusCard.SyclBuild"), 2, 0);
         return statusGrid;
     }
 
     private static DataGrid ToolsGrid(WindowsPageRequest request)
     {
         var grid = PageSectionFactory.GridFor(
-            ("Toolchain", "C1", .75),
-            ("Status", "C2", .6),
-            ("Details", "C3", 2.8),
-            ("Driver", "C4", 1.7));
+            (Loc.T("Windows.Col.Toolchain"), "C1", .75),
+            (Loc.T("Windows.Col.Status"), "C2", .6),
+            (Loc.T("Windows.Col.Details"), "C3", 2.8),
+            (Loc.T("Windows.Col.Driver"), "C4", 1.7));
         grid.ItemsSource = request.ViewModel.Windows.Rows;
         return grid;
     }
@@ -168,7 +168,7 @@ public static class WindowsPageFactory
         };
         Grid.SetColumn(descriptionText, 1);
         row.Children.Add(descriptionText);
-        actionButton = Button(actionText, actionClick, _ => $"Install or repair {label.ToLowerInvariant()} on Windows.");
+        actionButton = Button(actionText, actionClick, _ => Loc.T("Tooltip.InstallRepairOnWindows", label));
         Grid.SetColumn(actionButton, 2);
         row.Children.Add(actionButton);
         return row;

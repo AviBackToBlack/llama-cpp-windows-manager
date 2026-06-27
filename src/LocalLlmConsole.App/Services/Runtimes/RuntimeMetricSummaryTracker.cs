@@ -80,12 +80,12 @@ public sealed class RuntimeMetricSummaryTracker
         var promptTokens = RuntimeDashboardService.PromptTokenCounter(samples);
         var promptSeconds = RuntimeMetrics.Sum(samples, ["prompt", "seconds", "total"], [])
             ?? RuntimeMetrics.Sum(samples, ["prompt", "time"], []);
-        var observedMtpGeneratedTokens = RuntimeDashboardService.MaxNullable(
-            RuntimeDashboardService.MaxNullable(RuntimeDashboardService.MtpGeneratedTokenCounter(samples), slotSnapshot?.MtpGeneratedTokens),
-            mtpTokenSnapshot?.GeneratedTokens);
-        var observedMtpAcceptedTokens = RuntimeDashboardService.MaxNullable(
-            RuntimeDashboardService.MaxNullable(RuntimeDashboardService.MtpAcceptedTokenCounter(samples), slotSnapshot?.MtpAcceptedTokens),
-            mtpTokenSnapshot?.AcceptedTokens);
+        var observedMtpGeneratedTokens = RuntimeDashboardService.MtpGeneratedTokenCounter(samples)
+            ?? mtpTokenSnapshot?.GeneratedTokens
+            ?? slotSnapshot?.MtpGeneratedTokens;
+        var observedMtpAcceptedTokens = RuntimeDashboardService.MtpAcceptedTokenCounter(samples)
+            ?? mtpTokenSnapshot?.AcceptedTokens
+            ?? slotSnapshot?.MtpAcceptedTokens;
         var mtpGeneratedSeconds = RuntimeDashboardService.MtpGeneratedSecondsCounter(samples)
             ?? mtpTokenSnapshot?.GeneratedSeconds;
         var mtpAcceptedSeconds = RuntimeDashboardService.MtpAcceptedSecondsCounter(samples)
@@ -97,14 +97,23 @@ public sealed class RuntimeMetricSummaryTracker
         var liveMtpGeneratedRate = CounterRateAndRemember(observedMtpGeneratedTokens, ref state.LastMtpGeneratedTokenCounter, ref state.LastMtpGeneratedTokenPollAt, now);
         var liveMtpAcceptedRate = CounterRateAndRemember(observedMtpAcceptedTokens, ref state.LastMtpAcceptedTokenCounter, ref state.LastMtpAcceptedTokenPollAt, now);
 
-        var (slotPromptRate, slotGenerationRate) = SlotLiveRates(state, slotSnapshot, now);
-        liveGenerationRate = slotGenerationRate ?? liveGenerationRate;
-        livePromptRate = slotPromptRate ?? livePromptRate;
+        // Compute generation-time-based rates (uses actual active generation seconds, not wall clock).
+        // This avoids dilution during idle gaps between requests where the wall-clock counter rate
+        // would divide tokens by total elapsed time instead of active generation time.
+        var secondsBasedGenerationRate = SecondsBasedCounterRate(predictedTokens, predictedSeconds, ref state.LastPredictedTokenCounter, ref state.LastPredictedSecondsCounter);
+        var secondsBasedPromptRate = SecondsBasedCounterRate(promptTokens, promptSeconds, ref state.LastPromptTokenCounter, ref state.LastPromptSecondsCounter);
+        // Prefer the seconds-based rate when available; fall back to wall-clock counter rate
+        liveGenerationRate = secondsBasedGenerationRate ?? liveGenerationRate;
+        livePromptRate = secondsBasedPromptRate ?? livePromptRate;
 
-        var observedAverageGenerationRate = RuntimeMetrics.First(samples, ["predicted", "tokens", "seconds"], ["total"])
-            ?? RuntimeMetrics.First(samples, ["generation", "tokens", "seconds"], ["total"])
+        var (slotPromptRate, slotGenerationRate) = SlotLiveRates(state, slotSnapshot, now);
+        if (predictedTokens is null) liveGenerationRate = slotGenerationRate ?? liveGenerationRate;
+        if (promptTokens is null) livePromptRate = slotPromptRate ?? livePromptRate;
+
+        var observedAverageGenerationRate = RuntimeMetrics.Sum(samples, ["predicted", "tokens", "second"], ["total"])
+            ?? RuntimeMetrics.Sum(samples, ["generation", "tokens", "second"], ["total"])
             ?? RuntimeDashboardService.Rate(predictedTokens, predictedSeconds);
-        var observedAveragePromptRate = RuntimeMetrics.First(samples, ["prompt", "tokens", "seconds"], ["total"])
+        var observedAveragePromptRate = RuntimeMetrics.Sum(samples, ["prompt", "tokens", "second"], ["total"])
             ?? RuntimeDashboardService.Rate(promptTokens, promptSeconds);
         var observedAverageMtpGeneratedRate = RuntimeDashboardService.Rate(observedMtpGeneratedTokens, mtpGeneratedSeconds);
         var observedAverageMtpAcceptedRate = RuntimeDashboardService.Rate(observedMtpAcceptedTokens, mtpAcceptedSeconds);
@@ -121,8 +130,8 @@ public sealed class RuntimeMetricSummaryTracker
             ?? (metricsSettings.ContextSize > 0 ? (double?)metricsSettings.ContextSize : null);
         kvTokens ??= slotSnapshot?.ContextTokens;
 
-        var observedGeneratedTokens = RuntimeDashboardService.MaxNullable(predictedTokens, slotSnapshot?.GeneratedTokens);
-        var observedPromptTokens = RuntimeDashboardService.MaxNullable(promptTokens, slotSnapshot?.PromptTokensProcessed);
+        var observedGeneratedTokens = predictedTokens ?? slotSnapshot?.GeneratedTokens;
+        var observedPromptTokens = promptTokens ?? slotSnapshot?.PromptTokensProcessed;
         var displayGeneratedTokens = RuntimeDashboardService.MaxNullable(observedGeneratedTokens, previous?.GeneratedTokens);
         var displayPromptTokens = RuntimeDashboardService.MaxNullable(observedPromptTokens, previous?.PromptTokens);
         var displayMtpGeneratedTokens = RuntimeDashboardService.MaxNullable(observedMtpGeneratedTokens, previous?.MtpGeneratedTokens);
@@ -178,7 +187,7 @@ public sealed class RuntimeMetricSummaryTracker
             displayAverageMtpAcceptedRate,
             displayMtpGeneratedTokens,
             displayMtpAcceptedTokens);
-        var slotsText = RuntimeDashboardService.RuntimeSlotsLabel(samples);
+        var slotsText = RuntimeDashboardService.RuntimeSlotsLabel(samples, slotSnapshot);
         var settingsText = RuntimeDashboardService.RuntimeSettingsLabel(
             kvUsage,
             kvTokens,
@@ -245,23 +254,81 @@ public sealed class RuntimeMetricSummaryTracker
         if (snapshot is null)
             return (null, null);
 
-        double? promptRate = null;
-        double? generationRate = null;
+        var counters = SlotCounters(snapshot);
         if (state.LastSlotPollAt is not null)
         {
             var elapsed = (now - state.LastSlotPollAt.Value).TotalSeconds;
             if (elapsed >= 0.25)
             {
-                promptRate = RuntimeDashboardService.DeltaRate(snapshot.PromptTokensProcessed, state.LastSlotPromptProcessedCounter, elapsed, includeZero: true);
-                generationRate = RuntimeDashboardService.DeltaRate(snapshot.GeneratedTokens, state.LastSlotGeneratedCounter, elapsed, includeZero: true);
+                double promptDelta = 0;
+                double generationDelta = 0;
+                bool hasPromptDelta = false;
+                bool hasGenerationDelta = false;
+
+                foreach (var counter in counters)
+                {
+                    var hadPrevious = state.LastSlotCounters.TryGetValue(counter.SlotId, out var previous);
+
+                    // For newly-activated slots (no previous entry), treat the entire current
+                    // counter as new delta — the slot was idle before this poll. This ensures
+                    // multi-slot workloads where slots activate/deactivate between polls show
+                    // correct aggregate throughput rather than silently skipping new slots.
+                    double promptInc = hadPrevious
+                        ? SlotCounterDelta(counter.PromptTokensProcessed, previous!.PromptTokensProcessed, counter.TaskId, previous!.TaskId)
+                        : Math.Max(0, counter.PromptTokensProcessed);
+
+                    double genInc = hadPrevious
+                        ? SlotCounterDelta(counter.GeneratedTokens, previous!.GeneratedTokens, counter.TaskId, previous!.TaskId)
+                        : Math.Max(0, counter.GeneratedTokens);
+
+                    promptDelta += promptInc;
+                    generationDelta += genInc;
+                    hasPromptDelta = true;
+                    hasGenerationDelta = true;
+                }
+
+                var promptRate = hasPromptDelta ? promptDelta / elapsed : (double?)null;
+                var generationRate = hasGenerationDelta ? generationDelta / elapsed : (double?)null;
+
+                state.LastSlotCounters.Clear();
+                foreach (var counter in counters)
+                {
+                    state.LastSlotCounters[counter.SlotId] = new RuntimeSlotCounterState(
+                        counter.TaskId,
+                        counter.PromptTokensProcessed,
+                        counter.GeneratedTokens);
+                }
+                state.LastSlotPollAt = now;
+                return (promptRate, generationRate);
             }
         }
 
-        state.LastSlotPromptProcessedCounter = snapshot.PromptTokensProcessed;
-        state.LastSlotGeneratedCounter = snapshot.GeneratedTokens;
+        // First poll — seed counters so the next poll can compute deltas.
+        state.LastSlotCounters.Clear();
+        foreach (var counter in counters)
+        {
+            state.LastSlotCounters[counter.SlotId] = new RuntimeSlotCounterState(
+                counter.TaskId,
+                counter.PromptTokensProcessed,
+                counter.GeneratedTokens);
+        }
         state.LastSlotPollAt = now;
-        return (promptRate, generationRate);
+        return (null, null);
     }
+
+    private static IReadOnlyList<RuntimeSlotCounterSnapshot> SlotCounters(RuntimeSlotSnapshot snapshot)
+        => snapshot.SlotCounters is { Count: > 0 } counters
+            ? counters
+            : [new RuntimeSlotCounterSnapshot("aggregate", "", snapshot.PromptTokensProcessed, snapshot.GeneratedTokens, snapshot.IsProcessing)];
+
+    private static double SlotCounterDelta(double current, double previous, string currentTaskId, string previousTaskId)
+    {
+        if (current >= previous && string.Equals(currentTaskId, previousTaskId, StringComparison.Ordinal))
+            return current - previous;
+
+        return Math.Max(0, current);
+    }
+
 
     private static void Remember(
         RuntimeMetricSummaryState state,
@@ -388,6 +455,33 @@ public sealed class RuntimeMetricSummaryTracker
         return rate;
     }
 
+    /// <summary>Computes a live rate using active generation-time deltas instead of wall-clock time.
+    /// This prevents rate dilution during idle gaps between requests.</summary>
+    private static double? SecondsBasedCounterRate(
+        double? currentTokens,
+        double? currentSeconds,
+        ref double? previousTokens,
+        ref double? previousSeconds)
+    {
+        if (currentTokens is null || currentSeconds is null
+            || previousTokens is null || previousSeconds is null
+            || currentTokens.Value < previousTokens.Value
+            || currentSeconds.Value <= previousSeconds.Value)
+        {
+            // Remember current values for next poll
+            if (currentTokens is not null) previousTokens = currentTokens;
+            if (currentSeconds is not null) previousSeconds = currentSeconds;
+            return null;
+        }
+
+        var tokensDelta = currentTokens.Value - previousTokens.Value;
+        var secondsDelta = currentSeconds.Value - previousSeconds.Value;
+        previousTokens = currentTokens;
+        previousSeconds = currentSeconds;
+
+        return secondsDelta > 0 ? tokensDelta / secondsDelta : null;
+    }
+
     private static bool UsedPreviousCounter(double? observed, double? previous, double? display)
         => previous is not null
            && display == previous
@@ -437,13 +531,19 @@ public sealed class RuntimeMetricSummaryTracker
         public DateTimeOffset? LastPredictedTokenPollAt;
         public double? LastPromptTokenCounter;
         public DateTimeOffset? LastPromptTokenPollAt;
+        public double? LastPredictedSecondsCounter;
+        public double? LastPromptSecondsCounter;
         public double? LastMtpGeneratedTokenCounter;
         public DateTimeOffset? LastMtpGeneratedTokenPollAt;
         public double? LastMtpAcceptedTokenCounter;
         public DateTimeOffset? LastMtpAcceptedTokenPollAt;
-        public double? LastSlotPromptProcessedCounter;
-        public double? LastSlotGeneratedCounter;
         public DateTimeOffset? LastSlotPollAt;
+        public Dictionary<string, RuntimeSlotCounterState> LastSlotCounters { get; } = new(StringComparer.Ordinal);
         public RuntimeMetricDisplaySnapshot? LastDisplay;
     }
+
+    private sealed record RuntimeSlotCounterState(
+        string TaskId,
+        double PromptTokensProcessed,
+        double GeneratedTokens);
 }

@@ -15,7 +15,9 @@ public sealed record AppSettings(
     int AutoLoadGatewayPort,
     string AutoLoadGatewayPolicy,
     string Host,
+    bool RequireApiKeyAuth,
     string ModelApiKey,
+    string ModelApiKeyBackup,
     string WslDistro,
     int Port,
     int ContextSize,
@@ -74,7 +76,8 @@ public sealed record AppSettings(
     string ContextCheckpointsMode = "auto",
     int ContextCheckpointCount = 32,
     int ContextCheckpointEveryNTokens = 256,
-    string CustomParameters = "")
+    string CustomParameters = "",
+    string UiCulture = "en")
 {
     public const int DefaultContextSize = 131_072;
     public const int DefaultGpuLayers = 999;
@@ -124,6 +127,8 @@ public sealed record AppSettings(
         8082,
         "singleActive",
         "127.0.0.1",
+        true,
+        "",
         "",
         "Ubuntu-24.04",
         8081,
@@ -177,5 +182,6 @@ public sealed record AppSettings(
         DefaultSpecDraftPMin,
         DefaultCacheType,
         DefaultCacheType,
-        DefaultCudaPackagePreference);
+        DefaultCudaPackagePreference,
+        "");
 }

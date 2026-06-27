@@ -68,7 +68,7 @@ public static class WslPageFactory
 
         var root = new DockPanel { Margin = new Thickness(16) };
         var toolbar = Bar();
-        toolbar.Children.Add(Button("Refresh", request.Actions.RefreshAsync, request.ButtonToolTip));
+        toolbar.Children.Add(Button(Loc.T("Logs.RefreshButton"), request.Actions.RefreshAsync, request.ButtonToolTip));
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
 
@@ -80,11 +80,11 @@ public static class WslPageFactory
         body.Children.Add(statusGrid);
 
         body.Children.Add(Text(
-            "The selected distro is used for WSL llama.cpp launches and builds. Ubuntu is recommended; other real Linux distros remain selectable when detected.",
+            Loc.T("Wsl.DescriptionText"),
             muted: true));
 
         var distroGrid = DistroGrid(request);
-        body.Children.Add(PageSectionFactory.GridSection("Installed Linux distros", distroGrid));
+        body.Children.Add(PageSectionFactory.GridSection(Loc.T("Wsl.DistrosSectionTitle"), distroGrid));
 
         root.Children.Add(Scroll(body, new Thickness(16)));
 
@@ -117,75 +117,75 @@ public static class WslPageFactory
     {
         var panel = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         panel.Children.Add(SetupRow(
-            "WSL",
-            "Windows Subsystem for Linux",
+            Loc.T("Wsl.Setup.WslLabel"),
+            Loc.T("Wsl.Setup.WslDescription"),
             out var installWslButton,
-            "Install WSL",
+            Loc.T("Wsl.ActionBtn.InstallWsl"),
             request.Actions.InstallWslAsync,
             out var checkWslUpdatesButton,
-            "Update WSL",
+            Loc.T("Wsl.ActionBtn.UpdateWsl"),
             request.Actions.CheckWslUpdatesAsync,
             out var deleteWslButton,
-            "Delete WSL",
+            Loc.T("Wsl.ActionBtn.DeleteWsl"),
             request.Actions.DeleteWslAsync,
             request.ButtonToolTip));
         panel.Children.Add(SetupRow(
-            "Ubuntu",
-            "Recommended Linux distro for llama.cpp builds",
+            Loc.T("Wsl.Setup.UbuntuLabel"),
+            Loc.T("Wsl.Setup.UbuntuDescription"),
             out var installUbuntuButton,
-            "Install Ubuntu",
+            Loc.T("Wsl.ActionBtn.InstallUbuntu"),
             request.Actions.InstallUbuntuAsync,
             out var checkUbuntuUpdatesButton,
-            "Update Ubuntu",
+            Loc.T("Wsl.ActionBtn.UpdateUbuntu"),
             request.Actions.CheckUbuntuUpdatesAsync,
             out var deleteUbuntuButton,
-            "Delete Ubuntu",
+            Loc.T("Wsl.ActionBtn.DeleteUbuntu"),
             request.Actions.DeleteUbuntuAsync,
             request.ButtonToolTip));
         panel.Children.Add(ToolActionRow(
-            "CPU tools",
-            "Install Git, CMake, compiler, pkg-config, libcurl headers, ccache, and Ninja inside the selected Ubuntu distro. CUDA presets require a separate NVIDIA CUDA Toolkit install in WSL.",
+            Loc.T("Wsl.Setup.CpuLabel"),
+            Loc.T("Wsl.Setup.CpuDescription"),
             out var installBuildToolsButton,
-            "Install CPU Tools",
+            Loc.T("Windows.Tool.InstallCpuButton"),
             request.Actions.InstallBuildToolsAsync,
             out var deleteBuildToolsButton,
-            "Delete",
+            Loc.T("Common.DeleteButton"),
             request.Actions.DeleteBuildToolsAsync));
         panel.Children.Add(ToolActionRow(
-            "CUDA tools",
-            $"Install NVIDIA's WSL CUDA Toolkit package ({WslSetupCommands.CudaToolkitPackage}) inside the selected Ubuntu distro for CUDA runtime builds.",
+            Loc.T("Wsl.Setup.CudaLabel"),
+            $"{Loc.T("Wsl.Setup.CudaDescription")} {WslSetupCommands.CudaToolkitPackage}",
             out var installCudaToolkitButton,
-            "Install CUDA",
+            Loc.T("Windows.Tool.InstallCudaButton"),
             request.Actions.InstallCudaToolkitAsync,
             out var deleteCudaToolkitButton,
-            "Delete",
+            Loc.T("Common.DeleteButton"),
             request.Actions.DeleteCudaToolkitAsync));
         panel.Children.Add(ToolActionRow(
-            "Vulkan tools",
-            $"Install Ubuntu Vulkan build/runtime tools ({WslSetupCommands.VulkanToolsPackages}) inside the selected Ubuntu distro for official llama.cpp Vulkan builds.",
+            Loc.T("Wsl.Setup.VulkanLabel"),
+            $"{Loc.T("Wsl.Setup.VulkanDescription")} {WslSetupCommands.VulkanToolsPackages}",
             out var installVulkanToolsButton,
-            "Install Vulkan",
+            Loc.T("Windows.Tool.InstallVulkanButton"),
             request.Actions.InstallVulkanToolsAsync,
             out var deleteVulkanToolsButton,
-            "Delete",
+            Loc.T("Common.DeleteButton"),
             request.Actions.DeleteVulkanToolsAsync));
         panel.Children.Add(ToolActionRow(
-            "Intel GPU runtime",
-            $"Install Intel Level Zero/OpenCL runtime packages ({WslSetupCommands.SyclRuntimePackages}) inside the selected Ubuntu distro for Intel Arc SYCL runtimes.",
+            Loc.T("Wsl.Tool.IntelGpuLabel"),
+            $"{Loc.T("Wsl.Tool.IntelGpuDescription")} {WslSetupCommands.SyclRuntimePackages}",
             out var installSyclRuntimeButton,
-            "Install Intel GPU",
+            Loc.T("Wsl.ActionBtn.InstallIntelGpuButton"),
             request.Actions.InstallSyclRuntimeAsync,
             out var deleteSyclRuntimeButton,
-            "Delete",
+            Loc.T("Common.DeleteButton"),
             request.Actions.DeleteSyclRuntimeAsync));
         panel.Children.Add(ToolActionRow(
-            "Intel oneAPI",
-            $"Install Intel oneAPI DPC++ compiler, MKL, and DNNL packages ({WslSetupCommands.SyclOneApiPackages}) inside the selected Ubuntu distro for llama.cpp SYCL builds.",
+            Loc.T("Windows.Tool.SyclLabel"),
+            $"{Loc.T("Wsl.Tool.OneApiDescription")} {WslSetupCommands.SyclOneApiPackages}",
             out var installSyclOneApiButton,
-            "Install oneAPI",
+            Loc.T("Windows.Tool.InstallSyclButton"),
             request.Actions.InstallSyclOneApiAsync,
             out var deleteSyclOneApiButton,
-            "Delete",
+            Loc.T("Common.DeleteButton"),
             request.Actions.DeleteSyclOneApiAsync));
 
         buttons = new WslSetupButtons(
@@ -215,21 +215,21 @@ public static class WslPageFactory
         statusGrid.ColumnDefinitions.Add(new ColumnDefinition());
         statusGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         statusGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        statusMetric = MetricCardFactory.AddMetric(statusGrid, "WSL status", 0, 0);
-        selectedMetric = MetricCardFactory.AddMetric(statusGrid, "Selected distro", 0, 1);
-        infoMetric = MetricCardFactory.AddMetric(statusGrid, "WSL info", 1, 0);
-        toolsMetric = MetricCardFactory.AddMetric(statusGrid, "Tools", 1, 1);
+        statusMetric = MetricCardFactory.AddMetric(statusGrid, Loc.T("Wsl.StatusCard.WslStatus"), 0, 0);
+        selectedMetric = MetricCardFactory.AddMetric(statusGrid, Loc.T("Wsl.StatusCard.SelectedDistro"), 0, 1);
+        infoMetric = MetricCardFactory.AddMetric(statusGrid, Loc.T("Wsl.StatusCard.WslInfo"), 1, 0);
+        toolsMetric = MetricCardFactory.AddMetric(statusGrid, Loc.T("Wsl.StatusCard.Tools"), 1, 1);
         return statusGrid;
     }
 
     private static DataGrid DistroGrid(WslPageRequest request)
     {
         var grid = PageSectionFactory.GridFor(
-            ("Distro", "C2", 1.4),
-            ("State", "C3", .7),
-            ("WSL", "C4", .45),
-            ("Notes", "C5", 2.3));
-        PageSectionFactory.AddButtonColumn(grid, "Action", "C6", "B1", request.Actions.UseDistroRowClick, .55, tooltipBinding: "T1");
+            (Loc.T("Wsl.Col.Distro"), "C2", 1.4),
+            (Loc.T("Wsl.Col.State"), "C3", .7),
+            (Loc.T("Wsl.Col.Wsl"), "C4", .45),
+            (Loc.T("Wsl.Col.Notes"), "C5", 2.3));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Wsl.ActionBtn.Action"), "C6", "B1", request.Actions.UseDistroRowClick, .55, tooltipBinding: "T1");
         grid.ItemsSource = request.ViewModel.WslLinux.Rows;
         return grid;
     }
@@ -272,10 +272,10 @@ public static class WslPageFactory
         Func<Task> deleteClick)
     {
         var row = BaseRow(columnCount: 4, label, description);
-        actionButton = Button(actionText, actionClick, _ => $"Install or repair {label.ToLowerInvariant()} in the selected Ubuntu distro.");
+        actionButton = Button(actionText, actionClick, _ => Loc.T("Tooltip.InstallRepairInUbuntu", label));
         Grid.SetColumn(actionButton, 2);
         row.Children.Add(actionButton);
-        deleteButton = Button(deleteText, deleteClick, _ => $"Remove {label.ToLowerInvariant()} from the selected Ubuntu distro.");
+        deleteButton = Button(deleteText, deleteClick, _ => Loc.T("Tooltip.RemoveFromUbuntu", label));
         Grid.SetColumn(deleteButton, 3);
         row.Children.Add(deleteButton);
         return row;

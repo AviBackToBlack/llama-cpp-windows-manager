@@ -17,11 +17,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Title = $"{AppDisplayName} {AppVersionLabel}";
         AppVersionText.Text = AppVersionLabel;
         ApplyStaticButtonToolTips();
         StateChanged += Window_StateChanged;
         _workspaceRoot = WorkspaceRootResolver.Resolve();
+        Loc.LoadLanguage("en");
+        ApplyLocalizedXamlStrings();
         _serviceFactory = new AppServiceFactory(_workspaceRoot);
         _infrastructureServices = _serviceFactory.CreateMainWindowInfrastructureServices();
         _sessions = _infrastructureServices.Sessions;
@@ -51,7 +52,7 @@ public partial class MainWindow : Window
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        await RunAsync("Starting app...", async () =>
+        await RunAsync(Loc.T("Status.StartingApp"), async () =>
         {
             await _coreServices.App.StartupApplication.StartAsync(
                 new AppStartupApplicationRequest(
@@ -67,6 +68,9 @@ public partial class MainWindow : Window
                         {
                             _settings = settings;
                             ApplyTheme(settings.ThemeMode);
+                            Loc.LoadLanguage(settings.UiCulture);
+                            ApplyLocalizedXamlStrings();
+                            PopulateLanguageSelector();
                         },
                     ApplyLoadedServices,
                     service => _service = service,
@@ -75,7 +79,7 @@ public partial class MainWindow : Window
             ShowOverview();
             await RefreshAllAsync();
             await RecoverActiveRuntimeSessionAsync();
-            await RestartModelGatewayAsync();
+            await StartModelGatewaySafelyAsync();
             RunBackground(AutoSelectDetectedWslDistroAsync, "WSL distro auto-select failed");
         });
         await ShowCompletedAppUpdateNoticeAsync();

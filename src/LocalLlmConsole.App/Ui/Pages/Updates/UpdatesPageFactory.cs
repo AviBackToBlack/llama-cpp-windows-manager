@@ -31,17 +31,17 @@ public static class UpdatesPageFactory
 
         var actions = Bar();
         actions.Children.Add(Button(request.ViewModel.ActionText, request.Actions.PrimaryActionAsync));
-        actions.Children.Add(Button("Open GitHub", () =>
+        actions.Children.Add(Button(Loc.T("Updates.OpenGitHubButton"), () =>
         {
             request.Actions.OpenRepository();
             return Task.CompletedTask;
         }));
         root.Children.Add(actions);
 
-        root.Children.Add(PageSectionFactory.FramedSection("Update Status", SoftText(request.ViewModel.StatusDetails)));
+        root.Children.Add(PageSectionFactory.FramedSection(Loc.T("Updates.StatusSectionTitle"), SoftText(request.ViewModel.StatusDetails)));
 
         if (request.ViewModel.LatestUpdate is { IsAvailable: true })
-            root.Children.Add(PageSectionFactory.FramedSection("Latest Release", SoftText(request.ViewModel.LatestReleaseText)));
+            root.Children.Add(PageSectionFactory.FramedSection(Loc.T("Updates.LatestReleaseSectionTitle"), SoftText(request.ViewModel.LatestReleaseText)));
 
         return new UpdatesPageBuildResult(root);
     }

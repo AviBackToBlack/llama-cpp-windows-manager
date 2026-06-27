@@ -33,7 +33,7 @@ public partial class MainWindow
         var mode = AppPreferenceService.ThemeMode(_settingsPage.SelectedThemeValue);
         _settings = _settings with { ThemeMode = mode };
         ApplyTheme(mode);
-        SetStatus("Theme preview applied. Save settings to keep it.");
+        SetStatus(Loc.T("Status.ThemePreviewApplied"));
     }
 
     private async Task RunSettingsRowActionAsync(EditableSettingRow? row)

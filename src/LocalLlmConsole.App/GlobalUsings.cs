@@ -17,3 +17,4 @@ global using Microsoft.Win32.SafeHandles;
 global using LocalLlmConsole.Models;
 global using LocalLlmConsole.Services;
 global using LocalLlmConsole.ViewModels;
+global using LocalLlmConsole.Localization;

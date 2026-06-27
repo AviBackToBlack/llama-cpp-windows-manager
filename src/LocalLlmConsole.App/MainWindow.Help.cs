@@ -20,7 +20,7 @@ public partial class MainWindow
     private void ShowHelpSection(string sectionKey)
     {
         var definition = _coreServices.App.HelpSections.Select(sectionKey);
-        SetPage("Help", definition.Summary);
+        SetPage("Help", Loc.T("Help.Summary"));
 
         var page = HelpPageFactory.Create(new HelpPageRequest(
             definition,

@@ -8,8 +8,8 @@ public partial class MainWindow
     {
         var enabled = _settings.AutoLoadGatewayEnabled;
         var state = enabled
-            ? _gateway is null ? "Enabled" : "Listening"
-            : "Off";
+            ? _gateway is null ? Localization.Loc.T("Gateway.Enabled") : Localization.Loc.T("Gateway.Listening")
+            : Localization.Loc.T("Gateway.Off");
         return new GatewayRoutingOverviewStatus(
             Visible: true,
             Enabled: enabled,

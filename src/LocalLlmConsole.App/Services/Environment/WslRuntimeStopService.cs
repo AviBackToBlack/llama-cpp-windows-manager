@@ -16,7 +16,7 @@ public sealed record WslRuntimeStopResult(
 
 public sealed class WslRuntimeStopService
 {
-    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
     private readonly IProcessRunner _processRunner;
     private readonly Func<string> _wslExe;
 

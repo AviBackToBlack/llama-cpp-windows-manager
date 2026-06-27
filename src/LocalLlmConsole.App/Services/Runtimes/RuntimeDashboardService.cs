@@ -7,6 +7,13 @@ public sealed record RuntimeMtpTokenSnapshot(
     double? GeneratedSeconds = null,
     double? AcceptedSeconds = null);
 
+public sealed record RuntimeSlotCounterSnapshot(
+    string SlotId,
+    string TaskId,
+    double PromptTokensProcessed,
+    double GeneratedTokens,
+    bool IsProcessing);
+
 public sealed record RuntimeSlotSnapshot(
     double PromptTokensProcessed,
     double GeneratedTokens,
@@ -15,7 +22,8 @@ public sealed record RuntimeSlotSnapshot(
     double? ContextTokens,
     double? ContextSize,
     double? MtpGeneratedTokens = null,
-    double? MtpAcceptedTokens = null);
+    double? MtpAcceptedTokens = null,
+    IReadOnlyList<RuntimeSlotCounterSnapshot>? SlotCounters = null);
 
 public static class RuntimeDashboardService
 {
@@ -40,13 +48,19 @@ public static class RuntimeDashboardService
         double? mtpGeneratedTokens = null;
         double? mtpAcceptedTokens = null;
         var processing = false;
+        var slotCounters = new List<RuntimeSlotCounterSnapshot>();
+        var slotIndex = 0;
 
         foreach (var slotNode in slots.OfType<JsonObject>())
         {
+            var slotId = SlotId(slotNode, slotIndex);
+            var taskId = SlotTaskId(slotNode);
             var slotProcessing = ReadBool(slotNode, "is_processing", "processing", "busy");
             processing |= slotProcessing;
 
             var slotPromptProcessed = ReadDouble(slotNode, "n_prompt_tokens_processed", "prompt_tokens_processed", "n_prompt_tokens_processed_total") ?? 0;
+            var slotPromptTokens = ReadDouble(slotNode, "n_prompt_tokens", "prompt_tokens");
+            var slotPromptCacheTokens = ReadDouble(slotNode, "n_prompt_tokens_cache", "prompt_tokens_cache", "n_cached_tokens", "cached_tokens");
             var slotGenerated = ReadDouble(slotNode, "n_decoded", "tokens_predicted", "n_tokens_predicted", "n_tokens_predicted_total");
             if (slotGenerated is null && slotNode["next_token"] is JsonArray nextTokens)
             {
@@ -55,17 +69,36 @@ public static class RuntimeDashboardService
                     .Where(value => value is not null)
                     .Sum(value => value!.Value);
                 processing |= nextTokens.OfType<JsonObject>().Any(next => ReadBool(next, "has_next_token"));
+                slotProcessing |= nextTokens.OfType<JsonObject>().Any(next => ReadBool(next, "has_next_token"));
+            }
+            else if (slotGenerated is null && slotNode["next_token"] is JsonObject nextToken)
+            {
+                // Newer llama.cpp format: next_token is a single object, not an array
+                slotGenerated = ReadDouble(nextToken, "n_decoded", "tokens_predicted", "n_tokens_predicted", "n_tokens_decoded", "decoded");
+                processing |= ReadBool(nextToken, "has_next_token");
+                slotProcessing |= ReadBool(nextToken, "has_next_token");
             }
 
             promptProcessed += slotPromptProcessed;
             generated += slotGenerated ?? 0;
 
-            promptTokens = SumNullable(promptTokens, ReadDouble(slotNode, "n_prompt_tokens", "prompt_tokens"));
-            var slotContextTokens = slotPromptProcessed + (slotGenerated ?? 0);
+            promptTokens = SumNullable(promptTokens, slotPromptTokens);
+            var slotContextTokens = SlotContextTokens(
+                slotPromptProcessed,
+                slotGenerated ?? 0,
+                slotPromptTokens,
+                slotPromptCacheTokens);
             contextTokens = SumNullable(contextTokens, slotContextTokens > 0 ? slotContextTokens : null);
             contextSize = MaxNullable(contextSize, ReadDouble(slotNode, "n_ctx", "context_size", "ctx_size"));
             mtpGeneratedTokens = SumNullable(mtpGeneratedTokens, ReadMtpGeneratedTokens(slotNode));
             mtpAcceptedTokens = SumNullable(mtpAcceptedTokens, ReadMtpAcceptedTokens(slotNode));
+            slotCounters.Add(new RuntimeSlotCounterSnapshot(
+                slotId,
+                taskId,
+                slotPromptProcessed,
+                slotGenerated ?? 0,
+                slotProcessing));
+            slotIndex++;
         }
 
         return new RuntimeSlotSnapshot(
@@ -76,7 +109,8 @@ public static class RuntimeDashboardService
             contextTokens,
             contextSize,
             mtpGeneratedTokens,
-            mtpAcceptedTokens);
+            mtpAcceptedTokens,
+            slotCounters);
     }
 
     public static RuntimeMtpTokenSnapshot? ParseMtpTokenStats(string raw)
@@ -175,12 +209,15 @@ public static class RuntimeDashboardService
         return string.Join("\n", lines);
     }
 
-    public static string RuntimeSlotsLabel(IReadOnlyList<PrometheusSample> samples)
+    public static string RuntimeSlotsLabel(IReadOnlyList<PrometheusSample> samples, RuntimeSlotSnapshot? slotSnapshot = null)
     {
-        var active = RuntimeMetrics.First(samples, ["requests", "processing"], []) ?? 0;
+        var active = RuntimeMetrics.First(samples, ["requests", "processing"], [])
+            ?? SlotProcessingCount(slotSnapshot)
+            ?? 0;
         var queued = RuntimeMetrics.First(samples, ["requests", "deferred"], []) ?? 0;
         var busy = RuntimeMetrics.First(samples, ["busy", "slots", "decode"], [])
             ?? RuntimeMetrics.First(samples, ["n", "busy", "slots", "per", "decode"], [])
+            ?? SlotProcessingCount(slotSnapshot)
             ?? 0;
         return $"Active {active:N0} | Queued {queued:N0}\nBusy/decode {busy:0.0}";
     }
@@ -188,10 +225,15 @@ public static class RuntimeDashboardService
     public static double? GeneratedTokenCounter(IReadOnlyList<PrometheusSample> samples)
         => RuntimeMetrics.Sum(samples, ["tokens", "predicted", "total"], ["seconds", "duration"])
            ?? RuntimeMetrics.Sum(samples, ["tokens", "generated", "total"], ["seconds", "duration"])
-           ?? RuntimeMetrics.Sum(samples, ["tokens", "eval", "total"], ["seconds", "duration"]);
+           ?? RuntimeMetrics.Sum(samples, ["tokens", "decoded", "total"], ["seconds", "duration"])
+           ?? RuntimeMetrics.Sum(samples, ["tokens", "eval", "total"], ["seconds", "duration"])
+           ?? RuntimeMetrics.Sum(samples, ["tokens", "predicted"], ["seconds", "duration", "per"])
+           ?? RuntimeMetrics.Sum(samples, ["tokens", "generated"], ["seconds", "duration", "per"])
+           ?? RuntimeMetrics.Sum(samples, ["tokens", "decoded"], ["seconds", "duration", "per"]);
 
     public static double? PromptTokenCounter(IReadOnlyList<PrometheusSample> samples)
-        => RuntimeMetrics.Sum(samples, ["prompt", "tokens", "total"], ["seconds", "duration"]);
+        => RuntimeMetrics.Sum(samples, ["prompt", "tokens", "total"], ["seconds", "duration"])
+           ?? RuntimeMetrics.Sum(samples, ["prompt", "tokens"], ["seconds", "duration", "per"]);
 
     public static double? MtpGeneratedTokenCounter(IReadOnlyList<PrometheusSample> samples)
         => RuntimeMetrics.Sum(samples, ["mtp", "tokens", "generated", "total"], ["seconds", "duration", "accepted", "acc", "rejected"])
@@ -281,6 +323,43 @@ public static class RuntimeDashboardService
             if (bool.TryParse(obj[key]?.ToString(), out var parsed)) return parsed;
         }
         return false;
+    }
+
+    private static string SlotId(JsonObject obj, int index)
+        => FirstJsonText(obj, "id", "slot_id", "slot") ?? index.ToString(CultureInfo.InvariantCulture);
+
+    private static string SlotTaskId(JsonObject obj)
+        => FirstJsonText(obj, "id_task", "task_id", "task") ?? "";
+
+    private static string? FirstJsonText(JsonObject obj, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (obj[key] is null) continue;
+            var value = obj[key]?.ToString()?.Trim();
+            if (!string.IsNullOrWhiteSpace(value)) return value;
+        }
+
+        return null;
+    }
+
+    private static double SlotContextTokens(
+        double promptTokensProcessed,
+        double generatedTokens,
+        double? promptTokens,
+        double? promptCacheTokens)
+    {
+        var promptSide = promptTokensProcessed;
+        if (promptTokens is not null) promptSide = Math.Max(promptSide, promptTokens.Value);
+        if (promptCacheTokens is not null) promptSide = Math.Max(promptSide, promptCacheTokens.Value);
+        return promptSide + generatedTokens;
+    }
+
+    private static double? SlotProcessingCount(RuntimeSlotSnapshot? snapshot)
+    {
+        if (snapshot?.SlotCounters is { Count: > 0 } counters)
+            return counters.Count(counter => counter.IsProcessing);
+        return snapshot?.IsProcessing == true ? 1 : null;
     }
 
     private static string KvCacheLabel(double? usage, double? tokens)

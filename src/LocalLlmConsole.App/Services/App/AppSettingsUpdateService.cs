@@ -22,16 +22,39 @@ public sealed class AppSettingsUpdateService
         string V(string key, string fallback) => values.TryGetValue(key, out var value) ? value : fallback;
 
         var accessMode = AppPreferenceService.ModelAccessMode(V("modelAccessMode", current.ModelAccessMode));
-        var apiKey = (V("modelApiKey", current.ModelApiKey) ?? "").Trim();
-        var generatedApiKey = false;
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            apiKey = ApiSecurity.GenerateHexToken(32);
-            generatedApiKey = true;
-        }
+        var requireAuth = AppPreferenceService.YesNoValue(
+            V("requireApiKeyAuth", AppPreferenceService.YesNoLabel(current.RequireApiKeyAuth)),
+            current.RequireApiKeyAuth);
 
-        if (!ApiSecurity.IsStrongBearerSecret(apiKey))
-            return Fail(current, "Model API key must be at least 32 non-whitespace characters.");
+        string apiKey;
+        string apiKeyBackup;
+        var generatedApiKey = false;
+        if (requireAuth)
+        {
+            apiKey = (V("modelApiKey", current.ModelApiKey) ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                // When re-enabling, restore the key we backed up when disabling
+                if (!string.IsNullOrWhiteSpace(current.ModelApiKeyBackup))
+                    apiKey = current.ModelApiKeyBackup.Trim();
+                
+                if (string.IsNullOrWhiteSpace(apiKey))
+                {
+                    apiKey = ApiSecurity.GenerateHexToken(32);
+                    generatedApiKey = true;
+                }
+            }
+            if (!ApiSecurity.IsStrongBearerSecret(apiKey))
+                return Fail(current, "Model API key must be at least 32 non-whitespace characters.");
+            apiKeyBackup = apiKey;
+        }
+        else
+        {
+            apiKeyBackup = (current.ModelApiKey ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(apiKeyBackup) && !string.IsNullOrWhiteSpace(current.ModelApiKeyBackup))
+                apiKeyBackup = current.ModelApiKeyBackup.Trim();
+            apiKey = string.Empty;
+        }
 
         if (!AppPreferenceService.TryIntValue(V("autoLoadGatewayPort", current.AutoLoadGatewayPort.ToString(CultureInfo.InvariantCulture)), out var autoLoadGatewayPort))
             return Fail(current, "Gateway port must be a whole number.");
@@ -79,7 +102,9 @@ public sealed class AppSettingsUpdateService
             AutoLoadGatewayPolicy = AppPreferenceService.GatewaySwapPolicy(
                 V("autoLoadGatewayPolicy", AppPreferenceService.GatewaySwapPolicyLabel(current.AutoLoadGatewayPolicy))),
             Host = AppPreferenceService.RuntimeHostForAccessMode(accessMode),
+            RequireApiKeyAuth = requireAuth,
             ModelApiKey = apiKey,
+            ModelApiKeyBackup = apiKeyBackup,
             MaxLogFileSizeMb = Math.Clamp(maxLogFileSizeMb, 1, 4096)
         };
 

@@ -120,7 +120,7 @@ public sealed class AppUpdateService
         };
         foreach (var arg in new[]
         {
-            "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", plan.ScriptPath,
+            "-NoProfile", "-ExecutionPolicy", "Bypass", "-Scope", "Process", "-File", plan.ScriptPath,
             "-ParentPid", currentProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture),
             "-SourceExe", plan.SourceExe,
             "-TargetExe", plan.TargetExe,

@@ -11,10 +11,10 @@
     <AssemblyTitle>llama.cpp Windows Manager</AssemblyTitle>
     <Product>llama.cpp Windows Manager</Product>
     <RepositoryUrl>https://github.com/alekk89/llama-cpp-windows-manager</RepositoryUrl>
-    <Version>1.1.5</Version>
-    <AssemblyVersion>1.1.5.0</AssemblyVersion>
-    <FileVersion>1.1.5.0</FileVersion>
-    <InformationalVersion>v1.1.5</InformationalVersion>
+    <Version>1.1.7</Version>
+    <AssemblyVersion>1.1.7.0</AssemblyVersion>
+    <FileVersion>1.1.7.0</FileVersion>
+    <InformationalVersion>v1.1.7</InformationalVersion>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
@@ -31,5 +31,26 @@
 
   <ItemGroup>
     <EmbeddedResource Include="tools\Build-LlamaCppRuntime.ps1" />
+    <EmbeddedResource Include="Localization\Strings.en.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.bg.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.de.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.es.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.fr.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.ru.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.ja.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.pt.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.zh.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.it.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.tr.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.fa.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.pl.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.nl.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.vi.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.ko.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.ar.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.id.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.hi.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.cs.json" WithCulture="false" />
+    <EmbeddedResource Include="Localization\Strings.sv.json" WithCulture="false" />
   </ItemGroup>
 </Project>

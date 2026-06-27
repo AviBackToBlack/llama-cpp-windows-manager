@@ -49,11 +49,6 @@ public sealed record RuntimesPageControls(
 
 public static class RuntimesPageFactory
 {
-    public const string InstalledLocalBuildsTitle = "Installed Local Builds";
-    public const string RuntimeDownloadsTitle = "Runtime Downloads";
-    public const string BuildFromSourceTitle = "Build From Source (Advanced)";
-    public const string RuntimeJobsTitle = "Runtime Jobs";
-
     public static RuntimesPageControls Create(RuntimesPageRequest request)
     {
         var root = RootGrid(request.ShowAdvancedRuntimes);
@@ -63,18 +58,18 @@ public static class RuntimesPageFactory
 
         var runtimeGrid = InstalledRuntimesGrid(request);
         var runtimeSection = PageSectionFactory.GridSection(
-            InstalledLocalBuildsTitle,
+            Loc.T("Runtimes.InstalledLocalBuildsTitle"),
             runtimeGrid,
-            "Registered llama-server builds found on disk. Build from downloaded source or delete unused builds that are not actively serving a model.");
+            Loc.T("Runtimes.InstalledLocalBuildsDesc"));
         Grid.SetRow(runtimeSection, 1);
         root.Children.Add(runtimeSection);
         root.Children.Add(PageSectionFactory.HorizontalGridSplitter(2));
 
         var runtimePackageGrid = RuntimePackageGrid(request);
         var packageSection = PageSectionFactory.GridSection(
-            RuntimeDownloadsTitle,
+            Loc.T("Runtimes.RuntimeDownloadsTitle"),
             runtimePackageGrid,
-            "Install prebuilt llama.cpp releases. Build tools are not required for these downloads.");
+            Loc.T("Runtimes.RuntimeDownloadsDesc"));
         Grid.SetRow(packageSection, 3);
         root.Children.Add(packageSection);
         if (request.ShowAdvancedRuntimes)
@@ -85,17 +80,17 @@ public static class RuntimesPageFactory
         if (request.ShowAdvancedRuntimes)
         {
             var buildSection = PageSectionFactory.GridSection(
-                BuildFromSourceTitle,
+                Loc.T("Runtimes.BuildFromSourceTitle"),
                 runtimeBuildGrid!,
-                "Use source builds for custom forks, patches, branches, or runtime targets without a prebuilt release.");
+                Loc.T("Runtimes.BuildFromSourceDesc"));
             Grid.SetRow(buildSection, 5);
             root.Children.Add(buildSection);
             root.Children.Add(PageSectionFactory.HorizontalGridSplitter(6));
 
             var jobsSection = PageSectionFactory.GridSection(
-                RuntimeJobsTitle,
+                Loc.T("Runtimes.RuntimeJobsTitle"),
                 runtimeJobsGrid!,
-                "Recent runtime download and build work. Use Log to inspect compiler, git, Windows, or WSL output.");
+                Loc.T("Runtimes.RuntimeJobsDesc"));
             Grid.SetRow(jobsSection, 7);
             root.Children.Add(jobsSection);
         }
@@ -132,10 +127,10 @@ public static class RuntimesPageFactory
     private static (Grid Header, TextBlock RuntimesFolderText, WpfButton AdvancedToggle, WpfComboBox CudaPreferenceCombo) Header(RuntimesPageRequest request)
     {
         var folderStrip = FolderStripActionsFirst(
-            "Runtimes folder",
+            Loc.T("Runtimes.FolderLabel"),
             request.RuntimeRoot,
             out var runtimesFolderText,
-            ("Choose Folder", request.Actions.ChooseRuntimeFolderAsync));
+            (Loc.T("Runtimes.ChooseFolderButton"), request.Actions.ChooseRuntimeFolderAsync));
         var header = new Grid { Margin = new Thickness(0, 0, 0, 8) };
         header.ColumnDefinitions.Add(new ColumnDefinition());
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -149,7 +144,7 @@ public static class RuntimesPageFactory
         };
         rightActions.Children.Add(new TextBlock
         {
-            Text = "CUDA downloads",
+            Text = Loc.T("Runtimes.CudaDownloadsLabel"),
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center,
@@ -158,15 +153,15 @@ public static class RuntimesPageFactory
         var runtimeCudaPreferenceCombo = LaunchCombo(AppPreferenceService.CudaPackagePreferenceOptions());
         runtimeCudaPreferenceCombo.Width = 132;
         runtimeCudaPreferenceCombo.SelectedItem = AppPreferenceService.CudaPackagePreferenceLabel(request.CudaPackagePreference);
-        runtimeCudaPreferenceCombo.ToolTip = TooltipText("Choose whether official CUDA runtime downloads prefer the newest CUDA asset or the CUDA 12 compatibility asset.");
+        runtimeCudaPreferenceCombo.ToolTip = Loc.T("Tooltip.CudaPreferenceCombo");
         runtimeCudaPreferenceCombo.SelectionChanged += async (_, _) => await request.Actions.ChangeCudaPackagePreferenceAsync();
         rightActions.Children.Add(runtimeCudaPreferenceCombo);
-        var runtimeAdvancedToggleButton = Button(request.ShowAdvancedRuntimes ? "Hide advanced" : "Show advanced", () =>
+        var runtimeAdvancedToggleButton = Button(request.ShowAdvancedRuntimes ? Loc.T("Runtimes.HideAdvancedButton") : Loc.T("Runtimes.ShowAdvancedButton"), () =>
         {
             request.Actions.ToggleAdvancedRuntimes();
             return Task.CompletedTask;
         });
-        runtimeAdvancedToggleButton.ToolTip = TooltipText(request.ShowAdvancedRuntimes ? "Hide source builds and runtime job history." : "Show source builds and runtime job history.");
+        runtimeAdvancedToggleButton.ToolTip = request.ShowAdvancedRuntimes ? Loc.T("Tooltip.RuntimesHideAdvanced") : Loc.T("Tooltip.RuntimesShowAdvanced");
         ToolTipService.SetShowOnDisabled(runtimeAdvancedToggleButton, true);
         runtimeAdvancedToggleButton.Margin = new Thickness(12, 0, 0, 6);
         rightActions.Children.Add(runtimeAdvancedToggleButton);
@@ -178,15 +173,15 @@ public static class RuntimesPageFactory
     private static DataGrid InstalledRuntimesGrid(RuntimesPageRequest request)
     {
         var grid = PageSectionFactory.GridFor(
-            ("Name", nameof(RuntimeCatalogRow.Name), 1.4),
-            ("Backend", nameof(RuntimeCatalogRow.Backend), .55),
-            ("State", nameof(RuntimeCatalogRow.State), .55),
-            ("Location", nameof(RuntimeCatalogRow.Location), 3));
+            (Loc.T("Runtimes.Col.Name"), nameof(RuntimeCatalogRow.Name), 1.4),
+            (Loc.T("Runtimes.Col.Backend"), nameof(RuntimeCatalogRow.Backend), .55),
+            (Loc.T("Runtimes.Col.State"), nameof(RuntimeCatalogRow.State), .55),
+            (Loc.T("Runtimes.Col.Location"), nameof(RuntimeCatalogRow.Location), 3));
         grid.RowDetailsVisibilityMode = DataGridRowDetailsVisibilityMode.VisibleWhenSelected;
         grid.RowDetailsTemplate = PageSectionFactory.RowDetailsTemplate(nameof(RuntimeCatalogRow.Details));
         grid.PreviewMouseLeftButtonDown += request.Actions.RuntimeGridPreviewMouseLeftButtonDown;
-        PageSectionFactory.AddButtonColumn(grid, "Build", nameof(RuntimeCatalogRow.BuildAction), nameof(RuntimeCatalogRow.CanBuild), request.Actions.BuildRuntimeRowClick, .65, tooltipBinding: nameof(RuntimeCatalogRow.BuildToolTip));
-        PageSectionFactory.AddButtonColumn(grid, "Action", nameof(RuntimeCatalogRow.DeleteAction), nameof(RuntimeCatalogRow.CanDelete), request.Actions.DeleteRuntimeRowClick, .65, tooltipBinding: nameof(RuntimeCatalogRow.DeleteToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Build"), nameof(RuntimeCatalogRow.BuildAction), nameof(RuntimeCatalogRow.CanBuild), request.Actions.BuildRuntimeRowClick, .65, tooltipBinding: nameof(RuntimeCatalogRow.BuildToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.ActionButton"), nameof(RuntimeCatalogRow.DeleteAction), nameof(RuntimeCatalogRow.CanDelete), request.Actions.DeleteRuntimeRowClick, .65, tooltipBinding: nameof(RuntimeCatalogRow.DeleteToolTip));
         PageSectionFactory.ApplyGridTextMargin(grid, new Thickness(6, 0, 6, 0));
         request.Actions.ConfigureRuntimeGridColumnSizing(grid);
         grid.ItemsSource = request.ViewModel.Runtimes.Rows;
@@ -196,14 +191,14 @@ public static class RuntimesPageFactory
     private static DataGrid RuntimePackageGrid(RuntimesPageRequest request)
     {
         var grid = PageSectionFactory.GridFor(
-            ("Runtime", nameof(RuntimePackagePresetRow.Label), 1.45),
-            ("Backend", nameof(RuntimePackagePresetRow.Backend), .68),
-            ("Local", nameof(RuntimePackagePresetRow.LocalStatus), .78),
-            ("Latest Release", nameof(RuntimePackagePresetRow.LatestRelease), 1.2),
-            ("Assets", nameof(RuntimePackagePresetRow.Assets), 2.35));
-        PageSectionFactory.AddButtonColumn(grid, "Install", nameof(RuntimePackagePresetRow.InstallAction), nameof(RuntimePackagePresetRow.CanInstall), request.Actions.InstallRuntimePackageRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.InstallToolTip));
-        PageSectionFactory.AddButtonColumn(grid, "Update", nameof(RuntimePackagePresetRow.CheckAction), nameof(RuntimePackagePresetRow.CanCheck), request.Actions.CheckRuntimePackageUpdateRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.CheckToolTip));
-        PageSectionFactory.AddButtonColumn(grid, "Delete", nameof(RuntimePackagePresetRow.DeleteAction), nameof(RuntimePackagePresetRow.CanDelete), request.Actions.DeleteRuntimePackageRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.DeleteToolTip));
+            (Loc.T("Runtimes.Col.Runtime"), nameof(RuntimePackagePresetRow.Label), 1.45),
+            (Loc.T("Runtimes.Col.Backend"), nameof(RuntimePackagePresetRow.Backend), .68),
+            (Loc.T("Runtimes.Col.Local"), nameof(RuntimePackagePresetRow.LocalStatus), .78),
+            (Loc.T("Runtimes.Col.LatestRelease"), nameof(RuntimePackagePresetRow.LatestRelease), 1.2),
+            (Loc.T("Runtimes.Col.Assets"), nameof(RuntimePackagePresetRow.Assets), 2.35));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Install"), nameof(RuntimePackagePresetRow.InstallAction), nameof(RuntimePackagePresetRow.CanInstall), request.Actions.InstallRuntimePackageRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.InstallToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Update"), nameof(RuntimePackagePresetRow.CheckAction), nameof(RuntimePackagePresetRow.CanCheck), request.Actions.CheckRuntimePackageUpdateRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.CheckToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.DeleteButton"), nameof(RuntimePackagePresetRow.DeleteAction), nameof(RuntimePackagePresetRow.CanDelete), request.Actions.DeleteRuntimePackageRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.DeleteToolTip));
         PageSectionFactory.ApplyGridTextMargin(grid, new Thickness(6, 0, 6, 0));
         request.Actions.ConfigureRuntimeBuildGridColumnSizing(grid);
         grid.ItemsSource = request.ViewModel.RuntimePackages.Rows;
@@ -213,15 +208,15 @@ public static class RuntimesPageFactory
     private static DataGrid RuntimeBuildGrid(RuntimesPageRequest request)
     {
         var grid = PageSectionFactory.GridFor(
-            ("Repository", nameof(RuntimeBuildPresetRow.Label), 1.4),
-            ("Backend", nameof(RuntimeBuildPresetRow.Backend), .7),
-            ("Local", nameof(RuntimeBuildPresetRow.LocalStatus), .85),
-            ("Latest Local", nameof(RuntimeBuildPresetRow.LatestLocal), 1.2),
-            ("Source", nameof(RuntimeBuildPresetRow.Source), 2.3));
+            (Loc.T("Runtimes.Col.Repository"), nameof(RuntimeBuildPresetRow.Label), 1.4),
+            (Loc.T("Runtimes.Col.Backend"), nameof(RuntimeBuildPresetRow.Backend), .7),
+            (Loc.T("Runtimes.Col.Local"), nameof(RuntimeBuildPresetRow.LocalStatus), .85),
+            (Loc.T("Runtimes.Col.LatestLocal"), nameof(RuntimeBuildPresetRow.LatestLocal), 1.2),
+            (Loc.T("Runtimes.Col.Source"), nameof(RuntimeBuildPresetRow.Source), 2.3));
         grid.IsReadOnly = false;
-        PageSectionFactory.AddButtonColumn(grid, "Download", nameof(RuntimeBuildPresetRow.DownloadAction), nameof(RuntimeBuildPresetRow.CanDownload), request.Actions.DownloadRuntimePresetRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.DownloadToolTip));
-        PageSectionFactory.AddButtonColumn(grid, "Update", nameof(RuntimeBuildPresetRow.CheckAction), nameof(RuntimeBuildPresetRow.CanCheck), request.Actions.CheckRuntimePresetUpdateRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.CheckToolTip));
-        PageSectionFactory.AddButtonColumn(grid, "Delete", nameof(RuntimeBuildPresetRow.DeleteAction), nameof(RuntimeBuildPresetRow.CanDelete), request.Actions.DeleteRuntimePresetRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.DeleteToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Download"), nameof(RuntimeBuildPresetRow.DownloadAction), nameof(RuntimeBuildPresetRow.CanDownload), request.Actions.DownloadRuntimePresetRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.DownloadToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Update"), nameof(RuntimeBuildPresetRow.CheckAction), nameof(RuntimeBuildPresetRow.CanCheck), request.Actions.CheckRuntimePresetUpdateRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.CheckToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.DeleteButton"), nameof(RuntimeBuildPresetRow.DeleteAction), nameof(RuntimeBuildPresetRow.CanDelete), request.Actions.DeleteRuntimePresetRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.DeleteToolTip));
         PageSectionFactory.ApplyGridTextMargin(grid, new Thickness(6, 0, 6, 0));
         request.Actions.ConfigureRuntimeBuildGridColumnSizing(grid);
         grid.ItemsSource = request.ViewModel.RuntimeBuilds.Rows;
@@ -231,14 +226,14 @@ public static class RuntimesPageFactory
     private static DataGrid RuntimeJobsGrid(RuntimesPageRequest request)
     {
         var grid = PageSectionFactory.GridFor(
-            ("Status", "C1", .8),
-            ("Kind", "C2", 1),
-            ("Updated", "C4", 1.1),
-            ("Payload", "C5", 3.2));
-        PageSectionFactory.AddButtonColumn(grid, "Log", "C6", "B1", request.Actions.OpenRuntimeJobLogRowClick, .55, tooltipBinding: "T1");
-        PageSectionFactory.AddButtonColumn(grid, "Cancel", "C7", "B2", request.Actions.CancelRuntimeJobRowClick, .7, tooltipBinding: "T2");
-        PageSectionFactory.AddButtonColumn(grid, "Retry", "C8", "B3", request.Actions.RetryRuntimeJobRowClick, .65, tooltipBinding: "T3");
-        PageSectionFactory.AddButtonColumn(grid, "Clear", "C9", "B4", request.Actions.ClearRuntimeJobRowClick, .65, tooltipBinding: "T4");
+            (Loc.T("Runtimes.Col.Status"), "C1", .8),
+            (Loc.T("Runtimes.Col.Kind"), "C2", 1),
+            (Loc.T("Runtimes.Col.Updated"), "C4", 1.1),
+            (Loc.T("Runtimes.Col.Payload"), "C5", 3.2));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.LogButton"), "C6", "B1", request.Actions.OpenRuntimeJobLogRowClick, .55, tooltipBinding: "T1");
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Cancel"), "C7", "B2", request.Actions.CancelRuntimeJobRowClick, .7, tooltipBinding: "T2");
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Retry"), "C8", "B3", request.Actions.RetryRuntimeJobRowClick, .65, tooltipBinding: "T3");
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.ClearButton"), "C9", "B4", request.Actions.ClearRuntimeJobRowClick, .65, tooltipBinding: "T4");
         PageSectionFactory.ApplyRuntimeJobsRowStyle(grid);
         request.Actions.ConfigureRuntimeJobsGridColumnSizing(grid);
         grid.ItemsSource = request.ViewModel.Jobs.RuntimeRows;
@@ -305,10 +300,10 @@ public static class RuntimesPageFactory
     private static string ButtonToolTip(string text)
         => (text ?? "").Trim() switch
         {
-            "Choose Folder" => "Choose a folder.",
-            "Show advanced" => "Show source builds and runtime job history.",
-            "Hide advanced" => "Hide source builds and runtime job history.",
-            var label => string.IsNullOrWhiteSpace(label) ? "" : $"Run {label}."
+            var t when string.Equals(t, Loc.T("Runtimes.ChooseFolderButton")) => Loc.T("Tooltip.ChooseFolder"),
+            var t when string.Equals(t, Loc.T("Runtimes.ShowAdvancedButton")) => Loc.T("Tooltip.RuntimesShowAdvanced"),
+            var t when string.Equals(t, Loc.T("Runtimes.HideAdvancedButton")) => Loc.T("Tooltip.RuntimesHideAdvanced"),
+            var label => string.IsNullOrWhiteSpace(label) ? "" : Loc.T("Common.RunAction", label)
         };
 
     private static string TooltipText(string text) => text;

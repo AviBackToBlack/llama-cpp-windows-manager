@@ -12,33 +12,33 @@ public static partial class LaunchSettingsPanelFactory
         AppSettings settings)
     {
         var batchSizeBox = LaunchTextBox(settings.BatchSize);
-        builder.AddLaunchSetting(memoryGrid, "Batch size", batchSizeBox);
+        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.BatchSize"), batchSizeBox);
         var microBatchSizeBox = LaunchTextBox(settings.MicroBatchSize);
-        builder.AddLaunchSetting(memoryGrid, "Micro batch", microBatchSizeBox);
+        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.MicroBatch"), microBatchSizeBox);
         var flashAttentionCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddLaunchSetting(memoryGrid, "Flash attention", flashAttentionCombo);
+        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.FlashAttention"), flashAttentionCombo);
         var cacheTypeKCombo = LaunchCombo(LaunchSettingMetadataService.CacheTypeOptions);
-        builder.AddLaunchSetting(memoryGrid, "K cache", cacheTypeKCombo);
+        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.KCache"), cacheTypeKCombo);
         var cacheTypeVCombo = LaunchCombo(LaunchSettingMetadataService.CacheTypeOptions);
-        builder.AddLaunchSetting(memoryGrid, "V cache", cacheTypeVCombo);
+        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.VCache"), cacheTypeVCombo);
         var kvOffloadCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, "KV offload", kvOffloadCombo);
+        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.KvOffload"), kvOffloadCombo);
         var kvUnifiedCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, "Unified KV", kvUnifiedCombo);
+        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.UnifiedKv"), kvUnifiedCombo);
         var promptCacheCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, "Prompt cache", promptCacheCombo);
+        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.PromptCache"), promptCacheCombo);
         var promptCacheRamMbBox = LaunchTextBox(settings.PromptCacheRamMb);
-        builder.AddAdvancedLaunchSetting(memoryGrid, "Prompt cache MB", promptCacheRamMbBox);
+        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.PromptCacheMb"), promptCacheRamMbBox);
         var contextCheckpointsCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, "Checkpoints", contextCheckpointsCombo);
+        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.Checkpoints"), contextCheckpointsCombo);
         var contextCheckpointCountBox = LaunchTextBox(settings.ContextCheckpointCount);
-        builder.AddAdvancedLaunchSetting(memoryGrid, "Checkpoint count", contextCheckpointCountBox);
+        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.CheckpointCount"), contextCheckpointCountBox);
         var contextCheckpointEveryNTokensBox = LaunchTextBox(settings.ContextCheckpointEveryNTokens);
-        builder.AddAdvancedLaunchSetting(memoryGrid, "Checkpoint spacing", contextCheckpointEveryNTokensBox);
+        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.CheckpointSpacing"), contextCheckpointEveryNTokensBox);
         var mmapCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, "Memory map", mmapCombo);
+        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.MemoryMap"), mmapCombo);
         var mlockCombo = LaunchCombo(LaunchSettingMetadataService.OffOnOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, "Memory lock", mlockCombo);
+        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.MemoryLock"), mlockCombo);
 
         return new MemoryLaunchControls(
             batchSizeBox,

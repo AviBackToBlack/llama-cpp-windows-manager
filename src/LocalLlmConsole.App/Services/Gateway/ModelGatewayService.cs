@@ -32,7 +32,7 @@ public sealed class ModelGatewayService : IModelGatewayHost
     public Uri BaseUri => new(_options.LocalOpenAiBaseUrl);
     public string LastListenerError { get; private set; } = "";
 
-    public Task StartAsync(CancellationToken cancellationToken = default)
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
             throw new InvalidOperationException("The model gateway is disabled.");
@@ -43,9 +43,45 @@ public sealed class ModelGatewayService : IModelGatewayHost
         if (_options.MaxRequestBodyBytes <= 0)
             throw new InvalidOperationException("Gateway request body limit must be greater than zero.");
 
-        _listener.Start();
+        try
+        {
+            _listener.Start();
+        }
+        catch (HttpListenerException ex) when (ex.ErrorCode == 5) // ERROR_ACCESS_DENIED
+        {
+            // Attempt one-time URL ACL registration via UAC elevation.
+            // After registration succeeds, the listener can bind without admin.
+            var registered = await GatewayUrlReservationService.TryRegisterAsync(
+                _options.Port,
+                _options.AllowLanAccess,
+                cancellationToken);
+
+            if (registered)
+            {
+                // The netsh command succeeded — retry binding.
+                _listener.Start();
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Cannot start the auto-load gateway on port {_options.Port}.{Environment.NewLine}" +
+                    $"Windows requires a one-time permission to listen on this port.{Environment.NewLine}" +
+                    $"Please approve the UAC prompt that appears, or run this command as Administrator:{Environment.NewLine}" +
+                    $"{NetshCommand(_options)}",
+                    ex);
+            }
+        }
+        catch (HttpListenerException ex)
+        {
+            throw new InvalidOperationException(
+                $"Cannot start the auto-load gateway on port {_options.Port}.{Environment.NewLine}" +
+                $"Windows blocked the listener: {ex.Message}.{Environment.NewLine}" +
+                $"Run this command as Administrator and restart:{Environment.NewLine}" +
+                $"{NetshCommand(_options)}",
+                ex);
+        }
+
         _loop = Task.Run(() => ListenAsync(_stop.Token), cancellationToken);
-        return Task.CompletedTask;
     }
 
     private async Task ListenAsync(CancellationToken cancellationToken)
@@ -167,7 +203,7 @@ public sealed class ModelGatewayService : IModelGatewayHost
             Trace.TraceError($"Model gateway request failed: {ex}");
             try
             {
-                await ModelGatewayResponseWriter.WriteJsonAsync(context, 500, new { error = new { message = ex.Message, type = "gateway_error" } }, CancellationToken.None);
+                await ModelGatewayResponseWriter.WriteJsonAsync(context, 500, new { error = new { message = "An internal gateway error occurred.", type = "gateway_error" } }, CancellationToken.None);
             }
             catch (Exception writeEx)
             {
@@ -293,6 +329,9 @@ public sealed class ModelGatewayService : IModelGatewayHost
             Trace.TraceWarning($"Model gateway background task completed with an observed exception: {ex}");
         }
     }
+
+    private static string NetshCommand(ModelGatewayOptions options)
+        => $"netsh http add urlacl url={GatewayUrlReservationService.ListenerPrefixForPort(options.Port, options.AllowLanAccess)} user=\"%USERDOMAIN%\\%USERNAME%\"";
 
     private static void TraceFaultedTask(Task task, string message)
     {

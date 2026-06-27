@@ -20,7 +20,7 @@ public static partial class LaunchSettingsPanelFactory
         runtimeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(88) });
         runtimeGrid.Children.Add(new TextBlock
         {
-            Text = "Runtime",
+            Text = Loc.T("Launch.RuntimeLabel"),
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
             FontSize = 11,
             VerticalAlignment = VerticalAlignment.Center,
@@ -31,12 +31,12 @@ public static partial class LaunchSettingsPanelFactory
 
         var portLabel = new TextBlock
         {
-            Text = "Port",
+            Text = Loc.T("Launch.PortLabel"),
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
             FontSize = 11,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(8, 0, 7, 2),
-            ToolTip = TooltipText("Fixed server port for this model. OpenCode uses this endpoint before the model is loaded.")
+            ToolTip = Loc.T("Tooltip.LaunchPort")
         };
         Grid.SetColumn(portLabel, 2);
         runtimeGrid.Children.Add(portLabel);
@@ -55,7 +55,7 @@ public static partial class LaunchSettingsPanelFactory
             MinHeight = 29,
             Margin = new Thickness(0, 0, 4, 2),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-            ToolTip = TooltipText("llama.cpp runtime used when starting or restarting the selected model.")
+            ToolTip = Loc.T("Tooltip.RuntimeCombo")
         };
         combo.SelectionChanged += (_, _) => request.RuntimeSelectionChanged();
         return combo;
@@ -78,7 +78,7 @@ public static partial class LaunchSettingsPanelFactory
             MinWidth = 150,
             Margin = new Thickness(0, 0, 6, 0),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-            ToolTip = TooltipText("Filter launch settings by name or description as you type.")
+            ToolTip = Loc.T("Tooltip.LaunchSettingsSearch")
         };
         searchBox.TextChanged += (_, _) => request.LaunchSettingsSearchChanged();
         Grid.SetColumn(searchBox, 0);
@@ -92,7 +92,7 @@ public static partial class LaunchSettingsPanelFactory
             MinHeight = toolbarControlHeight,
             MinWidth = 126,
             Margin = new Thickness(0),
-            ToolTip = TooltipText("Shows tuning controls for memory, RoPE, speculative/MTP decoding, and sampling.")
+            ToolTip = Loc.T("Tooltip.AdvancedSettings")
         };
         ToolTipService.SetShowOnDisabled(toggleButton, true);
         toggleButton.Click += (_, _) =>
@@ -109,15 +109,15 @@ public static partial class LaunchSettingsPanelFactory
     }
 
     private static string AdvancedButtonText(bool showAdvanced)
-        => showAdvanced ? "Hide Advanced" : "Advanced Settings";
+        => showAdvanced ? Loc.T("Launch.HideAdvanced") : Loc.T("Launch.ShowAdvanced");
 
     private static WrapPanel ActionButtons(LaunchSettingsPanelRequest request, out WpfButton saveForModelButton)
     {
         var actions = Bar();
-        saveForModelButton = Button("Save For Model", request.SaveForModelAsync);
+        saveForModelButton = Button(Loc.T("Launch.SaveForModelButton"), request.SaveForModelAsync);
         actions.Children.Add(saveForModelButton);
-        actions.Children.Add(Button("Save As Default", request.SaveDefaultsAsync));
-        actions.Children.Add(Button("Reset Defaults", () =>
+        actions.Children.Add(Button(Loc.T("Launch.SaveAsDefaultButton"), request.SaveDefaultsAsync));
+        actions.Children.Add(Button(Loc.T("Launch.ResetDefaultsButton"), () =>
         {
             request.ResetDefaults();
             return Task.CompletedTask;
@@ -133,25 +133,25 @@ public static partial class LaunchSettingsPanelFactory
         saveAsNewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         saveAsNewGrid.Children.Add(new TextBlock
         {
-            Text = "Save as new",
+            Text = Loc.T("Launch.SaveAsNewLabel"),
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
             FontSize = 11,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 2),
-            ToolTip = TooltipText("Create a saved model variant from the selected model and the settings currently shown here.")
+            ToolTip = Loc.T("Tooltip.SaveAsNewLabel")
         });
         nameBox = new WpfTextBox
         {
             MinHeight = 29,
             Margin = new Thickness(0, 0, 6, 2),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-            ToolTip = TooltipText("Name for the saved model variant. Change the prefilled name before saving.")
+            ToolTip = Loc.T("Tooltip.SaveAsNewNameBox")
         };
         nameBox.TextChanged += (_, _) => request.SaveAsNewNameChanged();
         Grid.SetColumn(nameBox, 1);
         saveAsNewGrid.Children.Add(nameBox);
-        saveButton = Button("Save As New", request.SaveAsNewAsync);
-        saveButton.ToolTip = TooltipText("Save the current launch settings as a separate loadable model variant on a new direct API port.");
+        saveButton = Button(Loc.T("Launch.SaveAsNewButton"), request.SaveAsNewAsync);
+        saveButton.ToolTip = Loc.T("Tooltip.SaveAsNewButton");
         ToolTipService.SetShowOnDisabled(saveButton, true);
         Grid.SetColumn(saveButton, 2);
         saveAsNewGrid.Children.Add(saveButton);

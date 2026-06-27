@@ -60,10 +60,10 @@ public static partial class LaunchSettingsPanelFactory
         var runtimeCombo = RuntimeCombo(request);
         var launchPortBox = LaunchTextBox(request.Settings.Port);
         launchPortBox.MinWidth = 78;
-        launchPortBox.ToolTip = TooltipText("Fixed server port for this model. Use a unique port per model when serving multiple models.");
+        launchPortBox.ToolTip = Loc.T("Tooltip.LaunchPortBox");
         panel.Children.Add(RuntimeAndPortRow(runtimeCombo, launchPortBox));
 
-        var modelCapabilityText = Text("No model selected", 12, false, true);
+        var modelCapabilityText = Text(Loc.T("Launch.NoModelSelected"), 12, false, true);
         modelCapabilityText.TextWrapping = TextWrapping.NoWrap;
         modelCapabilityText.TextTrimming = TextTrimming.CharacterEllipsis;
         modelCapabilityText.Margin = new Thickness(0, 0, 0, 4);

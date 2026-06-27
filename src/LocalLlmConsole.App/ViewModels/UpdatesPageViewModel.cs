@@ -28,16 +28,18 @@ public sealed class UpdatesPageViewModel : ObservableViewModel
     }
 
     public bool HasAvailableUpdate => LatestUpdate is { IsAvailable: true };
-    public string ActionText => HasAvailableUpdate ? "Install Update" : "Check For Updates";
+    public string ActionText => HasAvailableUpdate
+        ? Localization.Loc.T("Nav.InstallUpdate")
+        : Localization.Loc.T("Nav.CheckForUpdates");
     public string NavigationText => ActionText;
 
     public string StatusText => LatestUpdate is null
-        ? "No update check has run in this session yet."
+        ? Localization.Loc.T("Updates.NoCheckYet")
         : LatestUpdate.IsAvailable
-            ? $"Update available: {LatestUpdate.CurrentVersion} -> {LatestUpdate.LatestVersion}"
-            : $"No updates available. Current version: {LatestUpdate.CurrentVersion}";
+            ? Localization.Loc.T("Updates.Available", LatestUpdate.CurrentVersion, LatestUpdate.LatestVersion)
+            : Localization.Loc.T("Updates.NoUpdatesAvailable", LatestUpdate.CurrentVersion);
 
-    public string StatusDetails => $"{StatusText}\nRepository: {AppUpdateService.RepositoryUrl}";
+    public string StatusDetails => $"{StatusText}\n{Localization.Loc.T("Updates.RepositoryLabel")}: {AppUpdateService.RepositoryUrl}";
 
     public string LatestReleaseText => LatestUpdate is { IsAvailable: true } update
         ? $"{update.ReleaseName}\n{update.HtmlUrl}\n\n{DisplayFormatService.TrimForDisplay(update.ReleaseNotes, 1800)}"

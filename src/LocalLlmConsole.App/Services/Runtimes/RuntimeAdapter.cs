@@ -23,10 +23,13 @@ public static class RuntimeAdapter
             errors.Add("Runtime host must default to localhost. Enable LAN model access before exposing a model on the network.");
         else if (!IsLocalHost(host) && !IsBindableHost(host))
             errors.Add("Runtime host must be a valid host name or IP address.");
-        if (string.IsNullOrWhiteSpace(request.ApiKey))
-            errors.Add("Model serving requires a model API key, including local-only mode.");
-        else if (!ApiSecurity.IsStrongBearerSecret(request.ApiKey))
-            errors.Add("Model API key must be at least 32 non-whitespace characters.");
+        if (request.RequireApiKeyAuth)
+        {
+            if (string.IsNullOrWhiteSpace(request.ApiKey))
+                errors.Add("Model serving requires a model API key, including local-only mode.");
+            else if (!ApiSecurity.IsStrongBearerSecret(request.ApiKey))
+                errors.Add("Model API key must be at least 32 non-whitespace characters.");
+        }
         if (string.IsNullOrWhiteSpace(request.ExecutablePath))
             errors.Add("llama-server executable path is required.");
         if (string.IsNullOrWhiteSpace(request.ModelPath))
@@ -200,8 +203,8 @@ public static class RuntimeAdapter
             "--port", request.Port.ToString(System.Globalization.CultureInfo.InvariantCulture),
             "--ctx-size", request.ContextSize.ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
-        if (!string.IsNullOrWhiteSpace(request.ApiKey))
-            args.AddRange(["--api-key", request.ApiKey.Trim()]);
+        // API key is passed via LLAMA_API_KEY environment variable (not CLI arg)
+        // to avoid exposure in process command lines visible to Task Manager / WMI.
         if (request.Backend is RuntimeBackend.Cuda or RuntimeBackend.Vulkan or RuntimeBackend.Metal or RuntimeBackend.Sycl)
             args.AddRange(["--n-gpu-layers", request.GpuLayers.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
         args.AddRange([

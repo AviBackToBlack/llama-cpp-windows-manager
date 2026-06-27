@@ -122,17 +122,17 @@ public static class OpenCodePageFactory
         panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var toolbar = Bar();
-        toolbar.Children.Add(Button("Detect Files", request.Actions.DetectFilesAsync, request.ButtonToolTip));
-        toolbar.Children.Add(Button("Choose Config", request.Actions.ChooseConfigAsync, request.ButtonToolTip));
-        toolbar.Children.Add(Button("Choose Agents Folder", request.Actions.ChooseAgentsFolderAsync, request.ButtonToolTip));
-        toolbar.Children.Add(Button("Refresh", request.Actions.RefreshAsync, request.ButtonToolTip));
+        toolbar.Children.Add(Button(Loc.T("OpenCode.DetectFilesButton"), request.Actions.DetectFilesAsync, request.ButtonToolTip));
+        toolbar.Children.Add(Button(Loc.T("OpenCode.ChooseConfigButton"), request.Actions.ChooseConfigAsync, request.ButtonToolTip));
+        toolbar.Children.Add(Button(Loc.T("OpenCode.ChooseAgentsFolderButton"), request.Actions.ChooseAgentsFolderAsync, request.ButtonToolTip));
+        toolbar.Children.Add(Button(Loc.T("OpenCode.RefreshButton"), request.Actions.RefreshAsync, request.ButtonToolTip));
         panel.Children.Add(toolbar);
 
-        var configRow = PathRow("Config", request.Files.ConfigPath, out configPathText);
+        var configRow = PathRow(Loc.T("OpenCode.ConfigLabel"), request.Files.ConfigPath, out configPathText);
         Grid.SetRow(configRow, 1);
         panel.Children.Add(configRow);
 
-        var agentsRow = PathRow("Agents", request.Files.AgentsDirectory, out agentsPathText);
+        var agentsRow = PathRow(Loc.T("OpenCode.AgentsLabel"), request.Files.AgentsDirectory, out agentsPathText);
         Grid.SetRow(agentsRow, 2);
         panel.Children.Add(agentsRow);
 
@@ -146,27 +146,27 @@ public static class OpenCodePageFactory
     private static Grid ModelSection(OpenCodePageRequest request, out OpenCodeModelControls controls)
     {
         var left = new StackPanel { Margin = new Thickness(0, 6, 10, 6) };
-        left.Children.Add(Text("Model", 12, true, true));
+        left.Children.Add(Text(Loc.T("OpenCode.ModelLabel"), 12, true, true));
         var modelCombo = new WpfComboBox
         {
             ItemsSource = request.ViewModel.OpenCode.ModelChoices,
             DisplayMemberPath = nameof(OpenCodeModelEntry.Label),
             MinHeight = 30,
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-            ToolTip = TooltipText("Models configured in the selected OpenCode provider config.")
+            ToolTip = Loc.T("Tooltip.OpenCodeModelCombo")
         };
         modelCombo.SelectionChanged += async (_, _) => await request.Actions.LoadSelectedModelAsync();
         left.Children.Add(modelCombo);
 
         var modelActions = Bar();
-        var saveModelButton = Button("Update Config", request.Actions.SaveModelSnippetAsync, request.ButtonToolTip);
-        var deleteModelButton = Button("Delete Config", request.Actions.DeleteModelAsync, request.ButtonToolTip);
+        var saveModelButton = Button(Loc.T("OpenCode.UpdateConfigButton"), request.Actions.SaveModelSnippetAsync, request.ButtonToolTip);
+        var deleteModelButton = Button(Loc.T("OpenCode.DeleteConfigButton"), request.Actions.DeleteModelAsync, request.ButtonToolTip);
         modelActions.Children.Add(saveModelButton);
         modelActions.Children.Add(deleteModelButton);
         left.Children.Add(modelActions);
 
         var addPanel = new StackPanel { Margin = new Thickness(0, 8, 0, 0), Visibility = Visibility.Collapsed };
-        addPanel.Children.Add(Text("Local model", 12, true, true));
+        addPanel.Children.Add(Text(Loc.T("OpenCode.LocalModelLabel"), 12, true, true));
         var localModelCombo = new WpfComboBox
         {
             ItemsSource = request.ViewModel.OpenCode.LocalModelChoices,
@@ -174,7 +174,7 @@ public static class OpenCodePageFactory
             SelectedValuePath = nameof(ModelRecord.Id),
             MinHeight = 30,
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-            ToolTip = TooltipText("Choose one of the app's registered local GGUF models.")
+            ToolTip = Loc.T("Tooltip.OpenCodeLocalModelCombo")
         };
         localModelCombo.SelectionChanged += async (_, _) => await request.Actions.LoadLocalModelDraftAsync();
         addPanel.Children.Add(localModelCombo);
@@ -183,9 +183,9 @@ public static class OpenCodePageFactory
         addPanel.Children.Add(addModelStatusText);
 
         var addActions = Bar();
-        var addLocalModelButton = Button("Add", request.Actions.AddLocalModelAsync, request.ButtonToolTip);
-        var updateLocalModelButton = Button("Update", request.Actions.UpdateLocalModelAsync, request.ButtonToolTip);
-        var addAsNewLocalModelButton = Button("Add As New", request.Actions.AddLocalModelAsNewAsync, request.ButtonToolTip);
+        var addLocalModelButton = Button(Loc.T("OpenCode.AddButton"), request.Actions.AddLocalModelAsync, request.ButtonToolTip);
+        var updateLocalModelButton = Button(Loc.T("OpenCode.UpdateButton"), request.Actions.UpdateLocalModelAsync, request.ButtonToolTip);
+        var addAsNewLocalModelButton = Button(Loc.T("OpenCode.AddAsNewButton"), request.Actions.AddLocalModelAsNewAsync, request.ButtonToolTip);
         addActions.Children.Add(addLocalModelButton);
         addActions.Children.Add(updateLocalModelButton);
         addActions.Children.Add(addAsNewLocalModelButton);
@@ -205,42 +205,42 @@ public static class OpenCodePageFactory
             addAsNewLocalModelButton,
             addPanel,
             modelSnippetBox);
-        return SplitSection("OpenCode models", left, modelSnippetBox);
+        return SplitSection(Loc.T("OpenCode.SectionModelsTitle"), left, modelSnippetBox);
     }
 
     private static Grid AgentSection(OpenCodePageRequest request, out OpenCodeAgentControls controls)
     {
         var left = new StackPanel { Margin = new Thickness(0, 6, 10, 6) };
-        left.Children.Add(Text("Agent", 12, true, true));
+        left.Children.Add(Text(Loc.T("OpenCode.AgentLabel"), 12, true, true));
         var agentCombo = new WpfComboBox
         {
             ItemsSource = request.ViewModel.OpenCode.AgentChoices,
             DisplayMemberPath = nameof(OpenCodeAgentEntry.Label),
             MinHeight = 30,
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-            ToolTip = TooltipText("Agents from the selected OpenCode config and agents folder.")
+            ToolTip = Loc.T("Tooltip.OpenCodeAgentCombo")
         };
         agentCombo.SelectionChanged += async (_, _) => await request.Actions.LoadSelectedAgentAsync();
         left.Children.Add(agentCombo);
 
         var actions = Bar();
-        var saveAgentButton = Button("Save Agent", request.Actions.SaveAgentSnippetAsync, request.ButtonToolTip);
-        var deleteAgentButton = Button("Delete Agent", request.Actions.DeleteAgentAsync, request.ButtonToolTip);
+        var saveAgentButton = Button(Loc.T("OpenCode.SaveAgentButton"), request.Actions.SaveAgentSnippetAsync, request.ButtonToolTip);
+        var deleteAgentButton = Button(Loc.T("OpenCode.DeleteAgentButton"), request.Actions.DeleteAgentAsync, request.ButtonToolTip);
         actions.Children.Add(saveAgentButton);
         actions.Children.Add(deleteAgentButton);
         left.Children.Add(actions);
 
         var addPanel = new StackPanel { Margin = new Thickness(0, 8, 0, 0), Visibility = Visibility.Collapsed };
-        addPanel.Children.Add(Text("New agent", 12, true, true));
+        addPanel.Children.Add(Text(Loc.T("OpenCode.NewAgentLabel"), 12, true, true));
         var newAgentNameBox = new WpfTextBox
         {
-            ToolTip = TooltipText("Lowercase id is generated from this name."),
+            ToolTip = Loc.T("Tooltip.OpenCodeNewAgentName"),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch
         };
         addPanel.Children.Add(newAgentNameBox);
-        var agentKindCombo = Combo("config json", "markdown file");
+        var agentKindCombo = Combo(Loc.T("OpenCode.AgentKind.ConfigJson"), Loc.T("OpenCode.AgentKind.MarkdownFile"));
         addPanel.Children.Add(agentKindCombo);
-        var createAgentButton = Button("Create Agent", request.Actions.CreateAgentAsync, request.ButtonToolTip);
+        var createAgentButton = Button(Loc.T("OpenCode.CreateAgentButton"), request.Actions.CreateAgentAsync, request.ButtonToolTip);
         addPanel.Children.Add(createAgentButton);
         left.Children.Add(addPanel);
 
@@ -254,7 +254,7 @@ public static class OpenCodePageFactory
             createAgentButton,
             addPanel,
             agentSnippetBox);
-        return SplitSection("OpenCode agents", left, agentSnippetBox);
+        return SplitSection(Loc.T("OpenCode.SectionAgentsTitle"), left, agentSnippetBox);
     }
 
     private static WpfTextBox EditorBox() => new()

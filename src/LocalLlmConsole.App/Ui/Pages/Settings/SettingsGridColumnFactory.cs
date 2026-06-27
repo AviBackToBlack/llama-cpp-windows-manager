@@ -71,7 +71,7 @@ public static class SettingsGridColumnFactory
 
         return new DataGridTemplateColumn
         {
-            Header = "Value",
+            Header = Loc.T("Settings.Col.Value"),
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
             MinWidth = 240,
             CanUserResize = true,
@@ -118,7 +118,7 @@ public static class SettingsGridColumnFactory
 
         return new DataGridTemplateColumn
         {
-            Header = "Action",
+            Header = Loc.T("Common.ActionButton"),
             Width = new DataGridLength(1.35, DataGridLengthUnitType.Star),
             MinWidth = 208,
             CanUserResize = true,

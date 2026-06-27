@@ -107,9 +107,9 @@ public partial class MainWindow
     private void InitializeTrayIcon()
     {
         var menu = new Forms.ContextMenuStrip();
-        var showItem = new Forms.ToolStripMenuItem("Show llama.cpp Windows Manager");
+        var showItem = new Forms.ToolStripMenuItem(Localization.Loc.T("Tray.ShowWindow"));
         showItem.Click += (_, _) => Dispatcher.Invoke(RestoreFromTray);
-        var exitItem = new Forms.ToolStripMenuItem("Exit");
+        var exitItem = new Forms.ToolStripMenuItem(Localization.Loc.T("Tray.Exit"));
         exitItem.Click += (_, _) => Dispatcher.Invoke(() =>
         {
             RestoreFromTray();

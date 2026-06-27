@@ -21,7 +21,8 @@ public sealed record RuntimeBuildApplicationActions(
     Func<Task> RefreshRuntimesAsync,
     Func<Task> RefreshOverviewAsync,
     Action<string> SetStatus,
-    Action<string, string> ShowInformation);
+    Action<string, string> ShowInformation,
+    Func<string, Task>? ProgressStatusAsync = null);
 
 public sealed class RuntimeBuildApplicationService
 {
@@ -128,7 +129,8 @@ public sealed class RuntimeBuildApplicationService
                     request.Settings.WslDistro,
                     request.MaxLogBytes,
                     actions.RefreshJobsAsync,
-                    buildCancellation.Token));
+                    buildCancellation.Token,
+                    ProgressAsync: actions.ProgressStatusAsync));
                 outcome = await ApplyResultAsync(result, actions);
             }
             finally

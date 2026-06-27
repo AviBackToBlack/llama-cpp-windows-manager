@@ -14,7 +14,8 @@ public sealed record RuntimePackageInstallRequest(
     Func<RuntimePackageInstallProgress, Task> ProgressAsync,
     Func<string, string, string, Task>? ExtractWslArchiveAsync = null,
     Func<RuntimePackagePreset, string, string, Task>? PrepareWslExecutableAsync = null,
-    CancellationToken CancellationToken = default);
+    CancellationToken CancellationToken = default,
+    bool RequireChecksum = true);
 
 public sealed record RuntimePackageInstallResult(
     string InstallDir,
@@ -52,7 +53,7 @@ public sealed class RuntimePackageInstallService
                 var archivePath = Path.Combine(cacheDir, asset.Name);
                 var sizeText = asset.SizeBytes > 0 ? $" ({DisplayFormatService.Bytes(asset.SizeBytes)})" : "";
                 await ReportAsync(request, installDir, $"Downloading {asset.Name}{sizeText}...");
-                await RuntimePackageInstallFileService.DownloadAssetAsync(_client, asset, archivePath, request.CancellationToken);
+                await RuntimePackageInstallFileService.DownloadAssetAsync(_client, asset, archivePath, request.RequireChecksum, request.CancellationToken);
                 await RuntimeBuildJobService.AppendJobLogAsync(request.LogPath, JobStatus.Running, $"Extracting {asset.Name}...", request.MaxLogBytes);
                 if (request.Preset.Mode == RuntimeMode.Wsl && IsTarArchive(archivePath))
                 {

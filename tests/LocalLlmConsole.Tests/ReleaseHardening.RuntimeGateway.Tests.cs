@@ -594,20 +594,20 @@ public sealed partial class ReleaseHardeningTests
 
         var failed = new FakeModelGatewayHost(new InvalidOperationException("port busy"));
         calls.Clear();
-        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.RestartAsync(
-                new ModelGatewayLifecycleRestartRequest(null, settings),
-                Actions(
-                    gateway => currentGateway = gateway,
-                    _ => Task.FromResult(settings),
-                    (_, _) => failed,
-                    calls),
-                TestContext.Current.CancellationToken));
+        var failureResult = await service.RestartAsync(
+            new ModelGatewayLifecycleRestartRequest(null, settings),
+            Actions(
+                gateway => currentGateway = gateway,
+                _ => Task.FromResult(settings),
+                (_, _) => failed,
+                calls),
+            TestContext.Current.CancellationToken);
 
-        Assert.Equal("port busy", failure.Message);
+        Assert.False(failureResult.GatewayStarted);
         Assert.True(failed.Disposed);
         Assert.Null(currentGateway);
         Assert.Contains("status", calls);
+        Assert.Contains(calls, call => call.Contains("port busy"));
 
         ModelGatewayLifecycleActions Actions(
             Action<IModelGatewayHost?> setGateway,

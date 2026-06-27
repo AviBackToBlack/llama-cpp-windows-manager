@@ -18,11 +18,19 @@ public sealed class ModelGatewayUpstreamProxy : IDisposable
         "Content-Length"
     };
 
+    private static readonly HashSet<string> AllowedRequestHeaders = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Accept",
+        "Accept-Encoding",
+        "User-Agent",
+        "Cache-Control",
+    };
+
     private readonly HttpClient _client;
 
     public ModelGatewayUpstreamProxy(HttpClient? client = null)
     {
-        _client = client ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+        _client = client ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
     }
 
     public async Task ForwardAsync(
@@ -46,8 +54,7 @@ public sealed class ModelGatewayUpstreamProxy : IDisposable
         var request = new HttpRequestMessage(new HttpMethod(source.HttpMethod), upstream);
         foreach (var key in source.Headers.AllKeys)
         {
-            if (string.IsNullOrWhiteSpace(key) || HopByHopHeaders.Contains(key)) continue;
-            if (key.Equals("Authorization", StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.IsNullOrWhiteSpace(key) || !AllowedRequestHeaders.Contains(key)) continue;
             var values = source.Headers.GetValues(key);
             if (values is not null)
                 request.Headers.TryAddWithoutValidation(key, values);

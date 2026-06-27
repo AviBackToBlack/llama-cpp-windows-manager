@@ -35,11 +35,11 @@ public static partial class LaunchSettingsPanelFactory
     private static ContextMenu VisionProjectorMenu(WpfTextBox textBox, Func<Task> chooseAsync)
     {
         var menu = PickerContextMenu();
-        var auto = new MenuItem { Header = "Auto-detect nearby head" };
+        var auto = new MenuItem { Header = Loc.T("Picker.Vision.AutoDetectHead") };
         auto.Click += (_, _) => textBox.Text = "";
-        var embedded = new MenuItem { Header = "Embedded / model-bundled" };
+        var embedded = new MenuItem { Header = Loc.T("Picker.Vision.Embedded") };
         embedded.Click += (_, _) => textBox.Text = VisionProjectorSelection.EmbeddedToken;
-        var choose = new MenuItem { Header = "Choose GGUF file..." };
+        var choose = new MenuItem { Header = Loc.T("Picker.ChooseGgufFile") };
         choose.Click += async (_, _) => await chooseAsync();
 
         menu.Items.Add(auto);
@@ -81,9 +81,9 @@ public static partial class LaunchSettingsPanelFactory
     private static ContextMenu MtpHeadMenu(WpfTextBox textBox, Func<Task> chooseAsync)
     {
         var menu = PickerContextMenu();
-        var auto = new MenuItem { Header = "Auto-detect nearby MTP head" };
+        var auto = new MenuItem { Header = Loc.T("Picker.Mtp.AutoDetectHead") };
         auto.Click += (_, _) => textBox.Text = "";
-        var choose = new MenuItem { Header = "Choose GGUF file..." };
+        var choose = new MenuItem { Header = Loc.T("Picker.ChooseGgufFile") };
         choose.Click += async (_, _) => await chooseAsync();
 
         menu.Items.Add(auto);
@@ -101,17 +101,17 @@ public static partial class LaunchSettingsPanelFactory
     private static string MtpHeadButtonText(string value)
     {
         var trimmed = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(trimmed)) return "Auto-detect MTP head";
+        if (string.IsNullOrWhiteSpace(trimmed)) return Loc.T("Picker.Mtp.DefaultText");
         var fileName = Path.GetFileName(trimmed);
-        return string.IsNullOrWhiteSpace(fileName) ? "MTP head selected" : fileName;
+        return string.IsNullOrWhiteSpace(fileName) ? Loc.T("Picker.Mtp.SelectedText") : fileName;
     }
 
     private static string MtpHeadTooltip(string value)
     {
         var trimmed = (value ?? "").Trim();
         return string.IsNullOrWhiteSpace(trimmed)
-            ? "Auto-detect a nearby MTP assistant/head GGUF when Spec type is atomic-mtp."
-            : $"MTP head: {trimmed}{Environment.NewLine}Click to change the MTP head source.";
+            ? Loc.T("Tooltip.MtpHeadDefault")
+            : $"{Loc.T("Tooltip.MtpHeadPath")} {trimmed}{Environment.NewLine}{Loc.T("Tooltip.MtpHeadClickChange")}";
     }
 
     private static WpfButton DropDownPickerButton(string text, Func<Task> click)

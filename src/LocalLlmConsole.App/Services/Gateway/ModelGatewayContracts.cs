@@ -11,6 +11,7 @@ public sealed record ModelGatewayOptions(
     string AccessMode,
     int Port,
     string ApiKey,
+    bool RequireApiKeyAuth,
     ModelGatewaySwapPolicy SwapPolicy,
     long MaxRequestBodyBytes = 64L * 1024 * 1024)
 {
@@ -31,6 +32,7 @@ public sealed record ModelGatewayOptions(
             settings.ModelAccessMode,
             settings.AutoLoadGatewayPort,
             RuntimeEndpointService.ModelApiKeyForClient(settings),
+            settings.RequireApiKeyAuth,
             AppPreferenceService.GatewaySwapPolicy(settings.AutoLoadGatewayPolicy) == "singleActive"
                 ? ModelGatewaySwapPolicy.SingleActive
                 : ModelGatewaySwapPolicy.KeepLoaded);

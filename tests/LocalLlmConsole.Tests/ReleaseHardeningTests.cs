@@ -16,6 +16,7 @@ public sealed partial class ReleaseHardeningTests
         ModelPath = "model.gguf",
         Host = "127.0.0.1",
         ApiKey = new string('a', 32),
+        RequireApiKeyAuth = true,
         Port = 8081
     };
 

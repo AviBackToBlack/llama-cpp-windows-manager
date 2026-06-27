@@ -21,7 +21,8 @@ public sealed record RuntimeBuildWorkflowRequest(
     string WslDistro,
     long MaxLogBytes,
     Func<Task>? JobsChangedAsync = null,
-    CancellationToken CancellationToken = default);
+    CancellationToken CancellationToken = default,
+    Func<string, Task>? ProgressAsync = null);
 
 public sealed record RuntimeBuildWorkflowResult(
     RuntimeBuildWorkflowResultKind Kind,
@@ -93,7 +94,8 @@ public sealed class RuntimeBuildWorkflowService
                 await UpdateJobAsync(request, JobStatus.Running, "update", request.Plan.InstallDir, updateMessage, sourceDir);
             }
 
-            var result = await _executeBuildAsync(new RuntimeBuildExecutionRequest(
+            var buildStart = DateTimeOffset.UtcNow;
+            var buildTask = _executeBuildAsync(new RuntimeBuildExecutionRequest(
                 request.Preset,
                 request.Settings,
                 request.Plan,
@@ -101,6 +103,20 @@ public sealed class RuntimeBuildWorkflowService
                 request.Job.LogPath,
                 request.Update,
                 request.CancellationToken));
+            using var progressCts = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken);
+            var progressTask = request.ProgressAsync is not null
+                ? RunBuildProgressLoopAsync(buildTask, buildStart, request, progressCts.Token)
+                : Task.CompletedTask;
+            RuntimeBuildExecutionResult result;
+            try
+            {
+                result = await buildTask;
+            }
+            finally
+            {
+                progressCts.Cancel();
+            }
+            await progressTask;
             await UpdateJobAsync(request, JobStatus.Completed, request.Plan.Action, request.Plan.InstallDir, result.StatusMessage, sourceDir);
             return new RuntimeBuildWorkflowResult(RuntimeBuildWorkflowResultKind.Completed, result.StatusMessage, result);
         }
@@ -145,5 +161,38 @@ public sealed class RuntimeBuildWorkflowService
     {
         if (request.JobsChangedAsync is not null)
             await request.JobsChangedAsync();
+    }
+
+    private static async Task RunBuildProgressLoopAsync(
+        Task buildTask,
+        DateTimeOffset buildStart,
+        RuntimeBuildWorkflowRequest request,
+        CancellationToken progressCancellationToken)
+    {
+        while (!buildTask.IsCompleted && !progressCancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(15), progressCancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (buildTask.IsCompleted)
+                return;
+
+            var elapsed = DateTimeOffset.UtcNow - buildStart;
+            var message = $"Building... ({elapsed.TotalMinutes:F0}m {elapsed.Seconds}s elapsed)";
+            try
+            {
+                await request.ProgressAsync!(message);
+            }
+            catch
+            {
+                // Progress failures should never abort the build.
+            }
+        }
     }
 }

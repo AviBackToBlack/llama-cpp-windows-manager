@@ -31,5 +31,10 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
     }
 
     private static string BashQuote(string value)
-        => "'" + (value ?? "").Replace("'", "'\"'\"'") + "'";
+    {
+        var safe = value ?? "";
+        if (safe.IndexOf('\0') >= 0)
+            throw new ArgumentException("Shell arguments cannot contain null bytes.");
+        return "'" + safe.Replace("'", "'\"'\"'") + "'";
+    }
 }

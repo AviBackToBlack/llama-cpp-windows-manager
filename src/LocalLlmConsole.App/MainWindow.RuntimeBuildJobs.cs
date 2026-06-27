@@ -68,5 +68,6 @@ public partial class MainWindow
             RefreshRuntimesAsync,
             RefreshOverviewAsync,
             SetStatus,
-            (title, message) => _coreServices.App.Dialogs.Notify(this, message, title, MessageBoxImage.Information));
+            (title, message) => _coreServices.App.Dialogs.Notify(this, message, title, MessageBoxImage.Information),
+            ProgressStatusAsync: async message => await Dispatcher.InvokeAsync(() => SetStatus(message)));
 }

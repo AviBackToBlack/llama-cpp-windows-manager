@@ -56,7 +56,7 @@ public static class SettingsPageFactory
         toolbar.ColumnDefinitions.Add(new ColumnDefinition());
         toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var saveButton = Button("Save Settings", request.Actions.SaveSettings, request.ButtonToolTip);
+        var saveButton = Button(Loc.T("Settings.SaveSettingsButton"), request.Actions.SaveSettings, request.ButtonToolTip);
         Grid.SetColumn(saveButton, 0);
         toolbar.Children.Add(saveButton);
 
@@ -68,7 +68,7 @@ public static class SettingsPageFactory
         };
         themeBar.Children.Add(new TextBlock
         {
-            Text = "Theme",
+            Text = Loc.T("Settings.ThemeLabel"),
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center,
@@ -123,7 +123,7 @@ public static class SettingsPageFactory
         var textStyle = (Style)WpfApplication.Current.Resources["GridCellText"];
         grid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Setting",
+            Header = Loc.T("Settings.Col.Setting"),
             Binding = new WpfBinding(nameof(EditableSettingRow.Label)),
             IsReadOnly = true,
             ElementStyle = SettingsGridColumnFactory.CellTextStyle(textStyle),

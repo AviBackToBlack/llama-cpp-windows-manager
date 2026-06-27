@@ -39,28 +39,7 @@ public sealed record OverviewPageControls(
 
 public static class OverviewPageFactory
 {
-    public const string LoadedSessionsTitle = "Loaded Model Sessions";
-    public const string LiveRuntimeLogTitle = "Live Runtime Log";
-    public const string RuntimeMetricsTitle = "All llama.cpp Metrics";
 
-    public static readonly (string Header, string Binding, double Weight)[] LoadedSessionColumns =
-    [
-        ("Model", "C1", 1.45),
-        ("Size", "C2", .62),
-        ("State", "C3", .62),
-        ("API endpoints", "C4", 1.9),
-        ("Runtime", "C5", 1.25),
-        ("Backend", "C6", .75)
-    ];
-
-    public static readonly (string Header, string Binding, double Weight)[] RuntimeMetricColumns =
-    [
-        ("Metric", "C1", 1.5),
-        ("Labels", "C2", 2.2),
-        ("Value", "C3", .9),
-        ("Type", "C4", .7),
-        ("Help", "C5", 3)
-    ];
 
     public static OverviewPageControls Create(OverviewPageRequest request)
     {
@@ -76,11 +55,17 @@ public static class OverviewPageFactory
         root.Children.Add(modelBar);
 
         var dashboardSection = Stack();
-        var loadedSessionsGrid = PageSectionFactory.GridFor(LoadedSessionColumns);
+        var loadedSessionsGrid = PageSectionFactory.GridFor(
+            (Loc.T("Overview.SessionsCol.Model"), "C1", 1.45),
+            (Loc.T("Overview.SessionsCol.Size"), "C2", .62),
+            (Loc.T("Overview.SessionsCol.State"), "C3", .62),
+            (Loc.T("Overview.SessionsCol.ApiEndpoints"), "C4", 1.9),
+            (Loc.T("Overview.SessionsCol.Runtime"), "C5", 1.25),
+            (Loc.T("Overview.SessionsCol.Backend"), "C6", .75));
         loadedSessionsGrid.ItemsSource = request.ViewModel.Overview.SessionRows;
         loadedSessionsGrid.SelectionChanged += async (_, _) => await request.Actions.SelectLoadedSessionRowAsync();
-        dashboardSection.Children.Add(PageSectionFactory.GridSection(LoadedSessionsTitle, loadedSessionsGrid));
-        dashboardSection.Children.Add(Text("Model Status", 18, true));
+        dashboardSection.Children.Add(PageSectionFactory.GridSection(Loc.T("Overview.LoadedSessionsTitle"), loadedSessionsGrid));
+        dashboardSection.Children.Add(Text(Loc.T("Overview.ModelStatusLabel"), 18, true));
 
         var runtimeDashboard = RuntimeDashboard(
             out var runtimeDashboardModel,
@@ -95,16 +80,21 @@ public static class OverviewPageFactory
         root.Children.Add(dashboardSection);
 
         var runtimeLogBox = RuntimeLogBox();
-        var runtimeLogSection = PageSectionFactory.FramedSection(LiveRuntimeLogTitle, runtimeLogBox);
+        var runtimeLogSection = PageSectionFactory.FramedSection(Loc.T("Overview.LiveRuntimeLogTitle"), runtimeLogBox);
         Grid.SetRow(runtimeLogSection, 2);
         root.Children.Add(runtimeLogSection);
         root.Children.Add(PageSectionFactory.HorizontalGridSplitter(3));
 
-        var runtimeMetricsGrid = PageSectionFactory.GridFor(RuntimeMetricColumns);
+        var runtimeMetricsGrid = PageSectionFactory.GridFor(
+            (Loc.T("Overview.MetricsCol.Metric"), "C1", 1.5),
+            (Loc.T("Overview.MetricsCol.Labels"), "C2", 2.2),
+            (Loc.T("Overview.MetricsCol.Value"), "C3", .9),
+            (Loc.T("Overview.MetricsCol.Type"), "C4", .7),
+            (Loc.T("Overview.MetricsCol.Help"), "C5", 3));
         runtimeMetricsGrid.ItemsSource = request.ViewModel.RuntimeMetrics.Rows;
         runtimeMetricsGrid.VerticalAlignment = VerticalAlignment.Stretch;
         request.ConfigureRuntimeMetricsGrid(runtimeMetricsGrid);
-        var metricsSection = PageSectionFactory.GridSection(RuntimeMetricsTitle, runtimeMetricsGrid);
+        var metricsSection = PageSectionFactory.GridSection(Loc.T("Overview.RuntimeMetricsTitle"), runtimeMetricsGrid);
         Grid.SetRow(metricsSection, 4);
         root.Children.Add(metricsSection);
 
@@ -134,7 +124,7 @@ public static class OverviewPageFactory
         modelBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         modelBar.Children.Add(new TextBlock
         {
-            Text = "Model",
+            Text = Loc.T("Overview.ModelLabel"),
             FontWeight = FontWeights.SemiBold,
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextSoft"],
             VerticalAlignment = VerticalAlignment.Center,
@@ -148,17 +138,17 @@ public static class OverviewPageFactory
             MinHeight = 30,
             Margin = new Thickness(0, 0, 8, 6),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-            ToolTip = "Choose a local model to load with its saved launch profile."
+            ToolTip = Loc.T("Tooltip.OverviewModelCombo")
         };
         modelCombo.SelectionChanged += async (_, _) => await request.Actions.SelectModelSessionAsync();
         Grid.SetColumn(modelCombo, 1);
         modelBar.Children.Add(modelCombo);
 
-        loadButton = Button("Load", request.Actions.LoadSelectedModelAsync);
+        loadButton = Button(Loc.T("Overview.LoadButton"), request.Actions.LoadSelectedModelAsync);
         Grid.SetColumn(loadButton, 2);
         modelBar.Children.Add(loadButton);
 
-        unloadButton = Button("Unload", request.Actions.UnloadSelectedModelAsync);
+        unloadButton = Button(Loc.T("Overview.UnloadButton"), request.Actions.UnloadSelectedModelAsync);
         Grid.SetColumn(unloadButton, 3);
         modelBar.Children.Add(unloadButton);
         return modelBar;
@@ -180,12 +170,12 @@ public static class OverviewPageFactory
         for (var row = 0; row < 2; row++)
             runtimeDashboard.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        model = MetricCardFactory.AddMetric(runtimeDashboard, "Model status", 0, 0);
-        gpu = MetricCardFactory.AddMetric(runtimeDashboard, "Hardware", 0, 1);
-        requests = MetricCardFactory.AddMetric(runtimeDashboard, "Settings", 0, 2);
-        tokens = MetricCardFactory.AddMetric(runtimeDashboard, "Tokens", 1, 0, out tokensLastKnown);
-        mtpTokens = MetricCardFactory.AddMetric(runtimeDashboard, "MTP tokens", 1, 1);
-        slots = MetricCardFactory.AddMetric(runtimeDashboard, "Slots", 1, 2);
+        model = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T("Overview.Metric.ModelStatus"), 0, 0, labelKey: "Overview.Metric.ModelStatus");
+        gpu = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T("Overview.Metric.Hardware"), 0, 1);
+        requests = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T("Overview.Metric.Settings"), 0, 2);
+        tokens = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T("Overview.Metric.Tokens"), 1, 0, out tokensLastKnown);
+        mtpTokens = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T("Overview.Metric.MtpTokens"), 1, 1);
+        slots = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T("Overview.Metric.Slots"), 1, 2);
         return runtimeDashboard;
     }
 
@@ -193,7 +183,7 @@ public static class OverviewPageFactory
         => new()
         {
             IsReadOnly = true,
-            Text = "No runtime log is active.",
+            Text = Loc.T("Overview.NoRuntimeLog"),
             BorderThickness = new Thickness(0),
             Margin = new Thickness(0),
             TextWrapping = TextWrapping.NoWrap,
@@ -206,12 +196,9 @@ public static class OverviewPageFactory
     private static WpfButton Button(string text, Func<Task> click)
     {
         var button = new WpfButton { Content = text };
-        button.ToolTip = text switch
-        {
-            "Load" => "Load the selected model with its saved launch settings.",
-            "Unload" => "Stop the currently loading or loaded model and free runtime resources.",
-            _ => $"Run {text}."
-        };
+        button.ToolTip = string.Equals(text, Loc.T("Overview.LoadButton")) ? Loc.T("Tooltip.Load")
+            : string.Equals(text, Loc.T("Overview.UnloadButton")) ? Loc.T("Tooltip.Unload")
+            : Loc.T("Common.RunAction", text);
         ToolTipService.SetShowOnDisabled(button, true);
         button.Click += async (_, _) => await click();
         return button;

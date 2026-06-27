@@ -51,15 +51,15 @@ public static class LogsPageFactory
         root.Children.Add(toolbar);
 
         var logsGrid = PageSectionFactory.GridFor(
-            ("Type", "C1", .9),
-            ("File", "C2", 2.1),
-            ("Related", "C3", 2.5),
-            ("Updated", "C4", 1.1),
-            ("Size", "C5", .7));
+            (Loc.T("Logs.Col.Type"), "C1", .9),
+            (Loc.T("Logs.Col.File"), "C2", 2.1),
+            (Loc.T("Logs.Col.Related"), "C3", 2.5),
+            (Loc.T("Logs.Col.Updated"), "C4", 1.1),
+            (Loc.T("Logs.Col.Size"), "C5", .7));
         logsGrid.SelectionMode = DataGridSelectionMode.Extended;
         logsGrid.SelectionUnit = DataGridSelectionUnit.FullRow;
-        PageSectionFactory.AddButtonColumn(logsGrid, "Open", "C6", "B1", request.Actions.OpenRow, .55, tooltipBinding: "T1");
-        PageSectionFactory.AddButtonColumn(logsGrid, "Delete", "C7", "B2", request.Actions.DeleteRow, .65, tooltipBinding: "T2");
+        PageSectionFactory.AddButtonColumn(logsGrid, Loc.T("Logs.ActionBtn.Open"), "C6", "B1", request.Actions.OpenRow, .55, tooltipBinding: "T1");
+        PageSectionFactory.AddButtonColumn(logsGrid, Loc.T("Logs.ActionBtn.Delete"), "C7", "B2", request.Actions.DeleteRow, .65, tooltipBinding: "T2");
         logsGrid.ItemsSource = request.Rows;
         logsGrid.SelectionChanged += request.Actions.SelectionChanged;
         var listFrame = PageSectionFactory.GridFrame(logsGrid);
@@ -98,15 +98,15 @@ public static class LogsPageFactory
         toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var leftActions = Bar();
-        leftActions.Children.Add(Button("Refresh Logs", request.Actions.Refresh, request.ButtonToolTip));
-        leftActions.Children.Add(Button("Open Selected", request.Actions.OpenSelected, request.ButtonToolTip));
-        leftActions.Children.Add(Button("Open Logs Folder", request.Actions.OpenLogsFolder, request.ButtonToolTip));
+        leftActions.Children.Add(Button(Loc.T("Logs.RefreshButton"), request.Actions.Refresh, request.ButtonToolTip));
+        leftActions.Children.Add(Button(Loc.T("Logs.OpenSelectedButton"), request.Actions.OpenSelected, request.ButtonToolTip));
+        leftActions.Children.Add(Button(Loc.T("Logs.OpenFolderButton"), request.Actions.OpenLogsFolder, request.ButtonToolTip));
         toolbar.Children.Add(leftActions);
 
         var rightActions = Bar();
         rightActions.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
-        rightActions.Children.Add(Button("Delete Selected", request.Actions.DeleteSelected, request.ButtonToolTip));
-        rightActions.Children.Add(Button("Delete All Logs", request.Actions.DeleteAll, request.ButtonToolTip));
+        rightActions.Children.Add(Button(Loc.T("Logs.DeleteSelectedButton"), request.Actions.DeleteSelected, request.ButtonToolTip));
+        rightActions.Children.Add(Button(Loc.T("Logs.DeleteAllButton"), request.Actions.DeleteAll, request.ButtonToolTip));
         Grid.SetColumn(rightActions, 2);
         toolbar.Children.Add(rightActions);
         return toolbar;

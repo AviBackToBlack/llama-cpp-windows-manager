@@ -66,7 +66,9 @@ public sealed partial class StateStore
             AutoLoadGatewayPort = Math.Clamp(IntValue("autoLoadGatewayPort", defaults.AutoLoadGatewayPort), 1, 65535),
             AutoLoadGatewayPolicy = AppPreferenceService.GatewaySwapPolicy(StringValue("autoLoadGatewayPolicy", defaults.AutoLoadGatewayPolicy)),
             Host = StringValue("host", defaults.Host),
+            RequireApiKeyAuth = BoolValue("requireApiKeyAuth", defaults.RequireApiKeyAuth),
             ModelApiKey = SecretProtector.UnprotectSetting(StringValue("modelApiKey", defaults.ModelApiKey)),
+            ModelApiKeyBackup = SecretProtector.UnprotectSetting(StringValue("modelApiKeyBackup", defaults.ModelApiKeyBackup)),
             WslDistro = StringValue("wslDistro", defaults.WslDistro),
             Port = Math.Clamp(IntValue("port", defaults.Port), 1, 65535),
             ContextSize = IntValue("contextSize", defaults.ContextSize),
@@ -125,7 +127,8 @@ public sealed partial class StateStore
             SpecDraftCacheTypeK = StringValue("specDraftCacheTypeK", defaults.SpecDraftCacheTypeK),
             SpecDraftCacheTypeV = StringValue("specDraftCacheTypeV", defaults.SpecDraftCacheTypeV),
             CudaPackagePreference = AppPreferenceService.CudaPackagePreference(StringValue("cudaPackagePreference", defaults.CudaPackagePreference)),
-            CustomParameters = StringValue("customParameters", defaults.CustomParameters)
+            CustomParameters = StringValue("customParameters", defaults.CustomParameters),
+            UiCulture = StringValue("uiCulture", defaults.UiCulture)
         };
 
         var migratedLegacyLaunchDefaults = false;
@@ -193,7 +196,9 @@ public sealed partial class StateStore
             ("autoLoadGatewayPort", settings.AutoLoadGatewayPort),
             ("autoLoadGatewayPolicy", AppPreferenceService.GatewaySwapPolicy(settings.AutoLoadGatewayPolicy)),
             ("host", settings.Host),
+            ("requireApiKeyAuth", settings.RequireApiKeyAuth),
             ("modelApiKey", SecretProtector.ProtectSetting(settings.ModelApiKey)),
+            ("modelApiKeyBackup", SecretProtector.ProtectSetting(settings.ModelApiKeyBackup)),
             ("wslDistro", settings.WslDistro),
             ("port", settings.Port),
             ("contextSize", settings.ContextSize),
@@ -252,7 +257,8 @@ public sealed partial class StateStore
             ("specDraftCacheTypeK", settings.SpecDraftCacheTypeK),
             ("specDraftCacheTypeV", settings.SpecDraftCacheTypeV),
             ("cudaPackagePreference", AppPreferenceService.CudaPackagePreference(settings.CudaPackagePreference)),
-            ("customParameters", settings.CustomParameters)
+            ("customParameters", settings.CustomParameters),
+            ("uiCulture", settings.UiCulture)
         };
 
         await WithConnectionAsync(async () =>

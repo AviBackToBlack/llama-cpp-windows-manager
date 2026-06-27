@@ -82,15 +82,15 @@ public static partial class LaunchSettingsPanelFactory
     }
 
     private static string ButtonToolTip(string text)
-        => (text ?? "").Trim() switch
-        {
-            "Save For Model" => "Save these launch settings for the selected model.",
-            "Save As Default" => "Save these launch settings as the default for new models.",
-            "Reset Defaults" => "Restore launch settings to the app defaults.",
-            "Save As New" => "Save the current launch settings as a separate loadable model variant on a new direct API port.",
-            "Choose" => "Choose a GGUF file.",
-            var label => string.IsNullOrWhiteSpace(label) ? "" : $"Run {label}."
-        };
+    {
+        var t = (text ?? "").Trim();
+        if (string.Equals(t, Loc.T("Launch.SaveForModelButton"))) return Loc.T("Tooltip.SaveForModel");
+        if (string.Equals(t, Loc.T("Launch.SaveAsDefaultButton"))) return Loc.T("Tooltip.SaveAsDefault");
+        if (string.Equals(t, Loc.T("Launch.ResetDefaultsButton"))) return Loc.T("Tooltip.ResetDefaults");
+        if (string.Equals(t, Loc.T("Launch.SaveAsNewButton"))) return Loc.T("Tooltip.SaveAsNewButton");
+        if (string.Equals(t, "Choose")) return "Choose a GGUF file.";
+        return string.IsNullOrWhiteSpace(t) ? "" : $"Run {t}.";
+    }
 
     private static ScrollViewer Scroll(UIElement child, Thickness? padding = null)
     {

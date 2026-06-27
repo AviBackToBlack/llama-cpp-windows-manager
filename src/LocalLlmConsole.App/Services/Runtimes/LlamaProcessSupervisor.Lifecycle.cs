@@ -21,9 +21,12 @@ public sealed partial class LlamaProcessSupervisor
 
         try { _process?.Dispose(); }
         catch (Exception ex) { Trace.TraceWarning($"Could not dispose llama process handle: {ex.Message}"); }
+        try { _jobObject?.Dispose(); }
+        catch (Exception ex) { Trace.TraceWarning($"Could not dispose llama job object: {ex.Message}"); }
         try { _log?.Dispose(); }
         catch (Exception ex) { Trace.TraceWarning($"Could not dispose llama log writer: {ex.Message}"); }
         _process = null;
+        _jobObject = null;
         _log = null;
         ActiveModelId = "";
         ActiveRuntimeId = "";

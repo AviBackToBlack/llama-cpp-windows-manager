@@ -50,6 +50,10 @@ library replacement.
   Limit output** and is written when OpenCode settings are saved or synced.
 - Offers a Start with Windows installer task, enabled by default for fresh
   installs, plus the same setting inside the app.
+- Supports 21 languages: English, Bulgarian, Spanish, Russian, German, French,
+  Japanese, Portuguese, Chinese (Simplified), Italian, Turkish, Persian, Polish,
+  Dutch, Vietnamese, Korean, Arabic, Indonesian, Hindi, Czech, and Swedish.
+  The language is selectable from the sidebar and persisted across restarts.
 - Stores settings, jobs, models, runtimes, migrations, and history in SQLite.
 
 ## Comparison
@@ -76,6 +80,13 @@ Windows or inside Ubuntu/WSL without living in a terminal.
 - Model serving requires a strong API key in every local-only or LAN exposure
   mode.
 - The model API key is protected with Windows current-user DPAPI at rest.
+- The model API key is passed via environment variable (`LLAMA_API_KEY`) rather
+  than command-line arguments, keeping it out of process command lines visible
+  in Task Manager.
+- Custom launch parameters are validated to prevent overriding security-critical
+  `llama-server` flags (`--host`, `--port`, `--api-key`).
+- Native `llama-server.exe` processes are bound to a Windows Job Object that
+  terminates them automatically if the app crashes or is force-killed.
 - Destructive deletes are bounded by app ownership and path-root checks.
 - External/imported models are registration-only deletes by default.
 - Hugging Face downloads reject unsafe Windows filenames, symlink/hardlink
@@ -174,7 +185,7 @@ End users should receive a release artifact, not the source tree.
 Preferred artifact:
 
 ```text
-dist\installer\LlamaCppWindowsManager-Setup-1.1.5-win-x64.exe
+dist\installer\LlamaCppWindowsManager-Setup-1.1.7-win-x64.exe
 ```
 
 Portable artifacts:

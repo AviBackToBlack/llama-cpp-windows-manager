@@ -27,7 +27,7 @@ public static class RuntimeCustomRepositoryDialogFactory
         RuntimeCustomRepositoryDraft? result = null;
         var dialog = new WpfWindow
         {
-            Title = "Add custom repository",
+            Title = Loc.T("Runtimes.CustomRepo.DialogTitle"),
             WindowStyle = WindowStyle.None,
             ResizeMode = ResizeMode.NoResize,
             SizeToContent = SizeToContent.WidthAndHeight,
@@ -46,16 +46,16 @@ public static class RuntimeCustomRepositoryDialogFactory
 
         layout.Children.Add(new TextBlock
         {
-            Text = "Add custom runtime repository",
+            Text = Loc.T("Runtimes.CustomRepo.Heading"),
             FontSize = 15,
             FontWeight = FontWeights.SemiBold,
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
             Margin = new Thickness(0, 0, 0, 14)
         });
 
-        var nameBox = DialogTextBox("Example: My TurboQuant CUDA");
-        var repoBox = DialogTextBox("https://github.com/user/repo.git");
-        var branchBox = DialogTextBox("Optional, leave blank for repository default");
+        var nameBox = DialogTextBox(Loc.T("Runtimes.CustomRepo.NameTooltip"));
+        var repoBox = DialogTextBox(Loc.T("Runtimes.CustomRepo.RepoTooltip"));
+        var branchBox = DialogTextBox(Loc.T("Runtimes.CustomRepo.BranchTooltip"));
         var backendBox = new WpfComboBox
         {
             ItemsSource = RuntimeCustomRepositoryService.BackendOptions,
@@ -88,10 +88,10 @@ public static class RuntimeCustomRepositoryDialogFactory
         var fields = new Grid { Margin = new Thickness(0, 0, 0, 18) };
         fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(118) });
         fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(390) });
-        AddDialogRow(fields, 0, "Name", editors[0]);
-        AddDialogRow(fields, 1, "Repository", editors[1]);
-        AddDialogRow(fields, 2, "Branch", editors[2]);
-        AddDialogRow(fields, 3, "Backend", editors[3]);
+        AddDialogRow(fields, 0, Loc.T("Runtimes.CustomRepo.NameLabel"), editors[0]);
+        AddDialogRow(fields, 1, Loc.T("Runtimes.CustomRepo.RepoLabel"), editors[1]);
+        AddDialogRow(fields, 2, Loc.T("Runtimes.CustomRepo.BranchLabel"), editors[2]);
+        AddDialogRow(fields, 3, Loc.T("Runtimes.CustomRepo.BackendLabel"), editors[3]);
         return fields;
     }
 
@@ -109,10 +109,10 @@ public static class RuntimeCustomRepositoryDialogFactory
             Orientation = System.Windows.Controls.Orientation.Horizontal,
             HorizontalAlignment = System.Windows.HorizontalAlignment.Right
         };
-        var addButton = new WpfButton { Content = "Add", MinWidth = 90, IsDefault = true, Margin = new Thickness(7, 0, 0, 0) };
-        var cancelButton = new WpfButton { Content = "Cancel", MinWidth = 90, IsCancel = true, Margin = new Thickness(7, 0, 0, 0) };
-        SetButtonToolTip(addButton, "Add this custom runtime repository preset.");
-        SetButtonToolTip(cancelButton, "Close without adding a repository.");
+        var addButton = new WpfButton { Content = Loc.T("Runtimes.CustomRepo.AddButton"), MinWidth = 90, IsDefault = true, Margin = new Thickness(7, 0, 0, 0) };
+        var cancelButton = new WpfButton { Content = Loc.T("Runtimes.CustomRepo.CancelButton"), MinWidth = 90, IsCancel = true, Margin = new Thickness(7, 0, 0, 0) };
+        SetButtonToolTip(addButton, Loc.T("Runtimes.CustomRepo.AddTooltip"));
+        SetButtonToolTip(cancelButton, Loc.T("Runtimes.CustomRepo.CancelTooltip"));
         addButton.Click += (_, _) =>
         {
             var draft = new RuntimeCustomRepositoryDraft(

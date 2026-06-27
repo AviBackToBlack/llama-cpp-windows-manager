@@ -27,7 +27,7 @@ public partial class MainWindow
         if (_viewModel.CurrentPage == "WSL Linux") await RefreshWslLinuxAsync();
     }
 
-    private async void Refresh_Click(object sender, RoutedEventArgs e) => await RunAsync("Refreshing...", RefreshAllAsync);
+    private async void Refresh_Click(object sender, RoutedEventArgs e) => await RunAsync(Loc.T("Status.Refreshing"), RefreshAllAsync);
     private void OpenWorkspace_Click(object sender, RoutedEventArgs e) => OpenFolder(_workspaceRoot);
     private void ShowOverview_Click(object sender, RoutedEventArgs e) => ShowOverview();
     private void ShowModels_Click(object sender, RoutedEventArgs e) => ShowModels();

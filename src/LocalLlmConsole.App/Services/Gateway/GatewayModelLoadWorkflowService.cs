@@ -50,6 +50,11 @@ public sealed class GatewayModelLoadWorkflowService
     private readonly ModelLaunchProfileService _launchProfiles;
     private readonly RuntimeSessionCoordinator _runtimeSessions;
 
+    // Per-model serialization gates prevent concurrent requests for the same model from
+    // spawning duplicate llama-server processes while the first one is still loading.
+    private readonly Dictionary<string, SemaphoreSlim> _modelLoadGates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _gateLock = new();
+
     public GatewayModelLoadWorkflowService(
         StateStore stateStore,
         ModelLaunchProfileService launchProfiles,
@@ -58,6 +63,19 @@ public sealed class GatewayModelLoadWorkflowService
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
         _launchProfiles = launchProfiles ?? throw new ArgumentNullException(nameof(launchProfiles));
         _runtimeSessions = runtimeSessions ?? throw new ArgumentNullException(nameof(runtimeSessions));
+    }
+
+    private SemaphoreSlim GetModelLoadGate(string modelId)
+    {
+        lock (_gateLock)
+        {
+            if (!_modelLoadGates.TryGetValue(modelId, out var gate))
+            {
+                gate = new SemaphoreSlim(1, 1);
+                _modelLoadGates[modelId] = gate;
+            }
+            return gate;
+        }
     }
 
     public async Task<GatewayModelLoadWorkflowResult> EnsureLoadedAsync(
@@ -82,6 +100,36 @@ public sealed class GatewayModelLoadWorkflowService
                 loaded.LaunchSettings);
         }
 
+        // Per-model serialization gate prevents concurrent requests from spawning
+        // duplicate processes while the first one is still loading.
+        var gate = GetModelLoadGate(request.Model.Id);
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            // Re-check after acquiring the lock — another request may have loaded it.
+            var alreadyLoaded = _runtimeSessions.Sessions.SessionForModel(request.Model.Id);
+            if (alreadyLoaded is { IsRunning: true })
+            {
+                return new GatewayModelLoadWorkflowResult(
+                    alreadyLoaded,
+                    await _launchProfiles.EnsureAsync(request.Model, request.Settings) ?? ModelLaunchSettings.FromAppSettings(request.Settings),
+                    ResolveRuntime(await _stateStore.ListRuntimesAsync(), alreadyLoaded.RuntimeId)
+                        ?? new RuntimeRecord(alreadyLoaded.RuntimeId, alreadyLoaded.RuntimeName, alreadyLoaded.Mode, alreadyLoaded.Backend, "", "{}", DateTimeOffset.UtcNow),
+                    alreadyLoaded.LaunchSettings);
+            }
+
+            return await ExecuteLoadAsync(request, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<GatewayModelLoadWorkflowResult> ExecuteLoadAsync(
+        GatewayModelLoadWorkflowRequest request,
+        CancellationToken cancellationToken)
+    {
         ModelLaunchSettings? profile = null;
         RuntimeRecord? runtime = null;
         AppSettings? launchSettings = null;

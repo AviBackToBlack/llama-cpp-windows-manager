@@ -25,6 +25,15 @@ public static class MetricCardFactory
     public static Grid AddMetric(Grid grid, string label, int row, int column, bool includeProgress, out WpfProgressBar? progress)
         => AddMetric(grid, label, row, column, includeProgress, out progress, out _);
 
+    /// <summary>Creates a metric card with an English Loc key for internal comparisons.</summary>
+    public static Grid AddMetric(Grid grid, string label, int row, int column, string labelKey)
+        => AddMetric(grid, label, row, column, includeProgress: false, out _, out _, labelKey);
+
+    /// <summary>Creates a metric card with an English Loc key for internal comparisons.</summary>
+    public static Grid AddMetric(Grid grid, string label, int row, int column, out TextBlock lastKnown, string labelKey)
+        => AddMetric(grid, label, row, column, includeProgress: false, out _, out lastKnown, labelKey);
+
+    /// <summary>Creates a metric card. <paramref name="labelKey"/> is the English Loc key used for internal comparisons (e.g., "Overview.Metric.ModelStatus").</summary>
     public static Grid AddMetric(
         Grid grid,
         string label,
@@ -32,7 +41,8 @@ public static class MetricCardFactory
         int column,
         bool includeProgress,
         out WpfProgressBar? progress,
-        out TextBlock lastKnown)
+        out TextBlock lastKnown,
+        string labelKey = "")
     {
         progress = null;
         var card = new Border
@@ -68,7 +78,7 @@ public static class MetricCardFactory
         Grid.SetColumn(lastKnown, 1);
         header.Children.Add(lastKnown);
         stack.Children.Add(header);
-        var valueRows = new Grid { MinHeight = 34, Tag = label };
+        var valueRows = new Grid { MinHeight = 34, Tag = string.IsNullOrEmpty(labelKey) ? label : labelKey };
         valueRows.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(MetricLabelColumnWidth(label)) });
         valueRows.ColumnDefinitions.Add(new ColumnDefinition());
         SetMetricText(valueRows, "...");
@@ -154,9 +164,9 @@ public static class MetricCardFactory
     {
         if (target is null) return;
 
-        var age = now <= capturedAt ? "just now" : DisplayFormatService.Elapsed(now - capturedAt);
-        target.Text = $"Last known {age} ago";
-        target.ToolTip = "Live token rates are using the most recent successful metrics sample.";
+        var age = now <= capturedAt ? Loc.T("Metrics.JustNow") : DisplayFormatService.Elapsed(now - capturedAt);
+        target.Text = Loc.T("Metrics.LastKnownAgo", age);
+        target.ToolTip = Loc.T("Tooltip.MetricsLastKnown");
         target.Visibility = Visibility.Visible;
     }
 
@@ -188,7 +198,8 @@ public static class MetricCardFactory
     }
 
     private static double MetricLabelColumnWidth(string label)
-        => string.Equals(label, "Model status", StringComparison.Ordinal)
+        => string.Equals(label, Loc.T("Overview.Metric.ModelStatus"), StringComparison.Ordinal)
+            || string.Equals(label, "Overview.Metric.ModelStatus", StringComparison.Ordinal)
             ? 98
             : 74;
 
@@ -228,14 +239,14 @@ public static class MetricCardFactory
             return true;
         }
 
-        if (string.Equals(label, "Model status", StringComparison.Ordinal)
+        if (IsStatusNameMetricLabel(label)
             && TrySplitModelStatusName(text, out var statusPrefix, out var modelName))
         {
             AddSpanningMetricBlock(target, MetricStatusNameBlock(statusPrefix, modelName), row);
             return true;
         }
 
-        if (string.Equals(label, "Model status", StringComparison.Ordinal) && row == 0)
+        if (IsStatusNameMetricLabel(label) && row == 0)
         {
             AddSpanningMetricBlock(target, MetricPlainValueBlock(text, compact: false), row);
             return true;
@@ -272,8 +283,9 @@ public static class MetricCardFactory
         return false;
     }
 
-    private static bool IsStatusNameMetricLabel(string label)
-        => string.Equals(label, "Model status", StringComparison.Ordinal);
+    private static bool IsStatusNameMetricLabel(string tag)
+        => string.Equals(tag, Loc.T("Overview.Metric.ModelStatus"), StringComparison.Ordinal)
+           || string.Equals(tag, "Overview.Metric.ModelStatus", StringComparison.Ordinal);
 
     private static bool MetricShouldEmphasizeWholeLine(Grid target, string line, bool emphasizeLoadedStatus)
     {
@@ -281,7 +293,7 @@ public static class MetricCardFactory
         var text = line.Trim();
         if (string.IsNullOrWhiteSpace(text) || IsNeutralMetricStatus(text)) return false;
 
-        if (string.Equals(label, "Model status", StringComparison.Ordinal))
+        if (IsStatusNameMetricLabel(label))
             return false;
 
         return false;

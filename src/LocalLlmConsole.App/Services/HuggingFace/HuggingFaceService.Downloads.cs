@@ -298,12 +298,16 @@ public sealed partial class HuggingFaceService
             var existing = File.Exists(partial) ? new FileInfo(partial).Length : 0;
             var knownTotal = total > 0 ? total : file.SizeBytes;
             await _jobs.UpdateAsync(job, active.RequestedStopStatus, JsonSerializer.Serialize(new DownloadJobPayload(file, destination, existing, knownTotal), JsonOptions), CancellationToken.None);
+            // Clean up partial file on cancellation (not pause — paused downloads keep it for resume).
+            if (active.RequestedStopStatus is JobStatus.Cancelled or JobStatus.Failed)
+                TryDelete(partial);
         }
         catch (Exception ex)
         {
             var existing = File.Exists(partial) ? new FileInfo(partial).Length : 0;
             var knownTotal = total > 0 ? total : file.SizeBytes;
             await _jobs.UpdateAsync(job, JobStatus.Failed, JsonSerializer.Serialize(new DownloadJobPayload(file, destination, existing, knownTotal, ex.Message), JsonOptions), CancellationToken.None);
+            TryDelete(partial);
         }
     }
 }

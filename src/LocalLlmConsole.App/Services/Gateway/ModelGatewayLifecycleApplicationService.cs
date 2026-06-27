@@ -59,12 +59,14 @@ public sealed class ModelGatewayLifecycleApplicationService
             actions.UpdateGatewayStatusText();
             return new ModelGatewayLifecycleRestartResult(settings, GatewayStarted: true);
         }
-        catch
+        catch (Exception ex)
         {
             await gateway.DisposeAsync();
             actions.SetGateway(null);
             actions.UpdateGatewayStatusText();
-            throw;
+            actions.SetStatus($"Gateway could not start: {ex.Message}");
+            Trace.TraceError($"Gateway restart failed: {ex}");
+            return new ModelGatewayLifecycleRestartResult(settings, GatewayStarted: false);
         }
     }
 

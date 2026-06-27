@@ -2,17 +2,7 @@ namespace LocalLlmConsole.Services;
 
 public static class AppPreferenceService
 {
-    public static readonly string[] MinimizeBehaviorOptionLabels = ["Taskbar only", "Tray only", "Tray + taskbar"];
-    public static readonly string[] ModelAccessModeOptionLabels =
-    [
-        "Local only",
-        "Gateway LAN only",
-        "Direct models LAN only",
-        "Gateway + direct LAN"
-    ];
-    public static readonly string[] GatewaySwapPolicyOptionLabels = ["Prefer keeping loaded models", "Single active model"];
-    public static readonly string[] CudaPackagePreferenceOptionLabels = ["Latest", "Compatibility"];
-    public static readonly string[] YesNoOptionLabels = ["Yes", "No"];
+
 
     public static string ThemeMode(string text)
     {
@@ -37,12 +27,17 @@ public static class AppPreferenceService
 
     public static string MinimizeBehaviorLabel(string text) => MinimizeBehavior(text) switch
     {
-        "trayOnly" => "Tray only",
-        "trayAndTaskbar" => "Tray + taskbar",
-        _ => "Taskbar only"
+        "trayOnly" => Loc.T("Pref.TrayOnly"),
+        "trayAndTaskbar" => Loc.T("Pref.TrayAndTaskbar"),
+        _ => Loc.T("Pref.TaskbarOnly")
     };
 
-    public static IEnumerable<string> MinimizeBehaviorOptions() => MinimizeBehaviorOptionLabels;
+    public static IEnumerable<string> MinimizeBehaviorOptions() =>
+    [
+        Loc.T("Pref.TaskbarOnly"),
+        Loc.T("Pref.TrayOnly"),
+        Loc.T("Pref.TrayAndTaskbar")
+    ];
 
     public static string ModelAccessMode(string text)
     {
@@ -64,13 +59,19 @@ public static class AppPreferenceService
 
     public static string ModelAccessModeLabel(string text) => ModelAccessMode(text) switch
     {
-        "gateway" => "Gateway LAN only",
-        "models" => "Direct models LAN only",
-        "both" => "Gateway + direct LAN",
-        _ => "Local only"
+        "gateway" => Loc.T("Pref.GatewayLanOnly"),
+        "models" => Loc.T("Pref.DirectModelsLanOnly"),
+        "both" => Loc.T("Pref.GatewayAndDirectLan"),
+        _ => Loc.T("Pref.LocalOnly")
     };
 
-    public static IEnumerable<string> ModelAccessModeOptions() => ModelAccessModeOptionLabels;
+    public static IEnumerable<string> ModelAccessModeOptions() =>
+    [
+        Loc.T("Pref.LocalOnly"),
+        Loc.T("Pref.GatewayLanOnly"),
+        Loc.T("Pref.DirectModelsLanOnly"),
+        Loc.T("Pref.GatewayAndDirectLan")
+    ];
 
     public static bool GatewayAllowsLanAccess(string text)
     {
@@ -97,9 +98,13 @@ public static class AppPreferenceService
     }
 
     public static string GatewaySwapPolicyLabel(string text)
-        => GatewaySwapPolicy(text) == "singleActive" ? "Single active model" : "Prefer keeping loaded models";
+        => GatewaySwapPolicy(text) == "singleActive" ? Loc.T("Pref.SingleActiveModel") : Loc.T("Pref.PreferKeepingLoaded");
 
-    public static IEnumerable<string> GatewaySwapPolicyOptions() => GatewaySwapPolicyOptionLabels;
+    public static IEnumerable<string> GatewaySwapPolicyOptions() =>
+    [
+        Loc.T("Pref.PreferKeepingLoaded"),
+        Loc.T("Pref.SingleActiveModel")
+    ];
 
     public static string CudaPackagePreference(string text)
     {
@@ -112,11 +117,21 @@ public static class AppPreferenceService
     }
 
     public static string CudaPackagePreferenceLabel(string text)
-        => CudaPackagePreference(text) == "compatibility" ? "Compatibility" : "Latest";
+        => CudaPackagePreference(text) == "compatibility" ? Loc.T("Pref.Compatibility") : Loc.T("Pref.Latest");
 
-    public static IEnumerable<string> CudaPackagePreferenceOptions() => CudaPackagePreferenceOptionLabels;
+    public static IEnumerable<string> CudaPackagePreferenceOptions() =>
+    [
+        Loc.T("Pref.Latest"),
+        Loc.T("Pref.Compatibility")
+    ];
 
-    public static string YesNoLabel(bool value) => value ? "Yes" : "No";
+    public static string YesNoLabel(bool value) => value ? Loc.T("Pref.Yes") : Loc.T("Pref.No");
+
+    public static IEnumerable<string> YesNoOptions() =>
+    [
+        Loc.T("Pref.Yes"),
+        Loc.T("Pref.No")
+    ];
 
     public static bool YesNoValue(string text, bool fallback)
     {
@@ -128,8 +143,6 @@ public static class AppPreferenceService
             _ => fallback
         };
     }
-
-    public static IEnumerable<string> YesNoOptions() => YesNoOptionLabels;
 
     public static string RuntimeHostForAccessMode(string accessMode)
         => DirectModelsAllowLanAccess(accessMode) ? "0.0.0.0" : "127.0.0.1";

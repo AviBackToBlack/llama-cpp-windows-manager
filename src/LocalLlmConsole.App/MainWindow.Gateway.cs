@@ -4,7 +4,20 @@ namespace LocalLlmConsole;
 
 public partial class MainWindow
 {
-    private async Task RestartModelGatewayAsync()
+    private async Task StartModelGatewaySafelyAsync()
+    {
+        try
+        {
+            await RestartModelGatewayAsync();
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"Gateway startup failed: {ex}");
+            SetStatus($"Gateway could not start: {ex.Message}");
+        }
+    }
+
+    private async Task<bool> RestartModelGatewayAsync()
     {
         var result = await _coreServices.Models.ModelGatewayLifecycleApplication.RestartAsync(
             new ModelGatewayLifecycleRestartRequest(_gateway, _settings),
@@ -16,6 +29,7 @@ public partial class MainWindow
                 UpdateGatewayStatusText,
                 SetStatus));
         _settings = result.Settings;
+        return result.GatewayStarted;
     }
 
     private async Task StopModelGatewayAsync()

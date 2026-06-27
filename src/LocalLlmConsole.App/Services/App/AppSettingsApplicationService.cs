@@ -36,7 +36,7 @@ public sealed record AppSettingsSaveApplicationActions(
     Action<AppSettings> ApplySettings,
     Action<string> ApplyTheme,
     Action ApplyLaunchSettingsToControls,
-    Func<Task> RestartGatewayAsync,
+    Func<Task<bool>> RestartGatewayAsync,
     Func<AppSettings, Task> SyncOpenCodeAsync,
     Func<bool> IsSettingsPageActive,
     Action RefreshSettingsPage,
@@ -99,10 +99,12 @@ public sealed class AppSettingsApplicationService
         actions.ApplySettings(result.Settings);
         actions.ApplyTheme(result.Settings.ThemeMode);
         actions.ApplyLaunchSettingsToControls();
-        await actions.RestartGatewayAsync();
+        var gatewayStarted = await actions.RestartGatewayAsync();
         if (result.Settings.AutoSaveOpenCodeOnLaunchSettingsSave)
             await actions.SyncOpenCodeAsync(result.Settings);
         var status = result.GeneratedApiKey ? "Settings saved. A model API key was generated." : "Settings saved.";
+        if (!gatewayStarted)
+            status = $"{status} Gateway did not start. Try saving again or run the app as Administrator.";
         if (!startupRegistration.Success)
             status = $"{status} {startupRegistration.StatusMessage}";
         actions.SetStatus(status);

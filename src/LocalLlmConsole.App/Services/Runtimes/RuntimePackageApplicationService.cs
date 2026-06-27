@@ -22,7 +22,8 @@ public sealed record RuntimePackageApplicationActions(
     Action RefreshPackageGrid,
     Action<string> SetStatus,
     Action<string, string> ShowInformation,
-    Func<RuntimePackageDeleteConfirmation, bool> ConfirmDelete);
+    Func<RuntimePackageDeleteConfirmation, bool> ConfirmDelete,
+    Func<string, bool>? ConfirmSkipChecksum = null);
 
 public sealed class RuntimePackageApplicationService
 {
@@ -72,15 +73,14 @@ public sealed class RuntimePackageApplicationService
 
         await actions.RunBusyAsync($"Installing {preset.Label}...", async () =>
         {
-            var result = await _packageInstall.InstallAsync(new RuntimePackageInstallWorkflowRequest(
-                preset,
-                settings,
-                maxLogBytes,
-                actions.RefreshJobsAsync));
-            sessionState.SetRuntimePackageUpdateState(preset.Id, result.UpdateState);
-            await actions.RefreshRuntimesAsync();
-            await actions.RefreshOverviewAsync();
-            actions.SetStatus(result.StatusMessage);
+            var jobResult = await TryInstallOnceAsync(preset, settings, maxLogBytes, actions, requireChecksum: true);
+            if (jobResult is not null)
+            {
+                sessionState.SetRuntimePackageUpdateState(preset.Id, jobResult.UpdateState);
+                await actions.RefreshRuntimesAsync();
+                await actions.RefreshOverviewAsync();
+                actions.SetStatus(jobResult.StatusMessage);
+            }
         });
         return RuntimePackageApplicationOutcome.Applied;
     }
@@ -195,6 +195,46 @@ public sealed class RuntimePackageApplicationService
         row.CanCheck = true;
     }
 
+    private async Task<RuntimePackageInstallWorkflowResult?> TryInstallOnceAsync(
+        RuntimePackagePreset preset,
+        AppSettings settings,
+        long maxLogBytes,
+        RuntimePackageApplicationActions actions,
+        bool requireChecksum)
+    {
+        try
+        {
+            return await _packageInstall.InstallAsync(new RuntimePackageInstallWorkflowRequest(
+                preset,
+                settings,
+                maxLogBytes,
+                actions.RefreshJobsAsync,
+                RequireChecksum: requireChecksum));
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("missing SHA-256 verification metadata", StringComparison.OrdinalIgnoreCase))
+        {
+            if (actions.ConfirmSkipChecksum is null)
+                throw;
+
+            var confirm = actions.ConfirmSkipChecksum(
+                $"SHA-256 verification metadata is not available for this release.{Environment.NewLine}{Environment.NewLine}" +
+                $"Install {preset.Label} without checksum verification?{Environment.NewLine}{Environment.NewLine}" +
+                "Only proceed if you trust the download source.");
+            if (!confirm)
+            {
+                actions.SetStatus("Install cancelled: checksum verification is required for this package.");
+                return null;
+            }
+
+            return await _packageInstall.InstallAsync(new RuntimePackageInstallWorkflowRequest(
+                preset,
+                settings,
+                maxLogBytes,
+                actions.RefreshJobsAsync,
+                RequireChecksum: false));
+        }
+    }
+
     private static void Validate(
         RuntimePackagePreset preset,
         AppSettings settings,
@@ -219,5 +259,6 @@ public sealed class RuntimePackageApplicationService
         ArgumentNullException.ThrowIfNull(actions.SetStatus);
         ArgumentNullException.ThrowIfNull(actions.ShowInformation);
         ArgumentNullException.ThrowIfNull(actions.ConfirmDelete);
+        // ConfirmSkipChecksum is optional and may be null.
     }
 }

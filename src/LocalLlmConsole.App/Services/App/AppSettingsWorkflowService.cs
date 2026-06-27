@@ -51,8 +51,22 @@ public sealed class AppSettingsWorkflowService
         AppSettings targetSettings,
         CancellationToken cancellationToken = default)
     {
+        // When auth is disabled, clear any previously stored key to prevent
+        // it from lingering in OpenCode config or being reused if re-enabled.
+        if (!targetSettings.RequireApiKeyAuth)
+        {
+            if (!string.IsNullOrWhiteSpace(targetSettings.ModelApiKey))
+            {
+                var cleared = targetSettings with { ModelApiKey = "" };
+                var persistedCleared = await PersistAsync(persistedSettings with { ModelApiKey = "" }, cancellationToken);
+                return new AppSettingsEnsureApiKeyResult(cleared, persistedCleared, GeneratedApiKey: false);
+            }
+            return new AppSettingsEnsureApiKeyResult(targetSettings, persistedSettings, GeneratedApiKey: false);
+        }
+
         var apiKey = RuntimeEndpointService.ModelApiKeyForClient(targetSettings);
-        if (ApiSecurity.IsStrongBearerSecret(apiKey))
+
+        if (!string.IsNullOrWhiteSpace(apiKey) && ApiSecurity.IsStrongBearerSecret(apiKey))
         {
             var trimmedTarget = targetSettings with { ModelApiKey = apiKey };
             return new AppSettingsEnsureApiKeyResult(

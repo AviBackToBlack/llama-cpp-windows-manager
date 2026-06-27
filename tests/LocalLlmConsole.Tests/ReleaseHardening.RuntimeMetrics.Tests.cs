@@ -61,10 +61,13 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(15, snapshot.PromptTokensProcessed);
         Assert.Equal(13, snapshot.GeneratedTokens);
         Assert.Equal(20, snapshot.PromptTokens);
-        Assert.Equal(28, snapshot.ContextTokens);
+        Assert.Equal(36, snapshot.ContextTokens);
         Assert.Equal(4096, snapshot.ContextSize);
         Assert.Equal(9, snapshot.MtpGeneratedTokens);
         Assert.Equal(6, snapshot.MtpAcceptedTokens);
+        Assert.NotNull(snapshot.SlotCounters);
+        Assert.Equal(["0", "1"], snapshot.SlotCounters.Select(counter => counter.SlotId).ToArray());
+        Assert.Equal([8, 5], snapshot.SlotCounters.Select(counter => counter.GeneratedTokens).ToArray());
         Assert.Equal(2, RuntimeDashboardService.DeltaRate(14, 10, 2, includeZero: false));
         Assert.Null(RuntimeDashboardService.DeltaRate(10, 10, 2, includeZero: false));
         Assert.Equal(0, RuntimeDashboardService.DeltaRate(10, 10, 2, includeZero: true));
@@ -88,6 +91,9 @@ public sealed partial class ReleaseHardeningTests
                 new PrometheusSample("llamacpp:requests_deferred", "", 0, "0", "gauge", ""),
                 new PrometheusSample("llamacpp:n_busy_slots_per_decode", "", 1.5, "1.5", "gauge", "")
             ]));
+        Assert.Equal(
+            "Active 2 | Queued 0\nBusy/decode 2.0",
+            RuntimeDashboardService.RuntimeSlotsLabel([], snapshot));
         Assert.Equal("2.0 t/s (Gen) | 3.0 t/s (Avg) | 9 t (Total)\n1.5 t/s (Accepted) | 2.5 t/s (Avg) | 6 t (Total)", RuntimeDashboardService.MtpTokenSummaryLabel(2, 3, 1.5, 2.5, 9, 6));
         var parsedMtpStats = RuntimeDashboardService.ParseMtpTokenStats(
             "statistics        draft-mtp: #calls(b,g,a) =  566 142602 107915, #gen drafts = 107915, #acc drafts = 103668, #gen tokens = 294686, #acc tokens = 274174, dur(b,g,a) = 0.412, 851457.082, 118.639 ms");
@@ -104,6 +110,44 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("Context 195,584 total\nSlots: 3 enabled\nKV cache 8,325 tokens", RuntimeDashboardService.RuntimeSettingsLabel(null, 8325, 586752, 195584, 3, "on"));
         Assert.Equal("Context 586,752 total\nSlots: 3 enabled\nKV cache Unknown", RuntimeDashboardService.RuntimeSettingsLabel(null, null, 195584, 195584, 3, "off"));
         Assert.Equal("Context 195,584 total\nSlots: 3 enabled\nKV cache Unknown", RuntimeDashboardService.RuntimeSettingsLabel(null, null, 195584, 0, 3));
+    }
+
+
+    [Fact]
+    public void RuntimeDashboardServiceUsesCachedPromptTotalsForSlotContext()
+    {
+        const string raw = """
+        [
+          {
+            "id": 0,
+            "is_processing": false,
+            "n_prompt_tokens": 0,
+            "n_prompt_tokens_processed": 1109,
+            "n_prompt_tokens_cache": 0,
+            "next_token": [{ "has_next_token": false, "n_decoded": 3908 }],
+            "n_ctx": 195584
+          },
+          {
+            "id": 1,
+            "id_task": 23124,
+            "is_processing": true,
+            "n_prompt_tokens": 87148,
+            "n_prompt_tokens_processed": 543,
+            "n_prompt_tokens_cache": 86569,
+            "next_token": [{ "has_next_token": true, "n_decoded": 37 }],
+            "n_ctx": 195584
+          }
+        ]
+        """;
+
+        var snapshot = RuntimeDashboardService.ParseSlotSnapshot(raw);
+
+        Assert.NotNull(snapshot);
+        Assert.Equal(1652, snapshot.PromptTokensProcessed);
+        Assert.Equal(3945, snapshot.GeneratedTokens);
+        Assert.Equal(87148, snapshot.PromptTokens);
+        Assert.Equal(92202, snapshot.ContextTokens);
+        Assert.Equal("23124", snapshot.SlotCounters?.Single(counter => counter.SlotId == "1").TaskId);
     }
 
 
@@ -227,6 +271,105 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(second.GenerationRate, stale.GenerationRate);
         Assert.Equal(second.MtpTokens, stale.MtpTokens);
         Assert.Equal(11, tracker.LastKnownSamples("model|runtime|8081").Count);
+    }
+
+    [Fact]
+    public void RuntimeMetricSummaryTrackerUsesPerSlotRatesAcrossParallelSlotResets()
+    {
+        var root = CreateTempRoot();
+        var settings = AppSettings.CreateDefault(root);
+        var tracker = new RuntimeMetricSummaryTracker();
+        var capturedAt = DateTimeOffset.Parse("2026-05-26T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+
+        tracker.Apply(
+            "model|runtime|8081",
+            [],
+            settings,
+            new RuntimeSlotSnapshot(
+                PromptTokensProcessed: 120,
+                GeneratedTokens: 1500,
+                IsProcessing: true,
+                PromptTokens: null,
+                ContextTokens: null,
+                ContextSize: 4096,
+                SlotCounters:
+                [
+                    new RuntimeSlotCounterSnapshot("0", "task-a", 100, 1000, true),
+                    new RuntimeSlotCounterSnapshot("1", "task-b", 20, 500, true)
+                ]),
+            mtpTokenSnapshot: null,
+            capturedAt);
+
+        var second = tracker.Apply(
+            "model|runtime|8081",
+            [],
+            settings,
+            new RuntimeSlotSnapshot(
+                PromptTokensProcessed: 55,
+                GeneratedTokens: 570,
+                IsProcessing: true,
+                PromptTokens: null,
+                ContextTokens: null,
+                ContextSize: 4096,
+                SlotCounters:
+                [
+                    new RuntimeSlotCounterSnapshot("0", "task-c", 30, 10, true),
+                    new RuntimeSlotCounterSnapshot("1", "task-b", 25, 560, true)
+                ]),
+            mtpTokenSnapshot: null,
+            capturedAt.AddSeconds(2));
+
+        Assert.True(second.UsedLastKnown);
+        Assert.Equal(capturedAt, second.LastKnownCapturedAt);
+        Assert.Equal("35.0 t/s (Gen) | 1,500 t (Total)\n17.5 t/s (Prompt) | 120 t (Total)", second.Tokens);
+        Assert.Equal("Active 2 | Queued 0\nBusy/decode 2.0", second.Slots);
+    }
+
+    [Fact]
+    public void RuntimeMetricSummaryTrackerPrefersPrometheusLiveRatesWhenBothSourcesExist()
+    {
+        var root = CreateTempRoot();
+        var settings = AppSettings.CreateDefault(root);
+        var tracker = new RuntimeMetricSummaryTracker();
+        var capturedAt = DateTimeOffset.Parse("2026-05-26T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+
+        tracker.Apply(
+            "model|runtime|8081",
+            [
+                new PrometheusSample("llama_tokens_predicted_total", "", 100, "100", "counter", ""),
+                new PrometheusSample("llama_prompt_tokens_total", "", 20, "20", "counter", "")
+            ],
+            settings,
+            new RuntimeSlotSnapshot(
+                PromptTokensProcessed: 100,
+                GeneratedTokens: 1000,
+                IsProcessing: true,
+                PromptTokens: null,
+                ContextTokens: null,
+                ContextSize: 4096,
+                SlotCounters: [new RuntimeSlotCounterSnapshot("0", "task-a", 100, 1000, true)]),
+            mtpTokenSnapshot: null,
+            capturedAt);
+
+        var second = tracker.Apply(
+            "model|runtime|8081",
+            [
+                new PrometheusSample("llama_tokens_predicted_total", "", 110, "110", "counter", ""),
+                new PrometheusSample("llama_prompt_tokens_total", "", 26, "26", "counter", "")
+            ],
+            settings,
+            new RuntimeSlotSnapshot(
+                PromptTokensProcessed: 300,
+                GeneratedTokens: 1400,
+                IsProcessing: true,
+                PromptTokens: null,
+                ContextTokens: null,
+                ContextSize: 4096,
+                SlotCounters: [new RuntimeSlotCounterSnapshot("0", "task-a", 300, 1400, true)]),
+            mtpTokenSnapshot: null,
+            capturedAt.AddSeconds(2));
+
+        Assert.Equal("5.0 t/s (Gen) | 110 t (Total)\n3.0 t/s (Prompt) | 26 t (Total)", second.Tokens);
     }
 
     [Fact]

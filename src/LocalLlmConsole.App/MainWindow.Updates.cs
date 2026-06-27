@@ -111,5 +111,9 @@ public partial class MainWindow
     }
 
     private void UpdateAppUpdateNavigation()
-        => UpdatesNavButton.Content = _viewModel.Updates.NavigationText;
+    {
+        UpdatesNavButton.Content = _viewModel.Updates.HasAvailableUpdate
+            ? Localization.Loc.T("Nav.InstallUpdate")
+            : Localization.Loc.T("Nav.CheckForUpdates");
+    }
 }

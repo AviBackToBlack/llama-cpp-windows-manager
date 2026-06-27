@@ -49,5 +49,10 @@ public partial class MainWindow
                 this,
                 confirmation.Message,
                 confirmation.Title,
+                MessageBoxImage.Warning),
+            ConfirmSkipChecksum: message => _coreServices.App.Dialogs.Confirm(
+                this,
+                message,
+                "Skip checksum verification?",
                 MessageBoxImage.Warning));
 }

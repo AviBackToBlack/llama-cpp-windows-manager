@@ -35,11 +35,6 @@ public sealed record ModelsPageControls(
 
 public static class ModelsPageFactory
 {
-    public const string ModelFilesTitle = "Model Files";
-    public const string SavedModelVariantsTitle = "Saved Model Variants";
-    public const string ModelFilesDescription = "Physical GGUF files discovered in the model folder or imported from another folder.";
-    public const string SavedModelVariantsDescription = "Loadable aliases created from launch settings. They share the same GGUF file but keep separate names, model ids, ports, and profiles.";
-
     public static ModelsPageControls Create(ModelsPageRequest request)
     {
         var root = new Grid { Margin = new Thickness(16) };
@@ -49,12 +44,12 @@ public static class ModelsPageFactory
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(230), MinHeight = 120 });
 
         var folderStrip = FolderStripActionsFirst(
-            "Models folder",
+            Loc.T("Models.FolderLabel"),
             request.ModelsRoot,
             out var modelsFolderText,
-            ("Scan Models Folder", request.Actions.ScanModelsFolderAsync),
-            ("Choose", request.Actions.ChooseModelsFolderAsync),
-            ("Open", () =>
+            (Loc.T("Models.ScanButton"), request.Actions.ScanModelsFolderAsync),
+            (Loc.T("Common.ChooseButton"), request.Actions.ChooseModelsFolderAsync),
+            (Loc.T("Common.OpenButton"), () =>
             {
                 request.Actions.OpenModelsFolder();
                 return Task.CompletedTask;
@@ -92,28 +87,28 @@ public static class ModelsPageFactory
         modelLists.RowDefinitions.Add(new RowDefinition { Height = new GridLength(.58, GridUnitType.Star), MinHeight = 96 });
 
         var modelsGrid = PageSectionFactory.GridFor(
-            ("Name", nameof(ModelGridRow.Name), 2.35),
-            ("Quant", nameof(ModelGridRow.Quant), .6),
-            ("Size", nameof(ModelGridRow.Size), .65));
-        PageSectionFactory.AddButtonColumn(modelsGrid, "Open Folder", nameof(ModelGridRow.OpenFolderAction), nameof(ModelGridRow.CanOpenFolder), request.Actions.OpenModelFolderRowClick, .85, tooltipBinding: nameof(ModelGridRow.OpenFolderToolTip));
-        PageSectionFactory.AddButtonColumn(modelsGrid, "Delete", nameof(ModelGridRow.DeleteAction), nameof(ModelGridRow.CanDelete), request.Actions.DeleteModelRowClick, .65, tooltipBinding: nameof(ModelGridRow.DeleteToolTip));
+            (Loc.T("Models.Col.Name"), nameof(ModelGridRow.Name), 2.35),
+            (Loc.T("Models.Col.Quant"), nameof(ModelGridRow.Quant), .6),
+            (Loc.T("Models.Col.Size"), nameof(ModelGridRow.Size), .65));
+        PageSectionFactory.AddButtonColumn(modelsGrid, Loc.T("Models.ActionBtn.OpenFolder"), nameof(ModelGridRow.OpenFolderAction), nameof(ModelGridRow.CanOpenFolder), request.Actions.OpenModelFolderRowClick, .85, tooltipBinding: nameof(ModelGridRow.OpenFolderToolTip));
+        PageSectionFactory.AddButtonColumn(modelsGrid, Loc.T("Models.ActionBtn.Delete"), nameof(ModelGridRow.DeleteAction), nameof(ModelGridRow.CanDelete), request.Actions.DeleteModelRowClick, .65, tooltipBinding: nameof(ModelGridRow.DeleteToolTip));
         request.Actions.ConfigureModelGridColumnSizing(modelsGrid);
         modelsGrid.ItemsSource = request.ViewModel.Models.Rows;
 
         var modelVariantsGrid = PageSectionFactory.GridFor(
-            ("Name", nameof(ModelGridRow.Name), 1.35),
-            ("Base model", nameof(ModelGridRow.BaseModel), 1.35),
-            ("Port", nameof(ModelGridRow.Port), .45));
-        PageSectionFactory.AddButtonColumn(modelVariantsGrid, "Open Folder", nameof(ModelGridRow.OpenFolderAction), nameof(ModelGridRow.CanOpenFolder), request.Actions.OpenModelFolderRowClick, .75, tooltipBinding: nameof(ModelGridRow.OpenFolderToolTip));
-        PageSectionFactory.AddButtonColumn(modelVariantsGrid, "Remove", nameof(ModelGridRow.DeleteAction), nameof(ModelGridRow.CanDelete), request.Actions.DeleteModelRowClick, .68, tooltipBinding: nameof(ModelGridRow.DeleteToolTip));
+            (Loc.T("Models.Col.Name"), nameof(ModelGridRow.Name), 1.35),
+            (Loc.T("Models.Col.BaseModel"), nameof(ModelGridRow.BaseModel), 1.35),
+            (Loc.T("Models.Col.Port"), nameof(ModelGridRow.Port), .45));
+        PageSectionFactory.AddButtonColumn(modelVariantsGrid, Loc.T("Models.ActionBtn.OpenFolder"), nameof(ModelGridRow.OpenFolderAction), nameof(ModelGridRow.CanOpenFolder), request.Actions.OpenModelFolderRowClick, .75, tooltipBinding: nameof(ModelGridRow.OpenFolderToolTip));
+        PageSectionFactory.AddButtonColumn(modelVariantsGrid, Loc.T("Models.ActionBtn.Remove"), nameof(ModelGridRow.DeleteAction), nameof(ModelGridRow.CanDelete), request.Actions.DeleteModelRowClick, .68, tooltipBinding: nameof(ModelGridRow.DeleteToolTip));
         modelVariantsGrid.ItemsSource = request.ViewModel.Models.VariantRows;
 
         modelsGrid.SelectionChanged += (_, _) => request.Actions.SelectModelGridRow(modelsGrid, modelVariantsGrid);
         modelVariantsGrid.SelectionChanged += (_, _) => request.Actions.SelectModelGridRow(modelVariantsGrid, modelsGrid);
 
-        modelLists.Children.Add(PageSectionFactory.GridSection(ModelFilesTitle, modelsGrid, ModelFilesDescription));
+        modelLists.Children.Add(PageSectionFactory.GridSection(Loc.T("Models.ModelFilesTitle"), modelsGrid, Loc.T("Models.ModelFilesDescription")));
         modelLists.Children.Add(PageSectionFactory.HorizontalGridSplitter(1));
-        var variantsSection = PageSectionFactory.GridSection(SavedModelVariantsTitle, modelVariantsGrid, SavedModelVariantsDescription);
+        var variantsSection = PageSectionFactory.GridSection(Loc.T("Models.SavedVariantsTitle"), modelVariantsGrid, Loc.T("Models.SavedVariantsDescription"));
         Grid.SetRow(variantsSection, 2);
         modelLists.Children.Add(variantsSection);
         return (modelLists, modelsGrid, modelVariantsGrid);
@@ -125,10 +120,10 @@ public static class ModelsPageFactory
         hf.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         hf.RowDefinitions.Add(new RowDefinition());
         var hfBar = Bar();
-        var hfQueryBox = new WpfTextBox { Width = 280, ToolTip = "Hugging Face search term, repo id, or model file URL" };
+        var hfQueryBox = new WpfTextBox { Width = 280, ToolTip = Loc.T("Tooltip.HfSearchBox") };
         hfBar.Children.Add(hfQueryBox);
-        hfBar.Children.Add(Button("Search Hugging Face", request.Actions.SearchHuggingFaceAsync));
-        hfBar.Children.Add(Button("History", request.Actions.ShowDownloadHistoryAsync));
+        hfBar.Children.Add(Button(Loc.T("Models.ActionBtn.SearchHf"), request.Actions.SearchHuggingFaceAsync));
+        hfBar.Children.Add(Button(Loc.T("Models.ActionBtn.History"), request.Actions.ShowDownloadHistoryAsync));
         hf.Children.Add(hfBar);
         var hfGrid = new DataGrid();
         PageSectionFactory.PolishGrid(hfGrid);
@@ -189,15 +184,15 @@ public static class ModelsPageFactory
     }
 
     private static string ButtonToolTip(string text)
-        => (text ?? "").Trim() switch
-        {
-            "Scan Models Folder" => "Scan the models folder for local GGUF files.",
-            "Choose" => "Choose a folder.",
-            "Open" => "Open this folder.",
-            "Search Hugging Face" => "Search Hugging Face for GGUF model files.",
-            "History" => "Show model download history and controls.",
-            var label => string.IsNullOrWhiteSpace(label) ? "" : $"Run {label}."
-        };
+    {
+        var t = (text ?? "").Trim();
+        if (string.Equals(t, Loc.T("Models.ScanButton"))) return Loc.T("Tooltip.ScanModelsFolder");
+        if (string.Equals(t, Loc.T("Common.ChooseButton"))) return Loc.T("Tooltip.ChooseFolder");
+        if (string.Equals(t, Loc.T("Common.OpenButton"))) return Loc.T("Tooltip.OpenFolder");
+        if (string.Equals(t, Loc.T("Models.ActionBtn.SearchHf"))) return Loc.T("Tooltip.SearchHf");
+        if (string.Equals(t, Loc.T("Models.ActionBtn.History"))) return Loc.T("Tooltip.DownloadHistory");
+        return string.IsNullOrWhiteSpace(t) ? "" : Loc.T("Common.RunAction", t);
+    }
 
     private static string TooltipText(string text) => text;
 }
