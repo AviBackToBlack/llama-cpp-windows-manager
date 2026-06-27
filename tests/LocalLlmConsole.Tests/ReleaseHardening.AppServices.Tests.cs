@@ -441,9 +441,9 @@ public sealed partial class ReleaseHardeningTests
         var rows = new SettingsPageDefinitionService().BuildRows(settings);
 
         Assert.Contains(rows, row => row.Key == "autoLoadGatewayEnabled" && row.Label == "Setting.AutoLoadGateway");
-        Assert.Contains(rows, row => row.Key == "autoLoadGatewayPort" && row.ToolTip.Contains("1 to 65535", StringComparison.Ordinal));
-        Assert.Contains(rows, row => row.Key == "autoLoadGatewayPolicy" && row.ToolTip.Contains("unloads other models", StringComparison.Ordinal));
-        Assert.Contains(rows, row => row.Key == "startWithWindows" && row.Type == "choice" && row.ToolTip.Contains("startup", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(rows, row => row.Key == "autoLoadGatewayPort" && row.ToolTip.Contains("Tooltip.Setting.GatewayPort", StringComparison.Ordinal));
+        Assert.Contains(rows, row => row.Key == "autoLoadGatewayPolicy" && row.ToolTip.Contains("Tooltip.Setting.GatewayPolicy", StringComparison.Ordinal));
+        Assert.Contains(rows, row => row.Key == "startWithWindows" && row.Type == "choice" && row.ToolTip.Contains("Tooltip.Setting.StartWithWindows", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(rows, row => row.Key == "autoSaveOpenCodeOnLaunchSettingsSave" && row.Label == "Setting.AutoSyncEntries" && row.Type == "choice" && row.Group == "OpenCode");
         Assert.Contains(rows, row => row.Key == "autoSaveOpenCodeOnLaunchSettingsSave" && row.ToolTip.Contains("OpenCode provider config stores the synced API key in plain text", StringComparison.Ordinal));
         Assert.Contains(rows, row => row.Key == "openCodeOutputLimit" && row.Label == "Setting.LimitOutput" && row.Group == "OpenCode");
@@ -1720,7 +1720,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("Terms.All(term => text.Contains(term, StringComparison.OrdinalIgnoreCase))", launchPanelState, StringComparison.Ordinal);
         Assert.Contains("_launchSettingsPanel.ApplyControlState(plan)", source, StringComparison.Ordinal);
         Assert.Contains("LaunchTextBox(request.Settings.Port)", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("Fixed server port for this model", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("Tooltip.LaunchPortBox", launchPanelFactory, StringComparison.Ordinal);
         Assert.Contains("LaunchSettingsFormBinder.Read(_settings, _launchSettingsPanel.FormControls)", source, StringComparison.Ordinal);
         Assert.Contains("LaunchSettingsFormBinder.Apply(_launchSettingsPanel.FormControls", source, StringComparison.Ordinal);
         Assert.Contains("LaunchSettingsFormBinder.AttachChangeHandlers(_launchSettingsPanel.FormControls", source, StringComparison.Ordinal);
@@ -2044,7 +2044,7 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void LaunchSettingMetadataOwnsTooltipsAndContextSuggestions()
     {
-        Assert.Contains("conversation history", LaunchSettingMetadataService.Tooltip("Context size"), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Tooltip.Field.ContextSize", LaunchSettingMetadataService.Tooltip("Context size"), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Setting used", LaunchSettingMetadataService.Tooltip("Unknown setting"), StringComparison.Ordinal);
         Assert.Contains("Suggestion: 200,704 tokens.", LaunchSettingMetadataService.ContextSizeTooltip("196k"), StringComparison.Ordinal);
         Assert.DoesNotContain("Suggestion:", LaunchSettingMetadataService.ContextSizeTooltip("200704"), StringComparison.Ordinal);

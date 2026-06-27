@@ -100,8 +100,8 @@ public sealed class RuntimeMetricSummaryTracker
         // Compute generation-time-based rates (uses actual active generation seconds, not wall clock).
         // This avoids dilution during idle gaps between requests where the wall-clock counter rate
         // would divide tokens by total elapsed time instead of active generation time.
-        var secondsBasedGenerationRate = SecondsBasedCounterRate(predictedTokens, predictedSeconds, ref state.LastPredictedTokenCounter, ref state.LastPredictedSecondsCounter);
-        var secondsBasedPromptRate = SecondsBasedCounterRate(promptTokens, promptSeconds, ref state.LastPromptTokenCounter, ref state.LastPromptSecondsCounter);
+        var secondsBasedGenerationRate = SecondsBasedCounterRate(predictedTokens, predictedSeconds, ref state.LastPredictedTokenCounterForSeconds, ref state.LastPredictedSecondsCounter);
+        var secondsBasedPromptRate = SecondsBasedCounterRate(promptTokens, promptSeconds, ref state.LastPromptTokenCounterForSeconds, ref state.LastPromptSecondsCounter);
         // Prefer the seconds-based rate when available; fall back to wall-clock counter rate
         liveGenerationRate = secondsBasedGenerationRate ?? liveGenerationRate;
         livePromptRate = secondsBasedPromptRate ?? livePromptRate;
@@ -529,8 +529,10 @@ public sealed class RuntimeMetricSummaryTracker
     {
         public double? LastPredictedTokenCounter;
         public DateTimeOffset? LastPredictedTokenPollAt;
+        public double? LastPredictedTokenCounterForSeconds;
         public double? LastPromptTokenCounter;
         public DateTimeOffset? LastPromptTokenPollAt;
+        public double? LastPromptTokenCounterForSeconds;
         public double? LastPredictedSecondsCounter;
         public double? LastPromptSecondsCounter;
         public double? LastMtpGeneratedTokenCounter;

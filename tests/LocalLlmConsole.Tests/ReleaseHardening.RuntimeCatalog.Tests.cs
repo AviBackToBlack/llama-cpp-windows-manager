@@ -356,7 +356,7 @@ public sealed partial class ReleaseHardeningTests
             "clear-package-states",
             "persist:compatibility",
             "refresh-runtimes",
-            "status:CUDA downloads set to Compatibility."
+            "status:CUDA downloads set to Pref.Compatibility."
         ], calls);
 
         calls.Clear();

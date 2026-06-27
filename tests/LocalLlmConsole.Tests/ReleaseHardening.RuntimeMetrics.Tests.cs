@@ -261,9 +261,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("Gen 10\nPrompt 4", first.TotalTokens);
         Assert.Equal("Unknown (Gen) | 2.0 t/s (Avg) | 10 t (Total)\nUnknown (Prompt) | 2.0 t/s (Avg) | 4 t (Total)", first.Tokens);
         Assert.False(second.UsedLastKnown);
-        Assert.Equal("Gen 3.0 t/s (2.0 avg)\nPrompt 2.0 t/s (2.0 avg)", second.GenerationRate);
+        Assert.Equal("Gen 2.0 t/s (2.0 avg)\nPrompt 2.0 t/s (2.0 avg)", second.GenerationRate);
         Assert.Equal("Gen 16\nPrompt 8", second.TotalTokens);
-        Assert.Equal("3.0 t/s (Gen) | 2.0 t/s (Avg) | 16 t (Total)\n2.0 t/s (Prompt) | 2.0 t/s (Avg) | 8 t (Total)", second.Tokens);
+        Assert.Equal("2.0 t/s (Gen) | 2.0 t/s (Avg) | 16 t (Total)\n2.0 t/s (Prompt) | 2.0 t/s (Avg) | 8 t (Total)", second.Tokens);
         Assert.Equal("3.0 t/s (Gen) | 3.0 t/s (Avg) | 12 t (Total)\n3.0 t/s (Accepted) | 2.0 t/s (Avg) | 10 t (Total)", second.MtpTokens);
         Assert.Equal("Active 2 | Queued 0\nBusy/decode 1.5", second.Slots);
         Assert.True(stale.UsedLastKnown);
@@ -512,7 +512,7 @@ public sealed partial class ReleaseHardeningTests
             mtpTokenSnapshot: null,
             capturedAt.AddSeconds(2));
 
-        Assert.Equal("Gen 3.0 t/s (2.0 avg)\nPrompt Unknown", secondA.GenerationRate);
+        Assert.Equal("Gen 2.0 t/s (2.0 avg)\nPrompt Unknown", secondA.GenerationRate);
     }
 
     [Fact]

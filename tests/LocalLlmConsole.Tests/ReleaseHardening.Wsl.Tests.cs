@@ -388,8 +388,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("Windows.Tool.InstallVulkanButton", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("Wsl.ActionBtn.InstallIntelGpuButton", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("Windows.Tool.InstallSyclButton", wslPageFactory, StringComparison.Ordinal);
-        Assert.Contains("Delete WSL", wslPageFactory, StringComparison.Ordinal);
-        Assert.Contains("Delete Ubuntu", wslPageFactory, StringComparison.Ordinal);
+        Assert.Contains("Wsl.ActionBtn.DeleteWsl", wslPageFactory, StringComparison.Ordinal);
+        Assert.Contains("Wsl.ActionBtn.DeleteUbuntu", wslPageFactory, StringComparison.Ordinal);
         Assert.Equal("Update CPU Tools", WslEnvironmentService.CpuToolsActionLabel(new WslToolSnapshot(true, false, false, "CPU OK", "CUDA missing", "Vulkan missing")));
         Assert.Equal("Update CUDA", WslEnvironmentService.CudaToolsActionLabel(new WslToolSnapshot(false, true, false, "CPU missing", "CUDA OK", "Vulkan missing")));
         Assert.Equal("Update Vulkan", WslEnvironmentService.VulkanToolsActionLabel(new WslToolSnapshot(false, false, true, "CPU missing", "CUDA missing", "Vulkan OK")));
@@ -537,7 +537,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("public IEnumerable<WpfButton?> HelpButtons", windowsPageState, StringComparison.Ordinal);
         Assert.Contains("public Grid? StatusMetric", windowsPageState, StringComparison.Ordinal);
         Assert.Contains("public DataGrid? ToolsGrid", windowsPageState, StringComparison.Ordinal);
-        Assert.Contains("Installed Linux distros", wslPageFactory, StringComparison.Ordinal);
+        Assert.Contains("Wsl.DistrosSectionTitle", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("public sealed class WslPageState", wslPageState, StringComparison.Ordinal);
         Assert.Contains("public IEnumerable<WpfButton?> HelpButtons", wslPageState, StringComparison.Ordinal);
         Assert.Contains("public UiRow? SelectedDistroRow", wslPageState, StringComparison.Ordinal);

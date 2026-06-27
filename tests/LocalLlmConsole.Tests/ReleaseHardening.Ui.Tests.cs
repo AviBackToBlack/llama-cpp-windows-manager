@@ -25,7 +25,7 @@ public sealed partial class ReleaseHardeningTests
         var source = ReadMainWindowSources();
 
         Assert.Contains("x:Name=\"AppStatusText\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Status.CurrentActionLabel", xaml, StringComparison.Ordinal);
+        Assert.Contains("Status.CurrentActionLabel", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ServiceStatusText", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ServiceStatusText", source, StringComparison.Ordinal);
         Assert.DoesNotContain("RuntimeStatusText", xaml, StringComparison.Ordinal);
@@ -454,7 +454,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("FolderStripActionsFirst(\n            Loc.T(\"Models.FolderLabel\")", normalizedModelsFactory, StringComparison.Ordinal);
         Assert.Contains("ScanModelsFolderAsync", modelsFactory, StringComparison.Ordinal);
         Assert.Contains("Scanning models...", source, StringComparison.Ordinal);
-        Assert.Contains("Button(\"Save Settings\"", settingsFactory, StringComparison.Ordinal);
+        Assert.Contains("Settings.SaveSettingsButton", settingsFactory, StringComparison.Ordinal);
         Assert.Contains("SettingsPageFactory.Create(new SettingsPageRequest(", source, StringComparison.Ordinal);
         Assert.Contains("Select the loading or loaded model to unload it.", modelRuntimeCommands, StringComparison.Ordinal);
         Assert.Contains("Choose the loading or loaded model to unload it.", modelRuntimeCommands, StringComparison.Ordinal);
@@ -521,7 +521,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("public sealed class ModelsPageState", modelsPageState, StringComparison.Ordinal);
         Assert.Contains("public ModelRecord? SelectedModel", modelsPageState, StringComparison.Ordinal);
         Assert.Contains("public void SelectModelAfterRefresh", modelsPageState, StringComparison.Ordinal);
-        Assert.Contains("Save As New", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("Launch.SaveAsNewButton", launchPanelFactory, StringComparison.Ordinal);
         Assert.Contains("SaveLaunchSettingsAsNewModelAsync", source, StringComparison.Ordinal);
         Assert.Contains("nameof(ModelGridRow.OpenFolderAction)", modelsFactory, StringComparison.Ordinal);
         Assert.Contains("nameof(ModelGridRow.CanDelete)", modelsFactory, StringComparison.Ordinal);
@@ -1019,7 +1019,7 @@ public sealed partial class ReleaseHardeningTests
         var advancedState = new AdvancedSectionStateController();
 
         Assert.Contains("Logs.DeleteSelectedButton", logsFactory, StringComparison.Ordinal);
-        Assert.Contains("Delete All Logs", logsFactory, StringComparison.Ordinal);
+        Assert.Contains("Logs.DeleteAllButton", logsFactory, StringComparison.Ordinal);
         Assert.Contains("DeleteLogRow_Click", logsActions, StringComparison.Ordinal);
         Assert.Contains("DataGridSelectionMode.Extended", logsFactory, StringComparison.Ordinal);
         Assert.Contains("LogsPageFactory.Create(new LogsPageRequest(", source, StringComparison.Ordinal);
@@ -1132,7 +1132,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("127.0.0.1", AppPreferenceService.RuntimeHostForAccessMode("Gateway LAN only"));
         Assert.Equal("0.0.0.0", AppPreferenceService.RuntimeHostForAccessMode("Direct models LAN only"));
         Assert.Equal("latest", settings.CudaPackagePreference);
-        Assert.Equal(["Latest", "Compatibility"], AppPreferenceService.CudaPackagePreferenceOptions());
+        Assert.Equal(["Pref.Latest", "Pref.Compatibility"], AppPreferenceService.CudaPackagePreferenceOptions());
         Assert.Equal("latest", AppPreferenceService.CudaPackagePreference("Latest"));
         Assert.Equal("compatibility", AppPreferenceService.CudaPackagePreference("CUDA 12 compatibility"));
         Assert.True(AppPreferenceService.YesNoValue("on", fallback: false));
@@ -1677,7 +1677,7 @@ public sealed partial class ReleaseHardeningTests
         updatesVm.PropertyChanged += (_, e) => updateChanges.Add(e.PropertyName);
 
         Assert.Equal("Nav.CheckForUpdates", updatesVm.ActionText);
-        Assert.Contains("No update check", updatesVm.StatusDetails, StringComparison.Ordinal);
+        Assert.Contains("Updates.NoCheckYet", updatesVm.StatusDetails, StringComparison.Ordinal);
         updatesVm.CheckInFlight = true;
         Assert.Contains(nameof(UpdatesPageViewModel.CheckInFlight), updateChanges);
 
@@ -1693,7 +1693,7 @@ public sealed partial class ReleaseHardeningTests
             123));
 
         Assert.True(updatesVm.HasAvailableUpdate);
-        Assert.Equal("Install Update", updatesVm.NavigationText);
+        Assert.Equal("Nav.InstallUpdate", updatesVm.NavigationText);
         Assert.Contains("v1.0 -> v1.1.2", updatesVm.StatusText, StringComparison.Ordinal);
         Assert.Contains("Release v1.1.2", updatesVm.LatestReleaseText, StringComparison.Ordinal);
         Assert.True(updatesVm.LatestReleaseText.Length < 1900);
@@ -1719,7 +1719,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.True(vm.TryBeginBusy(out var busyMessage));
         Assert.Equal("", busyMessage);
         Assert.False(vm.TryBeginBusy(out busyMessage));
-        Assert.Equal("Please wait: Status.Starting", busyMessage);
+        Assert.Equal("Status.PleaseWaitFor", busyMessage);
         Assert.True(vm.EndBusy());
         Assert.False(vm.EndBusy());
 

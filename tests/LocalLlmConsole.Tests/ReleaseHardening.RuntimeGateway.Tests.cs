@@ -307,7 +307,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("disabled", disabled.Line, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(GatewayStatusVisualKind.Normal, disabled.VisualKind);
         Assert.Contains("listening at http://127.0.0.1:8082", listening.Line, StringComparison.Ordinal);
-        Assert.Contains("Single active model", listening.Line, StringComparison.Ordinal);
+        Assert.Contains("Pref.SingleActiveModel", listening.Line, StringComparison.Ordinal);
         Assert.Equal(GatewayStatusVisualKind.Activity, activity.VisualKind);
         Assert.Contains("switching to Qwen", activity.Line, StringComparison.Ordinal);
         Assert.Contains("loading Qwen", loading.Line, StringComparison.Ordinal);
