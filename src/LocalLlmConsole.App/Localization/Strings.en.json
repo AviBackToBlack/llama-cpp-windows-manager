@@ -467,6 +467,7 @@
   "Wsl.Tool.IntelGpuLabel": "Intel GPU SYCL",
   "Wsl.Tool.IntelGpuDescription": "Intel oneAPI level-zero runtime and compute-runtime for Intel Arc/iris GPUs in WSL.",
   "Windows.Tool.SyclLabel": "SYCL tools",
+  "Windows.Tool.InstallSyclButton": "Install oneAPI",
   "Wsl.ActionBtn.InstallIntelGpuButton": "Install Intel GPU SYCL",
   "Windows.Tool.SyclDescription": "Intel oneAPI level-zero runtime and compute-runtime for Intel Arc/iris GPUs.",
   "Logs.Col.Source": "Source",

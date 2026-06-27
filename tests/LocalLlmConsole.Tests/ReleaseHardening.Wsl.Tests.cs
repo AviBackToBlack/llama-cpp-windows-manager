@@ -387,7 +387,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("Windows.Tool.InstallCudaButton", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("Windows.Tool.InstallVulkanButton", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("Wsl.ActionBtn.InstallIntelGpuButton", wslPageFactory, StringComparison.Ordinal);
-        Assert.Contains("Install oneAPI", wslPageFactory, StringComparison.Ordinal);
+        Assert.Contains("Windows.Tool.InstallSyclButton", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("Delete WSL", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("Delete Ubuntu", wslPageFactory, StringComparison.Ordinal);
         Assert.Equal("Update CPU Tools", WslEnvironmentService.CpuToolsActionLabel(new WslToolSnapshot(true, false, false, "CPU OK", "CUDA missing", "Vulkan missing")));
