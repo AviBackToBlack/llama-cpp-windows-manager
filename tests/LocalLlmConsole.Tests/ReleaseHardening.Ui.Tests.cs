@@ -413,12 +413,11 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("public Grid? ModelMetric", runtimeDashboardState, StringComparison.Ordinal);
         Assert.Contains("public DataGrid? RuntimeMetricsGrid", runtimeDashboardState, StringComparison.Ordinal);
         Assert.Contains("public WpfTextBox? RuntimeLogBox", runtimeDashboardState, StringComparison.Ordinal);
-        Assert.Contains("LoadedSessionColumns", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("RuntimeMetricColumns", overviewFactory, StringComparison.Ordinal);
-        Assert.Equal(("Model", "C1", 1.45), OverviewPageFactory.LoadedSessionColumns[0]);
-        Assert.Equal(("Help", "C5", 3), OverviewPageFactory.RuntimeMetricColumns[^1]);
-        Assert.Contains("PageSectionFactory.GridSection(LoadedSessionsTitle", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("PageSectionFactory.FramedSection(LiveRuntimeLogTitle", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("Overview.SessionsCol.Model", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("Overview.MetricsCol.Metric", overviewFactory, StringComparison.Ordinal);
+        Assert.DoesNotContain("static readonly (string Header", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("Loc.T(\"Overview.LoadedSessionsTitle\")", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("Loc.T(\"Overview.LiveRuntimeLogTitle\")", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("PageSectionFactory.HorizontalGridSplitter(3)", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("public static Grid FramedSection", pageSectionFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("var modelBar = new Grid", source, StringComparison.Ordinal);
