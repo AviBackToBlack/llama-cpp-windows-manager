@@ -320,8 +320,8 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.True(result.Ok);
         Assert.Contains("0.0.0.0", args);
-        Assert.Contains("--api-key", args);
-        Assert.Contains(apiKey, args);
+        Assert.DoesNotContain("--api-key", args);
+        Assert.Equal(apiKey, request.ApiKey);
     }
 
 
@@ -383,7 +383,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("127.0.0.1", args);
         Assert.Contains("--port", args);
         Assert.Contains("8081", args);
-        Assert.Contains("--api-key", args);
+        Assert.DoesNotContain("--api-key", args);
         Assert.DoesNotContain("--cache-ram", args);
         Assert.DoesNotContain("--ctx-checkpoints", args);
         Assert.DoesNotContain("--checkpoint-min-step", args);

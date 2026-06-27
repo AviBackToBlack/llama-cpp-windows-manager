@@ -440,13 +440,13 @@ public sealed partial class ReleaseHardeningTests
         var settings = AppSettings.CreateDefault(CreateTempRoot());
         var rows = new SettingsPageDefinitionService().BuildRows(settings);
 
-        Assert.Contains(rows, row => row.Key == "autoLoadGatewayEnabled" && row.Label == "Auto-load gateway");
+        Assert.Contains(rows, row => row.Key == "autoLoadGatewayEnabled" && row.Label == "Setting.AutoLoadGateway");
         Assert.Contains(rows, row => row.Key == "autoLoadGatewayPort" && row.ToolTip.Contains("1 to 65535", StringComparison.Ordinal));
-        Assert.Contains(rows, row => row.Key == "autoLoadGatewayPolicy" && row.ToolTip.Contains("Single active model", StringComparison.Ordinal));
+        Assert.Contains(rows, row => row.Key == "autoLoadGatewayPolicy" && row.ToolTip.Contains("unloads other models", StringComparison.Ordinal));
         Assert.Contains(rows, row => row.Key == "startWithWindows" && row.Type == "choice" && row.ToolTip.Contains("startup", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(rows, row => row.Key == "autoSaveOpenCodeOnLaunchSettingsSave" && row.Label == "Auto-sync entries" && row.Type == "choice" && row.Group == "OpenCode");
+        Assert.Contains(rows, row => row.Key == "autoSaveOpenCodeOnLaunchSettingsSave" && row.Label == "Setting.AutoSyncEntries" && row.Type == "choice" && row.Group == "OpenCode");
         Assert.Contains(rows, row => row.Key == "autoSaveOpenCodeOnLaunchSettingsSave" && row.ToolTip.Contains("OpenCode provider config stores the synced API key in plain text", StringComparison.Ordinal));
-        Assert.Contains(rows, row => row.Key == "openCodeOutputLimit" && row.Label == "Limit output" && row.Group == "OpenCode");
+        Assert.Contains(rows, row => row.Key == "openCodeOutputLimit" && row.Label == "Setting.LimitOutput" && row.Group == "OpenCode");
         Assert.Contains(rows, row => row.Key == "openCodeOutputLimit" && row.ToolTip.Contains("limit.output", StringComparison.Ordinal));
         Assert.Contains(rows, row => row.Key == "modelApiKey" && row.Type == "secret" && row.Action == "Generate");
         Assert.Contains(rows, row => row.Key == "modelApiKey" && row.ToolTip.Contains("OpenCode sync copies this key into OpenCode provider config in plain text", StringComparison.Ordinal));

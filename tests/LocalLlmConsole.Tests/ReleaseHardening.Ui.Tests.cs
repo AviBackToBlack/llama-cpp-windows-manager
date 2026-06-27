@@ -25,7 +25,7 @@ public sealed partial class ReleaseHardeningTests
         var source = ReadMainWindowSources();
 
         Assert.Contains("x:Name=\"AppStatusText\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Current action", xaml, StringComparison.Ordinal);
+        Assert.Contains("Status.CurrentActionLabel", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ServiceStatusText", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ServiceStatusText", source, StringComparison.Ordinal);
         Assert.DoesNotContain("RuntimeStatusText", xaml, StringComparison.Ordinal);
@@ -43,10 +43,10 @@ public sealed partial class ReleaseHardeningTests
         var project = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "LocalLlmConsole.App.csproj"));
         var iconPath = FindRepositoryFile("src", "LocalLlmConsole.App", "Assets", "AppIcon.ico");
 
-        Assert.Contains("Title=\"llama.cpp Windows Manager v1.1.6\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"v1.1.6\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("AppDisplayName = \"llama.cpp Windows Manager\"", source, StringComparison.Ordinal);
-        Assert.Contains("AppVersionLabel = \"v1.1.6\"", source, StringComparison.Ordinal);
+        Assert.Contains("Title=\"llama.cpp Windows Manager v1.1.7\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"v1.1.7\"", xaml, StringComparison.Ordinal);
+
+        Assert.Contains("AppVersionLabel = \"v1.1.7\"", source, StringComparison.Ordinal);
         Assert.Contains("<AssemblyName>LlamaCppWindowsManager</AssemblyName>", project, StringComparison.Ordinal);
         Assert.Contains("<ApplicationIcon>Assets\\AppIcon.ico</ApplicationIcon>", project, StringComparison.Ordinal);
         Assert.True(new FileInfo(iconPath).Length > 1024);
@@ -451,7 +451,7 @@ public sealed partial class ReleaseHardeningTests
         var normalizedOverviewFactory = overviewFactory.Replace("\r\n", "\n", StringComparison.Ordinal);
         var normalizedModelsFactory = modelsFactory.Replace("\r\n", "\n", StringComparison.Ordinal);
 
-        Assert.Contains("FolderStripActionsFirst(\n            \"Models folder\"", normalizedModelsFactory, StringComparison.Ordinal);
+        Assert.Contains("FolderStripActionsFirst(\n            Loc.T(\"Models.FolderLabel\")", normalizedModelsFactory, StringComparison.Ordinal);
         Assert.Contains("ScanModelsFolderAsync", modelsFactory, StringComparison.Ordinal);
         Assert.Contains("Scanning models...", source, StringComparison.Ordinal);
         Assert.Contains("Button(\"Save Settings\"", settingsFactory, StringComparison.Ordinal);
@@ -511,7 +511,7 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.Contains("nameof(ModelGridRow.Name)", modelsFactory, StringComparison.Ordinal);
         Assert.Contains("nameof(ModelGridRow.Size)", modelsFactory, StringComparison.Ordinal);
-        Assert.Contains("Saved Model Variants", modelsFactory, StringComparison.Ordinal);
+        Assert.Contains("Models.SavedVariantsTitle", modelsFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("RowDetailsVisibilityMode", modelsFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("Saved launch variant. Same GGUF file", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "ViewModels", "ModelsPageViewModel.cs")), StringComparison.Ordinal);
         Assert.Contains("private readonly ModelsPageState _modelsPage;", source, StringComparison.Ordinal);
@@ -838,7 +838,7 @@ public sealed partial class ReleaseHardeningTests
         var handler = settings[handlerStart..handlerEnd];
         Assert.Contains("AppPreferenceService.ThemeMode(_settingsPage.SelectedThemeValue)", handler, StringComparison.Ordinal);
         Assert.Contains("ApplyTheme(mode);", handler, StringComparison.Ordinal);
-        Assert.Contains("Theme preview applied. Save settings to keep it.", handler, StringComparison.Ordinal);
+        Assert.Contains("Status.ThemePreviewApplied", handler, StringComparison.Ordinal);
         Assert.DoesNotContain("_themeCombo", handler, StringComparison.Ordinal);
         Assert.DoesNotContain("ShowSettings()", handler, StringComparison.Ordinal);
     }
@@ -1018,7 +1018,7 @@ public sealed partial class ReleaseHardeningTests
         var advancedSections = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "App", "AdvancedSectionStateController.cs"));
         var advancedState = new AdvancedSectionStateController();
 
-        Assert.Contains("Delete Selected", logsFactory, StringComparison.Ordinal);
+        Assert.Contains("Logs.DeleteSelectedButton", logsFactory, StringComparison.Ordinal);
         Assert.Contains("Delete All Logs", logsFactory, StringComparison.Ordinal);
         Assert.Contains("DeleteLogRow_Click", logsActions, StringComparison.Ordinal);
         Assert.Contains("DataGridSelectionMode.Extended", logsFactory, StringComparison.Ordinal);
@@ -1123,7 +1123,7 @@ public sealed partial class ReleaseHardeningTests
         var controller = new TrayWindowStateController();
 
         Assert.Equal("taskbarOnly", settings.MinimizeBehavior);
-        Assert.Equal(["Taskbar only", "Tray only", "Tray + taskbar"], AppPreferenceService.MinimizeBehaviorOptions());
+        Assert.Equal(["Pref.TaskbarOnly", "Pref.TrayOnly", "Pref.TrayAndTaskbar"], AppPreferenceService.MinimizeBehaviorOptions());
         Assert.Equal("trayAndTaskbar", AppPreferenceService.MinimizeBehavior("Tray + taskbar"));
         Assert.Equal("both", AppPreferenceService.ModelAccessMode("network access"));
         Assert.Equal("gateway", AppPreferenceService.ModelAccessMode("Gateway LAN only"));
@@ -1676,7 +1676,7 @@ public sealed partial class ReleaseHardeningTests
         var updateChanges = new List<string?>();
         updatesVm.PropertyChanged += (_, e) => updateChanges.Add(e.PropertyName);
 
-        Assert.Equal("Check For Updates", updatesVm.ActionText);
+        Assert.Equal("Nav.CheckForUpdates", updatesVm.ActionText);
         Assert.Contains("No update check", updatesVm.StatusDetails, StringComparison.Ordinal);
         updatesVm.CheckInFlight = true;
         Assert.Contains(nameof(UpdatesPageViewModel.CheckInFlight), updateChanges);
@@ -1715,11 +1715,11 @@ public sealed partial class ReleaseHardeningTests
         bool? waitCursor = null;
 
         Assert.Equal("Overview", vm.CurrentPage);
-        Assert.Equal("Starting...", vm.StatusText);
+        Assert.Equal("Status.Starting", vm.StatusText);
         Assert.True(vm.TryBeginBusy(out var busyMessage));
         Assert.Equal("", busyMessage);
         Assert.False(vm.TryBeginBusy(out busyMessage));
-        Assert.Equal("Please wait: Starting...", busyMessage);
+        Assert.Equal("Please wait: Status.Starting", busyMessage);
         Assert.True(vm.EndBusy());
         Assert.False(vm.EndBusy());
 

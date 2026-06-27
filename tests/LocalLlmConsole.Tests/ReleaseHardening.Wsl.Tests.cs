@@ -382,11 +382,11 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("build-essential", WslSetupCommands.BuildToolsPackages, StringComparison.Ordinal);
         Assert.Contains("libcurl4-openssl-dev", WslSetupCommands.InstallBuildToolsCommand, StringComparison.Ordinal);
         Assert.Contains("WslPageFactory.Create(new WslPageRequest(", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("Install CPU Tools", wslPageFactory, StringComparison.Ordinal);
+        Assert.Contains("Windows.Tool.InstallCpuButton", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("CPU build tools do not include CUDA", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "tools", "Build-LlamaCppRuntime.ps1")), StringComparison.Ordinal);
-        Assert.Contains("Install CUDA", wslPageFactory, StringComparison.Ordinal);
-        Assert.Contains("Install Vulkan", wslPageFactory, StringComparison.Ordinal);
-        Assert.Contains("Install Intel GPU", wslPageFactory, StringComparison.Ordinal);
+        Assert.Contains("Windows.Tool.InstallCudaButton", wslPageFactory, StringComparison.Ordinal);
+        Assert.Contains("Windows.Tool.InstallVulkanButton", wslPageFactory, StringComparison.Ordinal);
+        Assert.Contains("Wsl.ActionBtn.InstallIntelGpuButton", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("Install oneAPI", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("Delete WSL", wslPageFactory, StringComparison.Ordinal);
         Assert.Contains("Delete Ubuntu", wslPageFactory, StringComparison.Ordinal);
@@ -532,7 +532,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("_windowsPage.Apply(page);", mainWindow, StringComparison.Ordinal);
         Assert.Contains("WslPageFactory.Create(new WslPageRequest(", mainWindow, StringComparison.Ordinal);
         Assert.Contains("_wslPage.Apply(page);", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("Native Windows tools", windowsPageFactory, StringComparison.Ordinal);
+        Assert.Contains("Windows.ToolsSectionTitle", windowsPageFactory, StringComparison.Ordinal);
         Assert.Contains("public sealed class WindowsPageState", windowsPageState, StringComparison.Ordinal);
         Assert.Contains("public IEnumerable<WpfButton?> HelpButtons", windowsPageState, StringComparison.Ordinal);
         Assert.Contains("public Grid? StatusMetric", windowsPageState, StringComparison.Ordinal);
