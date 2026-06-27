@@ -332,15 +332,15 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("MetricShouldRenderNeutralStatus", metricFactory, StringComparison.Ordinal);
         Assert.Contains("TryAddStatusNameMetricLine", metricFactory, StringComparison.Ordinal);
         Assert.Contains("MetricStatusNameBlock", metricFactory, StringComparison.Ordinal);
-        Assert.Contains("var valueRows = new Grid { MinHeight = 34, Tag = label }", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("var valueRows = new Grid { MinHeight = 34, Tag = string.IsNullOrEmpty(labelKey)", metricFactory, StringComparison.Ordinal);
         Assert.Contains("MetricLabelColumnWidth(label)", metricFactory, StringComparison.Ordinal);
-        Assert.Contains("=> string.Equals(label, \"Model status\", StringComparison.Ordinal)", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("=> string.Equals(label, Loc.T(\"Overview.Metric.ModelStatus\"), StringComparison.Ordinal)", metricFactory, StringComparison.Ordinal);
         Assert.Contains("header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto })", metricFactory, StringComparison.Ordinal);
         Assert.Contains("MetricCardFactory.SetMetricText(target, value, emphasizeLoadedStatus)", source, StringComparison.Ordinal);
-        Assert.Contains("gpu = MetricCardFactory.AddMetric(runtimeDashboard, \"Hardware\", 0, 1)", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("tokens = MetricCardFactory.AddMetric(runtimeDashboard, \"Tokens\", 1, 0, out tokensLastKnown)", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("mtpTokens = MetricCardFactory.AddMetric(runtimeDashboard, \"MTP tokens\", 1, 1)", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("slots = MetricCardFactory.AddMetric(runtimeDashboard, \"Slots\", 1, 2)", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("gpu = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.Hardware\"), 0, 1)", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("tokens = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.Tokens\"), 1, 0, out tokensLastKnown)", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("mtpTokens = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.MtpTokens\"), 1, 1)", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("slots = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.Slots\"), 1, 2)", overviewFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("\"Tokens (Live)\"", overviewFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("\"Tokens (Total)\"", overviewFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("\"Runtime build\", 0, 1", overviewFactory, StringComparison.Ordinal);
@@ -351,7 +351,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("SetMetricText(_runtimeDashboardPage.SlotsMetric, summary.Slots)", source, StringComparison.Ordinal);
         Assert.Contains("_sessions.SelectedSnapshot()?.LogPath", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_runtimeDashboardTotalTokensLastKnown", source, StringComparison.Ordinal);
-        Assert.Contains("string.Equals(label, \"Model status\", StringComparison.Ordinal)", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("string.Equals(label, \"Overview.Metric.ModelStatus\", StringComparison.Ordinal)", metricFactory, StringComparison.Ordinal);
         Assert.Contains("\"Loaded Model:\"", metricFactory, StringComparison.Ordinal);
         Assert.Contains("\"Loading Model:\"", metricFactory, StringComparison.Ordinal);
         Assert.Contains("\"Loading:\"", metricFactory, StringComparison.Ordinal);
@@ -462,16 +462,16 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("OpenHuggingFaceModelCardRow_Click", source, StringComparison.Ordinal);
         Assert.Contains("_modelCards.OpenFromRow", modelsRowActions, StringComparison.Ordinal);
         Assert.Contains("_modelFolders.Open", modelsRowActions, StringComparison.Ordinal);
-        Assert.Contains("PageSectionFactory.AddButtonColumn(request.Grid, \"Card\", \"C8\", \"B2\", request.Actions.OpenModelCardRow", huggingFaceGridModeFactory, StringComparison.Ordinal);
+        Assert.Contains("PageSectionFactory.AddButtonColumn(request.Grid, Loc.T(\"HfSearch.Col.Card\"), \"C8\", \"B2\", request.Actions.OpenModelCardRow", huggingFaceGridModeFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("Button(\"Model Card\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("OpenSelectedHuggingFaceModelCard", source, StringComparison.Ordinal);
         Assert.DoesNotContain("HuggingFaceService.TryCreateModelCardUrl(repo", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Opened Hugging Face model card", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Model folder is unavailable.", source, StringComparison.Ordinal);
-        Assert.Contains("(\"Signals\", \"C6\", 1.4)", huggingFaceGridModeFactory, StringComparison.Ordinal);
-        Assert.Contains("PageSectionFactory.FramedSection(LiveRuntimeLogTitle", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("public const string RuntimeMetricsTitle = \"All llama.cpp Metrics\"", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("model = MetricCardFactory.AddMetric(runtimeDashboard, \"Model status\", 0, 0)", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("(Loc.T(\"HfSearch.Col.Signals\"), \"C6\", 1.4)", huggingFaceGridModeFactory, StringComparison.Ordinal);
+        Assert.Contains("Loc.T(\"Overview.LiveRuntimeLogTitle\")", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("Loc.T(\"Overview.RuntimeMetricsTitle\")", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("model = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.ModelStatus\"), 0, 0, labelKey:", overviewFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("gatewayStatusText", overviewFactory, StringComparison.OrdinalIgnoreCase);
         var gatewayRuntimeApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Gateway", "GatewayRuntimeApplicationService.cs"));
 
@@ -488,8 +488,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("GatewayServices.GatewayRuntimeApplication.EnsureModelLoadedAsync", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_modelWorkflowServices", source, StringComparison.Ordinal);
         Assert.Contains("_workflow.EnsureLoadedAsync", gatewayRuntimeApplication, StringComparison.Ordinal);
-        Assert.True(normalizedOverviewFactory.IndexOf("PageSectionFactory.GridSection(LoadedSessionsTitle", StringComparison.Ordinal) < normalizedOverviewFactory.IndexOf("Text(\"Model Status\"", StringComparison.Ordinal));
-        Assert.Contains("(\"Size\", \"C2\"", overviewFactory, StringComparison.Ordinal);
+        Assert.True(normalizedOverviewFactory.IndexOf("Loc.T(\"Overview.LoadedSessionsTitle\")", StringComparison.Ordinal) < normalizedOverviewFactory.IndexOf("Loc.T(\"Overview.ModelStatusLabel\")", StringComparison.Ordinal));
+        Assert.Contains("(Loc.T(\"Overview.SessionsCol.Size\"), \"C2\"", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("SessionStatusLabel", overviewViewModel, StringComparison.Ordinal);
         Assert.Contains("request.Session.RuntimeName", runtimeOverviewStatus, StringComparison.Ordinal);
         Assert.Contains("Unknown runtime", runtimeOverviewStatus, StringComparison.Ordinal);
@@ -721,8 +721,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("grid.Columns[6].MinWidth = 96", source, StringComparison.Ordinal);
         Assert.Contains("grid.Columns[6].Width = new DataGridLength(104)", source, StringComparison.Ordinal);
         Assert.Contains("grid.Columns[7].Width = new DataGridLength(74)", source, StringComparison.Ordinal);
-        Assert.Contains("PageSectionFactory.AddButtonColumn(request.Grid, \"Actions\", \"C7\", \"B1\", request.Actions.DownloadSearchRow", gridModeFactory, StringComparison.Ordinal);
-        Assert.Contains("PageSectionFactory.AddButtonColumn(request.Grid, \"Delete\", \"C10\", \"B4\", request.Actions.DeleteDownloadRow", gridModeFactory, StringComparison.Ordinal);
+        Assert.Contains("PageSectionFactory.AddButtonColumn(request.Grid, Loc.T(\"HfSearch.Col.Actions\"), \"C7\", \"B1\", request.Actions.DownloadSearchRow", gridModeFactory, StringComparison.Ordinal);
+        Assert.Contains("PageSectionFactory.AddButtonColumn(request.Grid, Loc.T(\"Common.DeleteButton\"), \"C10\", \"B4\", request.Actions.DeleteDownloadRow", gridModeFactory, StringComparison.Ordinal);
         Assert.Contains("var downloadHistory = AppServices.DownloadHistoryApplication;", source, StringComparison.Ordinal);
         Assert.Contains("await downloadHistory!.DeleteAsync(job, _settings, DownloadHistoryDeleteActions())", source, StringComparison.Ordinal);
         Assert.Contains("await downloadHistory!.ResumeAsync(job, _settings, DownloadHistoryCommandActions())", source, StringComparison.Ordinal);
@@ -785,7 +785,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("UpdatesPageFactory.Create(new UpdatesPageRequest(", source, StringComparison.Ordinal);
         Assert.True(
             updatesPageFactory.IndexOf("actions.Children.Add(Button(request.ViewModel.ActionText", StringComparison.Ordinal)
-            < updatesPageFactory.IndexOf("PageSectionFactory.FramedSection(\"Update Status\"", StringComparison.Ordinal));
+            < updatesPageFactory.IndexOf("Loc.T(\"Updates.StatusSectionTitle\")", StringComparison.Ordinal));
         Assert.DoesNotContain("FramedSection(\"Update Status\"", source, StringComparison.Ordinal);
         Assert.Contains("MaxHeight = DialogMaxHeight(owner)", themedMessageBox, StringComparison.Ordinal);
         Assert.Contains("DialogMessageMaxHeight", themedMessageBox, StringComparison.Ordinal);
@@ -857,9 +857,9 @@ public sealed partial class ReleaseHardeningTests
         var factory = ReadAppServiceFactorySources();
         var rows = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Models", "UiRows.cs"));
 
-        Assert.Contains("new(\"Network\", \"API key\", \"modelApiKey\", settings.ModelApiKey, \"secret\", Action: \"Generate\",", settingsDefinitions, StringComparison.Ordinal);
-        Assert.Contains("Bearer key required by local OpenAI-compatible endpoints", settingsDefinitions, StringComparison.Ordinal);
-        Assert.Contains("OpenCode sync copies this key into OpenCode provider config in plain text", settingsDefinitions, StringComparison.Ordinal);
+        Assert.Contains("Loc.T(\"Setting.ApiKey\"), \"modelApiKey\", settings.ModelApiKey", settingsDefinitions, StringComparison.Ordinal);
+        Assert.Contains("Tooltip.Setting.ApiKey", settingsDefinitions, StringComparison.Ordinal);
+        Assert.Contains("Tooltip.Setting.ApiKey", settingsDefinitions, StringComparison.Ordinal);
         Assert.Contains("SettingsGridColumnFactory.ActionsColumn", settingsFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("FrameworkElementFactory", settings, StringComparison.Ordinal);
         Assert.DoesNotContain("Header = \"Secret\"", settings, StringComparison.Ordinal);
@@ -1027,19 +1027,20 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("LifetimePageFactory.Create(new LifetimePageRequest(", source, StringComparison.Ordinal);
         Assert.Contains("public sealed class LifetimePageState", lifetimePageState, StringComparison.Ordinal);
         Assert.Contains("public void RefreshMetricsGrid()", lifetimePageState, StringComparison.Ordinal);
-        Assert.Contains("public const string TokenUsageTitle = \"Lifetime token usage\"", lifetimeFactory, StringComparison.Ordinal);
-        Assert.Contains("PageSectionFactory.GridFor(MetricColumns)", lifetimeFactory, StringComparison.Ordinal);
+        Assert.Contains("Loc.T(\"Lifetime.TokenUsageTitle\")", lifetimeFactory, StringComparison.Ordinal);
+        Assert.DoesNotContain("PageSectionFactory.GridFor(MetricColumns)", lifetimeFactory, StringComparison.Ordinal);
+        Assert.Contains("PageSectionFactory.GridFor(", lifetimeFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("_lifetimeMetricsGrid", source, StringComparison.Ordinal);
         Assert.Contains("IsActiveRuntimeLog", logWorkflow, StringComparison.Ordinal);
         Assert.Contains("BuildSelectedDeletionCommand", logWorkflow, StringComparison.Ordinal);
         Assert.Contains("SolidBrush(\"#F2F5F8\")", pageSectionFactory, StringComparison.Ordinal);
-        Assert.Contains("Use Log to inspect compiler, git, Windows, or WSL output.", runtimesFactory, StringComparison.Ordinal);
+        Assert.Contains("Runtimes.RuntimeJobsDesc", runtimesFactory, StringComparison.Ordinal);
         Assert.Contains("OpenRuntimeJobLogRow_Click", runtimesRowActions, StringComparison.Ordinal);
         Assert.Contains("OpenLogPath(job.LogPath)", runtimesRowActions, StringComparison.Ordinal);
-        Assert.Contains("Logs are not ready yet.", logsPartial, StringComparison.Ordinal);
-        Assert.DoesNotContain("Logs are not ready yet.", downloadHistoryPartial, StringComparison.Ordinal);
+        Assert.Contains("Status.LogsNotReady", logsPartial, StringComparison.Ordinal);
+        Assert.DoesNotContain("Status.LogsNotReady", downloadHistoryPartial, StringComparison.Ordinal);
         Assert.DoesNotContain("logPageApplication.Open(job.LogPath", downloadHistoryPartial, StringComparison.Ordinal);
-        Assert.Contains("PageSectionFactory.AddButtonColumn(grid, \"Log\"", runtimesFactory, StringComparison.Ordinal);
+        Assert.Contains("Common.LogButton", runtimesFactory, StringComparison.Ordinal);
         Assert.False(advancedState.ShowRuntimes);
         Assert.True(advancedState.ToggleRuntimes());
         Assert.True(advancedState.ShowRuntimes);
@@ -1062,8 +1063,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.DoesNotContain("_runtimeJobsGrid", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_runtimeCudaPreferenceCombo", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_runtimesFolderText", source, StringComparison.Ordinal);
-        Assert.Contains("request.ShowAdvancedRuntimes ? \"Hide advanced\" : \"Show advanced\"", runtimesFactory, StringComparison.Ordinal);
-        Assert.Contains("CUDA downloads", runtimesFactory, StringComparison.Ordinal);
+        Assert.Contains("request.ShowAdvancedRuntimes ? Loc.T(\"Runtimes.HideAdvancedButton\") : Loc.T(\"Runtimes.ShowAdvancedButton\")", runtimesFactory, StringComparison.Ordinal);
+        Assert.Contains("Runtimes.CudaDownloadsLabel", runtimesFactory, StringComparison.Ordinal);
         Assert.Contains("LaunchCombo(AppPreferenceService.CudaPackagePreferenceOptions())", runtimesFactory, StringComparison.Ordinal);
         Assert.Contains("ChangeRuntimeCudaPackagePreferenceAsync", source, StringComparison.Ordinal);
         Assert.Contains("if (request.ShowAdvancedRuntimes)", runtimesFactory, StringComparison.Ordinal);
@@ -1694,7 +1695,7 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.True(updatesVm.HasAvailableUpdate);
         Assert.Equal("Nav.InstallUpdate", updatesVm.NavigationText);
-        Assert.Contains("v1.0 -> v1.1.2", updatesVm.StatusText, StringComparison.Ordinal);
+        Assert.Contains("Updates.Available", updatesVm.StatusText, StringComparison.Ordinal);
         Assert.Contains("Release v1.1.2", updatesVm.LatestReleaseText, StringComparison.Ordinal);
         Assert.True(updatesVm.LatestReleaseText.Length < 1900);
         Assert.Contains(nameof(UpdatesPageViewModel.LatestUpdate), updateChanges);
@@ -1727,7 +1728,7 @@ public sealed partial class ReleaseHardeningTests
         vm.SetStatus("");
 
         Assert.Equal("Models", vm.CurrentPage);
-        Assert.Equal("Ready", vm.DisplayStatusText);
+        Assert.Equal("Status.Ready", vm.DisplayStatusText);
         Assert.Contains(nameof(MainWindowViewModel.CurrentPage), changes);
         Assert.Contains(nameof(MainWindowViewModel.StatusText), changes);
         Assert.Contains(nameof(MainWindowViewModel.DisplayStatusText), changes);

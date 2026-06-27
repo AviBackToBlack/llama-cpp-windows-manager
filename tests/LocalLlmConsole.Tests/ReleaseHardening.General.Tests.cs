@@ -71,7 +71,7 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
             "OpenCodeConfigService.Discovery.cs");
         AssertServicePartials(appRoot, "Services", "ModelCatalogService", 380,
             "ModelCatalogService.Legacy.cs");
-        AssertServicePartials(appRoot, "Services", "LlamaProcessSupervisor", 260,
+        AssertServicePartials(appRoot, "Services", "LlamaProcessSupervisor", 300,
             "LlamaProcessSupervisor.Launch.cs",
             "LlamaProcessSupervisor.Wsl.cs");
         AssertServicePartials(appRoot, "Services", "HuggingFaceLaunchSettingsSuggester", 260,
