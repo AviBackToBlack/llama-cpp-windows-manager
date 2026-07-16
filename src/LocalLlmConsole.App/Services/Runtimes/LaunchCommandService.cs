@@ -240,8 +240,8 @@ public static class LaunchCommandService
                 return ("false", null);
 
             var v = value?.Trim() ?? "";
-            if (IsTruthyBoolean(v)) return ("true", null);
-            if (IsFalsyBoolean(v)) return ("false", null);
+            if (IsTruthyBoolean(v)) return ("false", null);
+            if (IsFalsyBoolean(v)) return ("true", null);
             if (string.Equals(v, "auto", StringComparison.OrdinalIgnoreCase)) return (GetBooleanDefault(flag), null);
             return ("", $"Invalid boolean value '{v}' for flag '{flag.PrimaryName}'.");
         }
