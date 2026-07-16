@@ -18,7 +18,7 @@ public sealed class RuntimeFlagCapabilityService
     public RuntimeFlagCapabilityService(IRuntimeFlagHelpRunner runner, string? cacheDirectory = null, TimeSpan? cacheExpiration = null)
     {
         _runner = runner ?? throw new ArgumentNullException(nameof(runner));
-        _cacheDirectory = Path.Combine(cacheDirectory ?? Directory.GetCurrentDirectory(), "cache");
+        _cacheDirectory = cacheDirectory ?? Path.Combine(Directory.GetCurrentDirectory(), "cache");
         _cacheExpiration = cacheExpiration ?? TimeSpan.FromMinutes(5);
     }
 
