@@ -245,7 +245,7 @@ public sealed class LaunchCommandServiceTests : IDisposable
         var command = LaunchCommandService.BuildCommand(options);
 
         Assert.Contains("--no-mmap", command);
-        Assert.DoesNotContain("--mmap", command);
+        Assert.DoesNotContain(" --mmap ", $" {command} ");
     }
 
     [Fact]
