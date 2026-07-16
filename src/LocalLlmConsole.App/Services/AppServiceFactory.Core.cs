@@ -147,7 +147,7 @@ public sealed partial class AppServiceFactory
         var modelGatewayHostFactory = CreateModelGatewayHostFactoryService();
         var modelGatewayLifecycleApplication = CreateModelGatewayLifecycleApplicationService();
         var launchSettingsControlStates = CreateLaunchSettingsControlStateService();
-        var launchSettingsRuntimeCapabilities = CreateLaunchSettingsRuntimeCapabilityApplicationService(request.ProcessRunner);
+        var launchSettingsRuntimeCapabilities = CreateLaunchSettingsRuntimeCapabilityApplicationService();
         var runtimeToolPrerequisites = CreateRuntimeToolPrerequisiteService(
             request.WslEnvironment,
             request.WindowsEnvironment,

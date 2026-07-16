@@ -78,9 +78,15 @@ public sealed record AppSettings(
     int ContextCheckpointEveryNTokens = 256,
     string CustomParameters = "",
     string UiCulture = "en",
-    IReadOnlyDictionary<string, string>? FlagValues = null)
+    IReadOnlyDictionary<string, string> FlagValues = null!)
 {
-    public IReadOnlyDictionary<string, string> FlagValues { get; init; } = FlagValues ?? ImmutableDictionary<string, string>.Empty;
+    private readonly IReadOnlyDictionary<string, string> _flagValues = FlagValues ?? ImmutableDictionary<string, string>.Empty;
+    public IReadOnlyDictionary<string, string> FlagValues
+    {
+        get => _flagValues;
+        init => _flagValues = value ?? ImmutableDictionary<string, string>.Empty;
+    }
+
     public const int DefaultContextSize = 131_072;
     public const int DefaultGpuLayers = 999;
     public const int DefaultBatchSize = 4096;

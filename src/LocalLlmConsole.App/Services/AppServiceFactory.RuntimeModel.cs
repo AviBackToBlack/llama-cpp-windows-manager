@@ -75,11 +75,9 @@ public sealed partial class AppServiceFactory
     public LaunchRuntimeSelectionService CreateLaunchRuntimeSelectionService()
         => new();
 
-    public LaunchSettingsRuntimeCapabilityApplicationService CreateLaunchSettingsRuntimeCapabilityApplicationService(IProcessRunner processRunner)
+    public LaunchSettingsRuntimeCapabilityApplicationService CreateLaunchSettingsRuntimeCapabilityApplicationService()
     {
-        var helpRunner = new RuntimeFlagHelpRunner(processRunner);
-        var capabilityService = new RuntimeFlagCapabilityService(helpRunner, Path.Combine(_workspaceRoot, "runtime-help-cache"));
-        return new(capabilityService);
+        return new(GetOrCreateRuntimeFlagCapabilityService());
     }
 
     public ModelRuntimeLoadApplicationService CreateModelRuntimeLoadApplicationService(

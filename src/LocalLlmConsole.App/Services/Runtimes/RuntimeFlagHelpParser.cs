@@ -15,7 +15,7 @@ public static class RuntimeFlagHelpParser
 
     public static IReadOnlySet<string> ParseSupportedFlags(string? helpText)
     {
-        var flags = new HashSet<string>(StringComparer.Ordinal);
+        var flags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (string.IsNullOrWhiteSpace(helpText))
             return flags;

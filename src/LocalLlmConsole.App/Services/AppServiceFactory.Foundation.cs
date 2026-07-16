@@ -28,9 +28,7 @@ public sealed partial class AppServiceFactory
         WslRuntimeStopService wslRuntimeStop,
         NativeRuntimeStopService nativeRuntimeStop)
     {
-        var helpRunner = new RuntimeFlagHelpRunner(processRunner);
-        var capabilityService = new RuntimeFlagCapabilityService(helpRunner, Path.Combine(_workspaceRoot, "runtime-help-cache"));
-        return new(wslRuntimeStop, nativeRuntimeStop, capabilityService);
+        return new(wslRuntimeStop, nativeRuntimeStop, GetOrCreateRuntimeFlagCapabilityService());
     }
 
     public WslRuntimeStopService CreateWslRuntimeStopService(IProcessRunner processRunner)

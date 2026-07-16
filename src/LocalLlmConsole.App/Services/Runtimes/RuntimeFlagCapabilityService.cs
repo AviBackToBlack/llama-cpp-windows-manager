@@ -14,6 +14,7 @@ public sealed class RuntimeFlagCapabilityService
     private readonly TimeSpan _cacheExpiration;
     private readonly Dictionary<string, RuntimeFlagCapabilityResult> _memoryCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _cacheLock = new();
+    private readonly SemaphoreSlim _runLock = new(1, 1);
 
     public RuntimeFlagCapabilityService(IRuntimeFlagHelpRunner runner, string? cacheDirectory = null, TimeSpan? cacheExpiration = null)
     {
@@ -30,11 +31,12 @@ public sealed class RuntimeFlagCapabilityService
     {
         if (string.IsNullOrWhiteSpace(executablePath))
             return new RuntimeFlagCapabilityResult(
-                new HashSet<string>(StringComparer.Ordinal),
-                new HashSet<string>(StringComparer.Ordinal),
-                new HashSet<string>(StringComparer.Ordinal));
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 
         var key = BuildCacheKey(executablePath, mode, wslDistro);
+        var filePath = Path.Combine(_cacheDirectory, $"llama-server-help-{key}.json");
 
         lock (_cacheLock)
         {
@@ -42,7 +44,6 @@ public sealed class RuntimeFlagCapabilityService
                 return cached;
         }
 
-        var filePath = Path.Combine(_cacheDirectory, $"llama-server-help-{key}.json");
         if (TryReadCache(filePath, out var fileCached))
         {
             lock (_cacheLock)
@@ -52,15 +53,40 @@ public sealed class RuntimeFlagCapabilityService
             return fileCached;
         }
 
-        var result = await RunAndParseAsync(executablePath, mode, wslDistro, cancellationToken);
-
-        lock (_cacheLock)
+        await _runLock.WaitAsync(cancellationToken);
+        try
         {
-            _memoryCache[key] = result;
-        }
-        WriteCache(filePath, result);
+            // Re-check caches after acquiring the lock so concurrent callers
+            // don't spawn multiple llama-server --help processes for the same key.
+            lock (_cacheLock)
+            {
+                if (_memoryCache.TryGetValue(key, out var cached))
+                    return cached;
+            }
 
-        return result;
+            if (TryReadCache(filePath, out fileCached))
+            {
+                lock (_cacheLock)
+                {
+                    _memoryCache[key] = fileCached;
+                }
+                return fileCached;
+            }
+
+            var result = await RunAndParseAsync(executablePath, mode, wslDistro, cancellationToken);
+
+            lock (_cacheLock)
+            {
+                _memoryCache[key] = result;
+            }
+            WriteCache(filePath, result);
+
+            return result;
+        }
+        finally
+        {
+            _runLock.Release();
+        }
     }
 
     public async Task<IReadOnlySet<string>> GetSupportedFlagsAsync(
@@ -106,15 +132,15 @@ public sealed class RuntimeFlagCapabilityService
         var output = runResult.ExitCode == 0 ? runResult.Output : runResult.Output + runResult.Error;
         var parsedFlags = RuntimeFlagHelpParser.ParseSupportedFlags(output);
 
-        var schemaFlags = new HashSet<string>(StringComparer.Ordinal);
+        var schemaFlags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var flag in LlamaServerFlagSchema.All)
         {
             foreach (var name in flag.Names)
                 schemaFlags.Add(name);
         }
 
-        var supported = new HashSet<string>(StringComparer.Ordinal);
-        var unknown = new HashSet<string>(StringComparer.Ordinal);
+        var supported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var unknown = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var flag in parsedFlags)
         {
             if (schemaFlags.Contains(flag))
@@ -123,7 +149,7 @@ public sealed class RuntimeFlagCapabilityService
                 unknown.Add(flag);
         }
 
-        var unsupported = new HashSet<string>(StringComparer.Ordinal);
+        var unsupported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var schemaFlag in schemaFlags)
         {
             if (!parsedFlags.Contains(schemaFlag))
@@ -136,9 +162,9 @@ public sealed class RuntimeFlagCapabilityService
     private bool TryReadCache(string filePath, out RuntimeFlagCapabilityResult result)
     {
         result = new RuntimeFlagCapabilityResult(
-            new HashSet<string>(StringComparer.Ordinal),
-            new HashSet<string>(StringComparer.Ordinal),
-            new HashSet<string>(StringComparer.Ordinal));
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 
         try
         {
@@ -183,7 +209,7 @@ public sealed class RuntimeFlagCapabilityService
 
     private static IReadOnlySet<string> ReadStringSet(JsonObject document, string propertyName)
     {
-        var set = new HashSet<string>(StringComparer.Ordinal);
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (document.TryGetPropertyValue(propertyName, out var node) && node is JsonArray array)
         {
             foreach (var item in array)

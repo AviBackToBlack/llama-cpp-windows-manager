@@ -56,9 +56,14 @@ public sealed record ModelLaunchSettings(
     int ContextCheckpointCount = AppSettings.DefaultContextCheckpointCount,
     int ContextCheckpointEveryNTokens = AppSettings.DefaultContextCheckpointEveryNTokens,
     string CustomParameters = "",
-    IReadOnlyDictionary<string, string>? FlagValues = null)
+    IReadOnlyDictionary<string, string> FlagValues = null!)
 {
-    public IReadOnlyDictionary<string, string> FlagValues { get; init; } = FlagValues ?? ImmutableDictionary<string, string>.Empty;
+    private readonly IReadOnlyDictionary<string, string> _flagValues = FlagValues ?? ImmutableDictionary<string, string>.Empty;
+    public IReadOnlyDictionary<string, string> FlagValues
+    {
+        get => _flagValues;
+        init => _flagValues = value ?? ImmutableDictionary<string, string>.Empty;
+    }
 
     public static ModelLaunchSettings FromAppSettings(AppSettings settings, string runtimeId = "") => new(
         settings.ContextSize,
