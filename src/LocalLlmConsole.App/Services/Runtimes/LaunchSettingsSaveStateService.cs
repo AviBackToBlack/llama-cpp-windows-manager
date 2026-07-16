@@ -35,11 +35,24 @@ public static class LaunchSettingsSaveStateService
         if (!request.CurrentProfileReadable || request.CurrentProfile is null)
             return new LaunchSettingsSaveState(SaveForModelText, true, canSaveAsNewVariant);
 
-        var currentMatchesSavedProfile = Equals(request.CurrentProfile, request.SavedProfile);
+        var currentMatchesSavedProfile = ProfilesMatch(request.CurrentProfile, request.SavedProfile);
         return new LaunchSettingsSaveState(
             currentMatchesSavedProfile ? SavedText : SaveForModelText,
             !currentMatchesSavedProfile,
             canSaveAsNewVariant);
+    }
+
+    private static bool ProfilesMatch(ModelLaunchSettings current, ModelLaunchSettings saved)
+    {
+        var currentWithoutFlags = current with { FlagValues = ImmutableDictionary<string, string>.Empty };
+        var savedWithoutFlags = saved with { FlagValues = ImmutableDictionary<string, string>.Empty };
+
+        return Equals(currentWithoutFlags, savedWithoutFlags)
+            && current.FlagValues.Count == saved.FlagValues.Count
+            && current.FlagValues.All(currentFlag =>
+                saved.FlagValues.Any(savedFlag =>
+                    string.Equals(currentFlag.Key, savedFlag.Key, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(currentFlag.Value, savedFlag.Value, StringComparison.Ordinal)));
     }
 
     public static bool CanSaveAsNewVariant(ModelRecord? selectedModel, string requestedVariantName)

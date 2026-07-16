@@ -1929,6 +1929,18 @@ public sealed partial class ReleaseHardeningTests
         var model = new ModelRecord("model-1", "Qwen", "qwen.gguf", OwnershipKind.External, "{}", DateTimeOffset.UtcNow);
         var saved = ModelLaunchSettings.FromAppSettings(settings);
         var changed = saved with { ContextSize = saved.ContextSize + 1024 };
+        var savedWithFlags = saved with
+        {
+            FlagValues = new Dictionary<string, string> { ["--dry-multiplier"] = "0.8" }
+        };
+        var sameFlags = saved with
+        {
+            FlagValues = new Dictionary<string, string> { ["--DRY-MULTIPLIER"] = "0.8" }
+        };
+        var changedFlags = saved with
+        {
+            FlagValues = new Dictionary<string, string> { ["--dry-multiplier"] = "0.9" }
+        };
 
         var noSelection = LaunchSettingsSaveStateService.Evaluate(new LaunchSettingsSaveStateRequest(
             null,
@@ -1965,6 +1977,20 @@ public sealed partial class ReleaseHardeningTests
             CurrentProfileReadable: true,
             CurrentProfile: changed,
             RequestedVariantName: "  qwen  "));
+        var cleanGeneratedFlags = LaunchSettingsSaveStateService.Evaluate(new LaunchSettingsSaveStateRequest(
+            model,
+            HasSavedProfile: true,
+            SavedProfile: savedWithFlags,
+            CurrentProfileReadable: true,
+            CurrentProfile: sameFlags,
+            RequestedVariantName: model.Name));
+        var dirtyGeneratedFlags = LaunchSettingsSaveStateService.Evaluate(new LaunchSettingsSaveStateRequest(
+            model,
+            HasSavedProfile: true,
+            SavedProfile: savedWithFlags,
+            CurrentProfileReadable: true,
+            CurrentProfile: changedFlags,
+            RequestedVariantName: model.Name));
 
         Assert.Equal(LaunchSettingsSaveStateService.SaveForModelText, noSelection.SaveForModelContent);
         Assert.False(noSelection.CanSaveForModel);
@@ -1980,6 +2006,10 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(LaunchSettingsSaveStateService.SaveForModelText, dirtyProfile.SaveForModelContent);
         Assert.True(dirtyProfile.CanSaveForModel);
         Assert.False(dirtyProfile.CanSaveAsNewVariant);
+        Assert.Equal(LaunchSettingsSaveStateService.SavedText, cleanGeneratedFlags.SaveForModelContent);
+        Assert.False(cleanGeneratedFlags.CanSaveForModel);
+        Assert.Equal(LaunchSettingsSaveStateService.SaveForModelText, dirtyGeneratedFlags.SaveForModelContent);
+        Assert.True(dirtyGeneratedFlags.CanSaveForModel);
         Assert.Contains("LaunchSettingsSaveStateService.Evaluate", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_saveModelLaunchSettingsButton.Content = \"Saved\"", source, StringComparison.Ordinal);
     }

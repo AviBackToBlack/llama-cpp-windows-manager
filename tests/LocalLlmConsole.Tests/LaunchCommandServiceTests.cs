@@ -137,6 +137,16 @@ public sealed class LaunchCommandServiceTests : IDisposable
     }
 
     [Fact]
+    public void ParseCommandInvertsExplicitValuesForNegatedBooleanFlags()
+    {
+        var parsed = LaunchCommandService.ParseCommand("--no-kv-offload on --no-kv-unified off");
+
+        Assert.Empty(parsed.Errors);
+        Assert.Equal("false", parsed.Flags["--kv-offload"]);
+        Assert.Equal("true", parsed.Flags["--kv-unified"]);
+    }
+
+    [Fact]
     public void BuildCommandQuotesPathsWithSpaces()
     {
         var options = new LlamaServerLaunchOptions
