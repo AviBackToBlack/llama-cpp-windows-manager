@@ -59,7 +59,8 @@ public static partial class LaunchSettingsPanelFactory
             key = "--" + key[5..];
         if (formControls.TryGetValueByFlagName(key, out var value))
             return value;
-        return flag.Default?.ToString();
+        if (flag.Default is null) return null;
+        return LaunchSettingsFormControls.NormalizeDefaultValue(flag.Default);
     }
 
     private static bool IsContextExtensionFlag(LlamaServerFlag flag)

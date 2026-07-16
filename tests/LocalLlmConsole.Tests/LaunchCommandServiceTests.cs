@@ -27,21 +27,21 @@ public sealed class LaunchCommandServiceTests : IDisposable
             GpuLayers = 99,
             ContextSize = 8192,
             ParallelSlots = 2,
-            BatchSize = 2048,
-            MicroBatchSize = 512,
+            BatchSize = 4096,
+            MicroBatchSize = 1024,
             Threads = 4,
             FlashAttention = "on",
             CacheTypeK = "q8_0",
             CacheTypeV = "q8_0",
-            KvOffload = "on",
+            KvOffload = "off",
             KvUnified = "off",
-            Temperature = 0.8,
-            TopK = 40,
-            TopP = 0.95,
-            MinP = 0.05,
+            Temperature = 0.7,
+            TopK = 50,
+            TopP = 0.9,
+            MinP = 0.1,
             MaxTokens = 512,
             Seed = 42,
-            RepeatLastN = 64,
+            RepeatLastN = 32,
             RepeatPenalty = 1.1,
             PresencePenalty = 0.2,
             FrequencyPenalty = -0.1,
@@ -49,8 +49,8 @@ public sealed class LaunchCommandServiceTests : IDisposable
             RopeScale = 0.5,
             RopeFreqBase = 10000,
             RopeFreqScale = 0.9,
-            ContinuousBatching = "on",
-            MmapMode = "on",
+            ContinuousBatching = "off",
+            MmapMode = "off",
             MlockMode = "on"
         };
 
@@ -63,21 +63,21 @@ public sealed class LaunchCommandServiceTests : IDisposable
         Assert.Equal("8192", parsed.Flags["--ctx-size"]);
         Assert.Equal("99", parsed.Flags["--n-gpu-layers"]);
         Assert.Equal("2", parsed.Flags["--parallel"]);
-        Assert.Equal("2048", parsed.Flags["--batch-size"]);
-        Assert.Equal("512", parsed.Flags["--ubatch-size"]);
+        Assert.Equal("4096", parsed.Flags["--batch-size"]);
+        Assert.Equal("1024", parsed.Flags["--ubatch-size"]);
         Assert.Equal("4", parsed.Flags["--threads"]);
         Assert.Equal("true", parsed.Flags["--flash-attn"]);
         Assert.Equal("q8_0", parsed.Flags["--cache-type-k"]);
         Assert.Equal("q8_0", parsed.Flags["--cache-type-v"]);
-        Assert.Equal("true", parsed.Flags["--kv-offload"]);
+        Assert.Equal("false", parsed.Flags["--kv-offload"]);
         Assert.Equal("false", parsed.Flags["--kv-unified"]);
-        Assert.Equal("0.8", parsed.Flags["--temp"]);
-        Assert.Equal("40", parsed.Flags["--top-k"]);
-        Assert.Equal("0.95", parsed.Flags["--top-p"]);
-        Assert.Equal("0.05", parsed.Flags["--min-p"]);
+        Assert.Equal("0.7", parsed.Flags["--temp"]);
+        Assert.Equal("50", parsed.Flags["--top-k"]);
+        Assert.Equal("0.9", parsed.Flags["--top-p"]);
+        Assert.Equal("0.1", parsed.Flags["--min-p"]);
         Assert.Equal("512", parsed.Flags["--predict"]);
         Assert.Equal("42", parsed.Flags["--seed"]);
-        Assert.Equal("64", parsed.Flags["--repeat-last-n"]);
+        Assert.Equal("32", parsed.Flags["--repeat-last-n"]);
         Assert.Equal("1.1", parsed.Flags["--repeat-penalty"]);
         Assert.Equal("0.2", parsed.Flags["--presence-penalty"]);
         Assert.Equal("-0.1", parsed.Flags["--frequency-penalty"]);
@@ -85,8 +85,8 @@ public sealed class LaunchCommandServiceTests : IDisposable
         Assert.Equal("0.5", parsed.Flags["--rope-scale"]);
         Assert.Equal("10000", parsed.Flags["--rope-freq-base"]);
         Assert.Equal("0.9", parsed.Flags["--rope-freq-scale"]);
-        Assert.Equal("true", parsed.Flags["--cont-batching"]);
-        Assert.Equal("true", parsed.Flags["--mmap"]);
+        Assert.Equal("false", parsed.Flags["--cont-batching"]);
+        Assert.Equal("false", parsed.Flags["--mmap"]);
         Assert.Equal("true", parsed.Flags["--mlock"]);
     }
 
@@ -223,14 +223,14 @@ public sealed class LaunchCommandServiceTests : IDisposable
         {
             ModelPath = _modelFile,
             ContextSize = 4096,
-            Temperature = 0.8,
+            Temperature = 0.7,
             FlagValues = new Dictionary<string, string> { ["--temp"] = "0.99" }
         };
 
         var command = LaunchCommandService.BuildCommand(options);
         var parsed = LaunchCommandService.ParseCommand(command);
 
-        Assert.Equal("0.8", parsed.Flags["--temp"]);
+        Assert.Equal("0.7", parsed.Flags["--temp"]);
     }
 
     [Fact]

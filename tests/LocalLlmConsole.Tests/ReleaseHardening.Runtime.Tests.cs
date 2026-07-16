@@ -453,7 +453,7 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.Contains("--cache-ram", offArgs);
         Assert.Contains("0", offArgs);
-        Assert.Contains("--ctx-checkpoints", offArgs);
+        Assert.DoesNotContain("--ctx-checkpoints", offArgs);
         Assert.DoesNotContain("--checkpoint-min-step", offArgs);
     }
 
@@ -476,7 +476,7 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.Contains("--n-gpu-layers", onArgs);
         Assert.Contains("99", onArgs);
-        Assert.Contains("--mmap", onArgs);
+        Assert.DoesNotContain("--no-mmap", onArgs);
         Assert.Contains("--n-gpu-layers", offArgs);
         Assert.Contains("88", offArgs);
         Assert.Contains("--no-mmap", offArgs);

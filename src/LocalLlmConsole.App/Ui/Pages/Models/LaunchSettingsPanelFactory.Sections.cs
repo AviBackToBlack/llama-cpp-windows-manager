@@ -36,9 +36,12 @@ public static partial class LaunchSettingsPanelFactory
             ToolTip = Loc.T("Tooltip.Field.CommandLine")
         };
         formControls.CommandPreviewBox = commandLineBox;
-        var commandLineGrid = LaunchSettingsGrid();
-        builder.AddLaunchSetting(commandLineGrid, Loc.T("Launch.Field.CommandLine"), commandLineBox);
-        commandLineBox.ToolTip = Loc.T("Tooltip.Field.CommandLine");
+        var commandLineGrid = new Grid { Margin = new Thickness(0, 0, 0, 2) };
+        commandLineGrid.ColumnDefinitions.Add(new ColumnDefinition());
+        commandLineGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        Grid.SetColumn(commandLineBox, 0);
+        Grid.SetRow(commandLineBox, 0);
+        commandLineGrid.Children.Add(commandLineBox);
         AddLaunchSection(panel, builder, Loc.T("Launch.Section.CommandLine"), commandLineGrid);
 
         var basicGrid = LaunchSettingsGrid();

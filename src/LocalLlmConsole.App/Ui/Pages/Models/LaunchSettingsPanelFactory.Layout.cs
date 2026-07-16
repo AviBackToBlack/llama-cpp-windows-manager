@@ -124,7 +124,8 @@ public static partial class LaunchSettingsPanelFactory
 
         public void AddLaunchSetting(Grid grid, string label, FrameworkElement control)
         {
-            control.ToolTip = TooltipText(LaunchSettingMetadataService.Tooltip(label));
+            if (control.ToolTip is null)
+                control.ToolTip = TooltipText(LaunchSettingMetadataService.Tooltip(label));
             var index = grid.Children.Count / 2;
             var row = index / 2;
             var rightSide = index % 2 == 1;

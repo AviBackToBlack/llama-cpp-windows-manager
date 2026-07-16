@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace LocalLlmConsole.Services;
 
 /// <summary>Defines the value types supported by a llama-server flag.</summary>
@@ -33,7 +35,8 @@ public sealed record LlamaServerFlag(
         get
         {
             var longFlag = Names.FirstOrDefault(n => n.StartsWith("--", StringComparison.Ordinal)) ?? PrimaryName;
-            return longFlag.TrimStart('-').Replace('-', ' ');
+            var label = longFlag.TrimStart('-').Replace('-', ' ');
+            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(label);
         }
     }
 }

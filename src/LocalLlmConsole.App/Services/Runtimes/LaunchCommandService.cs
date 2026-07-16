@@ -1,3 +1,4 @@
+using System.Globalization;
 
 namespace LocalLlmConsole.Services;
 
@@ -38,11 +39,12 @@ public static class LaunchCommandService
             {
                 if (IsTruthyBoolean(value))
                 {
-                    if (IsSupportedByRuntime(schemaFlag, flagKey, options.SupportedFlags))
+                    if (!IsDefaultValue(schemaFlag, value) && IsSupportedByRuntime(schemaFlag, flagKey, options.SupportedFlags))
                         tokens.Add(flagKey);
                 }
                 else if (IsFalsyBoolean(value))
                 {
+                    if (IsDefaultValue(schemaFlag, value)) continue;
                     var negatedToken = flagKey.StartsWith("--no-", StringComparison.OrdinalIgnoreCase)
                         ? flagKey
                         : "--no-" + flagKey[2..];
@@ -56,7 +58,7 @@ public static class LaunchCommandService
             }
             else
             {
-                if (IsSupportedByRuntime(schemaFlag, flagKey, options.SupportedFlags))
+                if (!IsDefaultValue(schemaFlag, value) && IsSupportedByRuntime(schemaFlag, flagKey, options.SupportedFlags))
                 {
                     tokens.Add(flagKey);
                     tokens.Add(value);
@@ -260,6 +262,31 @@ public static class LaunchCommandService
 
     private static string GetBooleanDefault(LlamaServerFlag flag)
         => flag.Default is true or "true" or "on" ? "true" : flag.Default is "auto" ? "auto" : "false";
+
+    private static bool IsDefaultValue(LlamaServerFlag flag, string value)
+    {
+        if (flag.Default is null) return false;
+
+        if (flag.ValueType == FlagValueType.Boolean)
+        {
+            var defaultValue = flag.Default.ToString() ?? "";
+            if (string.Equals(value, defaultValue, StringComparison.OrdinalIgnoreCase)) return true;
+            if (IsTruthyBoolean(value) && IsTruthyBoolean(defaultValue)) return true;
+            if (IsFalsyBoolean(value) && IsFalsyBoolean(defaultValue)) return true;
+            return string.Equals(value, "auto", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(defaultValue, "auto", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (flag.ValueType is FlagValueType.Int or FlagValueType.Double
+            && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var numericValue))
+        {
+            if (flag.Default is double d) return Math.Abs(numericValue - d) < 0.000_000_1;
+            if (flag.Default is int i) return Math.Abs(numericValue - i) < 0.000_000_1;
+            if (flag.Default is float f) return Math.Abs(numericValue - f) < 0.000_000_1;
+        }
+
+        return string.Equals(value, Convert.ToString(flag.Default, CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool IsTruthyBoolean(string value)
         => string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)

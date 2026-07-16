@@ -119,14 +119,14 @@ public sealed class RuntimeAdapterTests
     {
         var args = RuntimeAdapter.BuildArgs(ValidRequest() with
         {
-            Temperature = 0.8,
+            Temperature = 0.7,
             FlagValues = new Dictionary<string, string> { ["--temp"] = "0.99" }
         });
 
         var argsList = args.ToList();
         var tempIndex = argsList.IndexOf("--temp");
         Assert.True(tempIndex >= 0);
-        Assert.Equal("0.8", argsList[tempIndex + 1]);
+        Assert.Equal("0.7", argsList[tempIndex + 1]);
     }
 
     [Fact]
@@ -152,20 +152,20 @@ public sealed class RuntimeAdapterTests
 
             Assert.Empty(parsed.Errors);
             Assert.Equal(tempFile, parsed.Flags["--model"]);
-            Assert.Equal("0", parsed.Flags["--ctx-size"]);
             Assert.Equal("1", parsed.Flags["--parallel"]);
-            Assert.Equal("2048", parsed.Flags["--batch-size"]);
-            Assert.Equal("512", parsed.Flags["--ubatch-size"]);
-            Assert.Equal("0.8", parsed.Flags["--temp"]);
-            Assert.Equal("40", parsed.Flags["--top-k"]);
-            Assert.Equal("0.95", parsed.Flags["--top-p"]);
-            Assert.Equal("0.05", parsed.Flags["--min-p"]);
-            Assert.Equal("64", parsed.Flags["--repeat-last-n"]);
-            Assert.Equal("1", parsed.Flags["--repeat-penalty"]);
-            Assert.Equal("0", parsed.Flags["--presence-penalty"]);
-            Assert.Equal("0", parsed.Flags["--frequency-penalty"]);
-            Assert.Equal("f16", parsed.Flags["--cache-type-k"]);
-            Assert.Equal("f16", parsed.Flags["--cache-type-v"]);
+            Assert.DoesNotContain("--ctx-size", parsed.Flags.Keys);
+            Assert.DoesNotContain("--batch-size", parsed.Flags.Keys);
+            Assert.DoesNotContain("--ubatch-size", parsed.Flags.Keys);
+            Assert.DoesNotContain("--temp", parsed.Flags.Keys);
+            Assert.DoesNotContain("--top-k", parsed.Flags.Keys);
+            Assert.DoesNotContain("--top-p", parsed.Flags.Keys);
+            Assert.DoesNotContain("--min-p", parsed.Flags.Keys);
+            Assert.DoesNotContain("--repeat-last-n", parsed.Flags.Keys);
+            Assert.DoesNotContain("--repeat-penalty", parsed.Flags.Keys);
+            Assert.DoesNotContain("--presence-penalty", parsed.Flags.Keys);
+            Assert.DoesNotContain("--frequency-penalty", parsed.Flags.Keys);
+            Assert.DoesNotContain("--cache-type-k", parsed.Flags.Keys);
+            Assert.DoesNotContain("--cache-type-v", parsed.Flags.Keys);
         }
         finally
         {

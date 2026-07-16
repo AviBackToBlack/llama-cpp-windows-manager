@@ -243,6 +243,90 @@ public sealed class LaunchSettingsFormControls
         var match = combo.Items.Cast<object>().Select(item => item.ToString() ?? "").FirstOrDefault(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase));
         combo.SelectedItem = string.IsNullOrWhiteSpace(match) ? combo.Items[0] : match;
     }
+
+    public void ResetControlsToDefaults()
+    {
+        // Port, runtime, custom parameters, and the command preview itself are not command flags.
+        SetTextBox(ContextSizeBox, SchemaDefault("--ctx-size", "0"));
+        SetTextBox(GpuLayersBox, SchemaDefault("--gpu-layers", "0"));
+        SetTextBox(ThreadsBox, SchemaDefault("--threads", "0"));
+        SetTextBox(ParallelSlotsBox, "1");
+        SetTextBox(BatchSizeBox, SchemaDefault("--batch-size", "2048"));
+        SetTextBox(MicroBatchSizeBox, SchemaDefault("--ubatch-size", "512"));
+        SetTextBox(ReasoningBudgetBox, SchemaDefault("--reasoning-budget", "-1"));
+        SetTextBox(VisionImageMinTokensBox, SchemaDefault("--image-min-tokens", "0"));
+        SetTextBox(VisionImageMaxTokensBox, SchemaDefault("--image-max-tokens", "0"));
+        SetTextBox(TemperatureBox, SchemaDefault("--temp", "0.8"));
+        SetTextBox(TopKBox, SchemaDefault("--top-k", "40"));
+        SetTextBox(TopPBox, SchemaDefault("--top-p", "0.95"));
+        SetTextBox(MinPBox, SchemaDefault("--min-p", "0.05"));
+        SetTextBox(MaxTokensBox, SchemaDefault("--predict", "-1"));
+        SetTextBox(SeedBox, SchemaDefault("--seed", "-1"));
+        SetTextBox(RepeatLastNBox, SchemaDefault("--repeat-last-n", "64"));
+        SetTextBox(RepeatPenaltyBox, SchemaDefault("--repeat-penalty", "1"));
+        SetTextBox(PresencePenaltyBox, SchemaDefault("--presence-penalty", "0"));
+        SetTextBox(FrequencyPenaltyBox, SchemaDefault("--frequency-penalty", "0"));
+        SetTextBox(RopeScaleBox, SchemaDefault("--rope-scale", "0"));
+        SetTextBox(RopeFreqBaseBox, SchemaDefault("--rope-freq-base", "0"));
+        SetTextBox(RopeFreqScaleBox, SchemaDefault("--rope-freq-scale", "0"));
+        SetTextBox(SpecDraftModelPathBox, "");
+        SetTextBox(MtpHeadPathBox, "");
+        SetTextBox(SpecDraftGpuLayersBox, SchemaDefault("--spec-draft-ngl", "0"));
+        SetTextBox(SpecDraftMinTokensBox, SchemaDefault("--spec-draft-n-min", "0"));
+        SetTextBox(SpecDraftMaxTokensBox, SchemaDefault("--spec-draft-n-max", "3"));
+        SetTextBox(SpecDraftPSplitBox, SchemaDefault("--spec-draft-p-split", "0.1"));
+        SetTextBox(SpecDraftPMinBox, SchemaDefault("--spec-draft-p-min", "0"));
+        SetTextBox(PromptCacheRamMbBox, SchemaDefault("--cache-ram", "8192"));
+        SetTextBox(ContextCheckpointCountBox, SchemaDefault("--ctx-checkpoints", "0"));
+        SetTextBox(ContextCheckpointEveryNTokensBox, SchemaDefault("--checkpoint-min-step", "8192"));
+        SetTextBox(VisionProjectorPathBox, "");
+
+        SetComboValue(MetricsCombo, "off");
+        SetComboValue(ReasoningCombo, "auto");
+        SetComboValue(ReasoningFormatCombo, "auto");
+        SetComboValue(VisionCombo, "auto");
+        SetComboValue(FlashAttentionCombo, "auto");
+        SetComboValue(CacheTypeKCombo, SchemaDefault("--cache-type-k", "f16"));
+        SetComboValue(CacheTypeVCombo, SchemaDefault("--cache-type-v", "f16"));
+        SetComboValue(KvOffloadCombo, "auto");
+        SetComboValue(KvUnifiedCombo, "auto");
+        SetComboValue(PromptCacheCombo, "auto");
+        SetComboValue(ContextCheckpointsCombo, "auto");
+        SetComboValue(ContinuousBatchingCombo, "on");
+        SetComboValue(JinjaCombo, "auto");
+        SetComboValue(MmapCombo, "auto");
+        SetComboValue(MlockCombo, "off");
+        SetComboValue(RopeScalingCombo, "auto");
+        SetComboValue(SpeculativeTypeCombo, "none");
+        SetComboValue(SpecDraftCacheTypeKCombo, SchemaDefault("--cache-type-k-draft", "f16"));
+        SetComboValue(SpecDraftCacheTypeVCombo, SchemaDefault("--cache-type-v-draft", "f16"));
+
+        foreach (var (flagName, control) in GeneratedControls)
+        {
+            var flag = LlamaServerFlagSchema.FindByName(flagName);
+            var value = flag is not null ? NormalizeDefaultValue(flag.Default) : "";
+            LaunchSettingsControlFactory.SetControlValue(control, value);
+        }
+    }
+
+    private static string SchemaDefault(string flagName, string fallback)
+    {
+        var flag = LlamaServerFlagSchema.FindByName(flagName);
+        if (flag?.Default is null) return fallback;
+        return Convert.ToString(flag.Default, CultureInfo.InvariantCulture) ?? fallback;
+    }
+
+    internal static string NormalizeDefaultValue(object? defaultValue)
+    {
+        if (defaultValue is null) return "";
+        if (defaultValue is bool b) return b ? "on" : "off";
+        var s = Convert.ToString(defaultValue, CultureInfo.InvariantCulture) ?? "";
+        if (string.Equals(s, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(s, "on", StringComparison.OrdinalIgnoreCase)) return "on";
+        if (string.Equals(s, "false", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(s, "off", StringComparison.OrdinalIgnoreCase)) return "off";
+        return s;
+    }
 }
 
 /// <summary>Reads and applies launch settings values to and from the WPF controls and builds the command preview.</summary>
@@ -313,6 +397,8 @@ public static class LaunchSettingsFormBinder
         var messages = new List<string>();
         messages.AddRange(parsed.Errors);
         messages.AddRange(parsed.SecurityWarnings);
+
+        controls.ResetControlsToDefaults();
 
         foreach (var (flagName, value) in parsed.Flags)
             controls.SetValueByFlagName(flagName, value);

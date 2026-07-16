@@ -70,7 +70,7 @@ public sealed class LaunchSettingsPanelFactoryTests
     {
         var flag = new LlamaServerFlag(["--verbose", "-v"], "Logging", FlagValueType.Boolean, Description: "Verbose.");
 
-        Assert.Equal("verbose", flag.UiLabel);
+        Assert.Equal("Verbose", flag.UiLabel);
     }
 
     [Fact]
@@ -181,19 +181,19 @@ public sealed class LaunchSettingsPanelFactoryTests
                 PromptCacheCombo = new ComboBox { ItemsSource = new[] { "auto", "on", "off" } }
             };
 
-            var parsed = LaunchCommandService.ParseCommand("--cache-ram 8192");
+            var parsed = LaunchCommandService.ParseCommand("--cache-ram 4096");
             controls.SetValueByFlagName("--cache-ram", parsed.Flags["--cache-ram"]);
 
-            Assert.Equal("8192", controls.PromptCacheRamMbBox!.Text);
+            Assert.Equal("4096", controls.PromptCacheRamMbBox!.Text);
             Assert.Equal("on", controls.PromptCacheCombo!.SelectedItem!.ToString());
 
             var settings = AppSettings.CreateDefault("C:\\Workspace") with
             {
                 PromptCacheMode = "on",
-                PromptCacheRamMb = 8192
+                PromptCacheRamMb = 4096
             };
             var command = LaunchSettingsFormBinder.BuildCommandPreview(settings, RuntimeBackend.Cpu);
-            Assert.Contains("--cache-ram 8192", command);
+            Assert.Contains("--cache-ram 4096", command);
         });
     }
 
@@ -227,6 +227,90 @@ public sealed class LaunchSettingsPanelFactoryTests
             Assert.Contains("--ctx-checkpoints 32", command);
             Assert.Contains("--checkpoint-min-step 256", command);
         });
+    }
+
+    [Fact]
+    public void ParseAndMergeCommandPreview_ResetsRemovedFlagsToDefaults()
+    {
+        RunInSta(() =>
+        {
+            var controls = CreateFullControls();
+            var defaults = AppSettings.CreateDefault("C:\\Workspace");
+            LaunchSettingsFormBinder.Apply(controls, defaults);
+
+            controls.CommandPreviewBox!.Text = "--ctx-size 2048";
+            var settings = LaunchSettingsFormBinder.Read(defaults, controls, parseCommandPreview: true);
+            var preview = LaunchSettingsFormBinder.BuildCommandPreview(settings, RuntimeBackend.Cpu);
+
+            Assert.Contains("--ctx-size 2048", preview);
+            Assert.DoesNotContain("--batch-size", preview);
+            Assert.DoesNotContain("--temp", preview);
+            Assert.DoesNotContain("--top-k", preview);
+            Assert.DoesNotContain("--cache-type-k", preview);
+        });
+    }
+
+    private static LaunchSettingsFormControls CreateFullControls()
+    {
+        var comboOptions = new[] { "auto", "on", "off", "none", "f16", "q8_0", "linear", "yarn", "deepseek", "deepseek-legacy" };
+        return new LaunchSettingsFormControls
+        {
+            LaunchPortBox = new TextBox(),
+            ContextSizeBox = new TextBox(),
+            GpuLayersBox = new TextBox(),
+            ParallelSlotsBox = new TextBox(),
+            BatchSizeBox = new TextBox(),
+            MicroBatchSizeBox = new TextBox(),
+            ThreadsBox = new TextBox(),
+            ReasoningBudgetBox = new TextBox(),
+            VisionProjectorPathBox = new TextBox(),
+            VisionImageMinTokensBox = new TextBox(),
+            VisionImageMaxTokensBox = new TextBox(),
+            TemperatureBox = new TextBox(),
+            TopKBox = new TextBox(),
+            TopPBox = new TextBox(),
+            MinPBox = new TextBox(),
+            MaxTokensBox = new TextBox(),
+            SeedBox = new TextBox(),
+            RepeatLastNBox = new TextBox(),
+            RepeatPenaltyBox = new TextBox(),
+            PresencePenaltyBox = new TextBox(),
+            FrequencyPenaltyBox = new TextBox(),
+            RopeScaleBox = new TextBox(),
+            RopeFreqBaseBox = new TextBox(),
+            RopeFreqScaleBox = new TextBox(),
+            SpecDraftModelPathBox = new TextBox(),
+            MtpHeadPathBox = new TextBox(),
+            SpecDraftGpuLayersBox = new TextBox(),
+            SpecDraftMinTokensBox = new TextBox(),
+            SpecDraftMaxTokensBox = new TextBox(),
+            SpecDraftPSplitBox = new TextBox(),
+            SpecDraftPMinBox = new TextBox(),
+            PromptCacheRamMbBox = new TextBox(),
+            ContextCheckpointCountBox = new TextBox(),
+            ContextCheckpointEveryNTokensBox = new TextBox(),
+            CustomParametersBox = new TextBox(),
+            CommandPreviewBox = new TextBox(),
+            MetricsCombo = new ComboBox { ItemsSource = comboOptions },
+            ReasoningCombo = new ComboBox { ItemsSource = comboOptions },
+            ReasoningFormatCombo = new ComboBox { ItemsSource = comboOptions },
+            VisionCombo = new ComboBox { ItemsSource = comboOptions },
+            FlashAttentionCombo = new ComboBox { ItemsSource = comboOptions },
+            CacheTypeKCombo = new ComboBox { ItemsSource = comboOptions },
+            CacheTypeVCombo = new ComboBox { ItemsSource = comboOptions },
+            KvOffloadCombo = new ComboBox { ItemsSource = comboOptions },
+            KvUnifiedCombo = new ComboBox { ItemsSource = comboOptions },
+            PromptCacheCombo = new ComboBox { ItemsSource = comboOptions },
+            ContextCheckpointsCombo = new ComboBox { ItemsSource = comboOptions },
+            ContinuousBatchingCombo = new ComboBox { ItemsSource = comboOptions },
+            JinjaCombo = new ComboBox { ItemsSource = comboOptions },
+            MmapCombo = new ComboBox { ItemsSource = comboOptions },
+            MlockCombo = new ComboBox { ItemsSource = comboOptions },
+            RopeScalingCombo = new ComboBox { ItemsSource = comboOptions },
+            SpeculativeTypeCombo = new ComboBox { ItemsSource = comboOptions },
+            SpecDraftCacheTypeKCombo = new ComboBox { ItemsSource = comboOptions },
+            SpecDraftCacheTypeVCombo = new ComboBox { ItemsSource = comboOptions }
+        };
     }
 
     private static void RunInSta(Action action)
