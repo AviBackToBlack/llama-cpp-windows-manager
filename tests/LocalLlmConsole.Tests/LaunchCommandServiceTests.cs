@@ -170,6 +170,25 @@ public sealed class LaunchCommandServiceTests : IDisposable
     }
 
     [Fact]
+    public void BuildCommandTokensReturnsRawUnquotedPaths()
+    {
+        const string modelPath = "C:\\Models\\my model.gguf";
+        var options = new LlamaServerLaunchOptions
+        {
+            ModelPath = modelPath,
+            ContextSize = 4096
+        };
+
+        var tokens = LaunchCommandService.BuildCommandTokens(options);
+
+        var modelIndex = tokens.ToList().IndexOf("--model");
+        Assert.True(modelIndex >= 0);
+        // Tokens feed ProcessStartInfo.ArgumentList, which applies OS-level quoting itself,
+        // so the value must be the raw path with no added quotes or escaped backslashes.
+        Assert.Equal(modelPath, tokens[modelIndex + 1]);
+    }
+
+    [Fact]
     public void ParseCommandHandlesEqualsSyntax()
     {
         var parsed = LaunchCommandService.ParseCommand($"--model=\"{_modelFile}\" --ctx-size=4096 --threads=4 --flash-attn=on");

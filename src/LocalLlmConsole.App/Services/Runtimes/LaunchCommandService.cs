@@ -7,17 +7,18 @@ public static class LaunchCommandService
     private static readonly string[] DisallowedFlags = ["--host", "--port", "--api-key"];
 
     /// <summary>
-    /// Builds the command line for llama-server.
+    /// Builds the command line for llama-server as a display string.
     /// If <see cref="LlamaServerLaunchOptions.SupportedFlags"/> is set, known flags that the selected runtime does not advertise in --help are omitted.
     /// The preview path uses SupportedFlags = null so the user sees the full command they asked for; RuntimeAdapter filters the same set before launching.
+    /// Values are quoted for display so the command can round-trip through the parser; use <see cref="BuildCommandTokens"/> for raw process arguments.
     /// </summary>
     public static string BuildCommand(LlamaServerLaunchOptions options)
-        => string.Join(" ", BuildCommandTokens(options));
+        => string.Join(" ", BuildCommandTokens(options).Select(QuoteIfNeeded));
 
     /// <summary>
-    /// Builds the argument tokens for llama-server without string round-tripping.
-    /// Callers that need a list of tokens (e.g. <see cref="RuntimeAdapter.BuildArgs"/>) should use this instead of
-    /// parsing the string returned by <see cref="BuildCommand"/>.
+    /// Builds the raw, unquoted argument tokens for llama-server without string round-tripping.
+    /// Callers that feed the tokens into <see cref="System.Diagnostics.ProcessStartInfo.ArgumentList"/> (e.g. <see cref="RuntimeAdapter.BuildArgs"/>)
+    /// must use this instead of parsing the string returned by <see cref="BuildCommand"/>, because ArgumentList applies OS-level quoting itself.
     /// </summary>
     public static IReadOnlyList<string> BuildCommandTokens(LlamaServerLaunchOptions options)
     {
@@ -58,7 +59,7 @@ public static class LaunchCommandService
                 if (IsSupportedByRuntime(schemaFlag, flagKey, options.SupportedFlags))
                 {
                     tokens.Add(flagKey);
-                    tokens.Add(QuoteIfNeeded(value));
+                    tokens.Add(value);
                 }
             }
         }
