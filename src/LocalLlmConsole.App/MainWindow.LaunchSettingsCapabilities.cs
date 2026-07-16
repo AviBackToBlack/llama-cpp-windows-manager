@@ -34,6 +34,30 @@ public partial class MainWindow
     private async Task<ModelCapabilitySummary> CachedModelCapabilitiesAsync(ModelRecord model, CancellationToken cancellationToken = default)
         => await _coreServices.Models.ModelCapabilities.ReadAsync(model, cancellationToken);
 
+    private async Task ApplyRuntimeCapabilitiesAsync()
+    {
+        var runtimeId = SelectedLaunchRuntimeId();
+        if (string.IsNullOrWhiteSpace(runtimeId) || _appServices is null) return;
+
+        try
+        {
+            var supportedFlags = await _coreServices.Models.LaunchSettingsRuntimeCapabilities.GetSupportedFlagsAsync(
+                runtimeId,
+                _appServices.StateStore.ListRuntimesAsync,
+                _settings.WslDistro);
+            await Dispatcher.InvokeAsync(() =>
+            {
+                _launchSettingsPanel.SetSupportedFlags(supportedFlags);
+                UpdateLaunchControlVisibility();
+                UpdateLaunchSaveButtonState();
+            });
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Runtime capability detection failed: {ex.Message}");
+        }
+    }
+
     private void UpdateLaunchControlVisibility()
     {
         var plan = _coreServices.Models.LaunchSettingsControlStates.Build(new LaunchSettingsControlStateRequest(

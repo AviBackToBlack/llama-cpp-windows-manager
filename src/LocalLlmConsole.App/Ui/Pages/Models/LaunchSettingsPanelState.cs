@@ -6,6 +6,7 @@ using WpfTextBox = System.Windows.Controls.TextBox;
 
 namespace LocalLlmConsole;
 
+/// <summary>Mutable state for the launch settings panel, including visibility, enabled state, and support checks.</summary>
 public sealed class LaunchSettingsPanelState
 {
     public WpfComboBox? RuntimeCombo { get; private set; }
@@ -31,6 +32,15 @@ public sealed class LaunchSettingsPanelState
     private WpfTextBox? SaveAsNewModelNameBox { get; set; }
 
     private WpfButton? SaveAsNewModelButton { get; set; }
+
+    private IReadOnlySet<string>? _supportedFlags;
+
+    public IReadOnlySet<string>? SupportedFlags => _supportedFlags;
+
+    public void SetSupportedFlags(IReadOnlySet<string>? supportedFlags)
+    {
+        _supportedFlags = supportedFlags;
+    }
 
     public string SaveAsNewModelName => (SaveAsNewModelNameBox?.Text ?? "").Trim();
 
@@ -107,6 +117,8 @@ public sealed class LaunchSettingsPanelState
             FormControls.MtpHeadPathBox.IsEnabled = plan.MtpHeadSettingsAvailable;
         if (FormControls.MtpHeadButton is not null)
             FormControls.MtpHeadButton.IsEnabled = plan.MtpHeadSettingsAvailable;
+
+        ApplyRuntimeSupport();
     }
 
     private void ApplyLaunchSettingVisibility(LaunchSettingsControlStatePlan plan, LaunchSettingsSearch search)
@@ -165,6 +177,46 @@ public sealed class LaunchSettingsPanelState
         if (!LaunchSettingElements.TryGetValue(label, out var elements)) return;
         foreach (var element in elements)
             element.IsEnabled = enabled;
+    }
+
+    private void ApplyRuntimeSupport()
+    {
+        if (_supportedFlags is null) return;
+
+        const string NotSupportedMessage = "Not supported by this runtime.";
+        foreach (var elements in LaunchSettingElements.Values)
+        {
+            foreach (var element in elements)
+            {
+                if (element is not FrameworkElement control) continue;
+                var flagName = control.Tag as string;
+                if (string.IsNullOrWhiteSpace(flagName) || !flagName.StartsWith("-", StringComparison.Ordinal)) continue;
+
+                var flag = LlamaServerFlagSchema.FindByName(flagName);
+                if (flag is null) continue;
+
+                var existing = control.ToolTip?.ToString() ?? "";
+                if (IsFlagSupported(flag))
+                {
+                    if (existing.Contains(NotSupportedMessage, StringComparison.OrdinalIgnoreCase))
+                        control.ToolTip = LaunchSettingMetadataService.Tooltip(flagName);
+                    continue;
+                }
+
+                control.IsEnabled = false;
+                ToolTipService.SetShowOnDisabled(control, true);
+                if (existing.Contains(NotSupportedMessage, StringComparison.OrdinalIgnoreCase)) continue;
+                control.ToolTip = string.IsNullOrWhiteSpace(existing)
+                    ? NotSupportedMessage
+                    : $"{existing}\n\n{NotSupportedMessage}";
+            }
+        }
+    }
+
+    private bool IsFlagSupported(LlamaServerFlag flag)
+    {
+        if (_supportedFlags is null) return true;
+        return flag.Names.Any(_supportedFlags.Contains);
     }
 
     private readonly record struct LaunchSettingsSearch(string[] Terms)

@@ -12,6 +12,7 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
 {
     private readonly WslRuntimeStopService _wslRuntimeStop;
     private readonly NativeRuntimeStopService _nativeRuntimeStop;
+    private readonly RuntimeFlagCapabilityService? _runtimeFlagCapabilityService;
     private Process? _process;
     private ProcessJobObjectService? _jobObject;
     private BoundedLogWriter? _log;
@@ -51,13 +52,15 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
 
     public LlamaProcessSupervisor(
         WslRuntimeStopService wslRuntimeStop,
-        NativeRuntimeStopService nativeRuntimeStop)
+        NativeRuntimeStopService nativeRuntimeStop,
+        RuntimeFlagCapabilityService? runtimeFlagCapabilityService = null)
     {
         _wslRuntimeStop = wslRuntimeStop ?? throw new ArgumentNullException(nameof(wslRuntimeStop));
         _nativeRuntimeStop = nativeRuntimeStop ?? throw new ArgumentNullException(nameof(nativeRuntimeStop));
+        _runtimeFlagCapabilityService = runtimeFlagCapabilityService;
     }
 
-    public Task StartAsync(RuntimeRecord runtime, ModelRecord model, AppSettings settings, string logRoot)
+    public async Task StartAsync(RuntimeRecord runtime, ModelRecord model, AppSettings settings, string logRoot)
     {
         Stop();
         Directory.CreateDirectory(logRoot);
@@ -96,11 +99,7 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         var launchHost = allowDirectLanAccess
             ? string.IsNullOrWhiteSpace(settings.Host) ? "0.0.0.0" : settings.Host
             : "127.0.0.1";
-        var extraArgs = new List<string>();
-        if (settings.EnableMetrics)
-            extraArgs.Add("--metrics");
-        extraArgs.AddRange(CustomLaunchParameterParser.Parse(settings.CustomParameters));
-        ValidateCustomArgs(extraArgs, settings);
+        var extraArgs = new List<string>(CustomLaunchParameterParser.Parse(settings.CustomParameters));
 
         var request = new RuntimeLaunchRequest
         {
@@ -116,6 +115,7 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
             Port = settings.Port,
             ContextSize = settings.ContextSize,
             GpuLayers = settings.GpuLayers,
+            EnableMetrics = settings.EnableMetrics,
             ParallelSlots = settings.ParallelSlots,
             BatchSize = settings.BatchSize,
             MicroBatchSize = settings.MicroBatchSize,
@@ -166,8 +166,26 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
             SpecDraftPMin = settings.SpecDraftPMin,
             SpecDraftCacheTypeK = settings.SpecDraftCacheTypeK,
             SpecDraftCacheTypeV = settings.SpecDraftCacheTypeV,
+            FlagValues = settings.FlagValues ?? ImmutableDictionary<string, string>.Empty,
             ExtraArgs = extraArgs
         };
+
+        if (_runtimeFlagCapabilityService is not null)
+        {
+            try
+            {
+                var supportedFlags = await _runtimeFlagCapabilityService.GetSupportedFlagsAsync(
+                    runtime.ExecutablePath,
+                    runtime.Mode,
+                    runtime.Mode == RuntimeMode.Wsl ? settings.WslDistro : null);
+                request = request with { SupportedFlags = supportedFlags };
+            }
+            catch
+            {
+                // If capability detection fails, fall back to sending the full command.
+            }
+        }
+
         _lastApiKey = settings.ModelApiKey ?? "";
         var args = RuntimeAdapter.BuildArgs(request);
         var psi = runtime.Mode == RuntimeMode.Wsl
@@ -250,7 +268,6 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         ActiveModelId = model.Id;
         ActiveRuntimeId = runtime.Id;
         _lastSettings = settings;
-        return Task.CompletedTask;
     }
 
     public bool MarkLoadedIfRunning()
@@ -264,29 +281,6 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
     {
         if (LlamaRuntimeOutputObserver.Observe(line, _log, _lastApiKey))
             TrySetLoadedFromLoading();
-    }
-
-    private static readonly HashSet<string> _disallowedCustomArgs = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "--host", "--port", "--api-key"
-    };
-
-    private static void ValidateCustomArgs(IReadOnlyList<string> extraArgs, AppSettings settings)
-    {
-        foreach (var arg in extraArgs)
-        {
-            foreach (var disallowed in _disallowedCustomArgs)
-            {
-                if (string.Equals(arg, disallowed, StringComparison.OrdinalIgnoreCase)
-                    || arg.StartsWith(disallowed + "=", StringComparison.OrdinalIgnoreCase)
-                    || arg.StartsWith(disallowed + " ", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException(
-                        $"Custom parameter '{arg}' is not allowed because it would override a security-critical setting " +
-                        $"({disallowed}). Remove it from launch settings and use the app's built-in controls instead.");
-                }
-            }
-        }
     }
 
     private bool TrySetLoadedFromLoading()

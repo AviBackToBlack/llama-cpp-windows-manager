@@ -169,15 +169,30 @@ public partial class MainWindow
             applySelectedPath);
 
     private AppSettings ReadLaunchSettingsFromControls()
-        => LaunchSettingsFormBinder.Read(_settings, _launchSettingsPanel.FormControls);
+        => LaunchSettingsFormBinder.Read(_settings, _launchSettingsPanel.FormControls, SetStatus, supportedFlags: _launchSettingsPanel.SupportedFlags);
 
     private void ApplyLaunchSettingsToControls(AppSettings? source = null)
     {
         _coreServices.Ui.LaunchSettingsEditor.RunProgrammaticUpdate(() =>
-            LaunchSettingsFormBinder.Apply(_launchSettingsPanel.FormControls, source ?? _settings));
+            LaunchSettingsFormBinder.Apply(_launchSettingsPanel.FormControls, source ?? _settings, SetStatus));
 
         UpdateLaunchControlVisibility();
         UpdateLaunchSaveButtonState();
+    }
+
+    private void UpdateCommandPreview()
+    {
+        if (_coreServices.Ui.LaunchSettingsEditor.IsProgrammaticUpdate) return;
+
+        try
+        {
+            var settings = LaunchSettingsFormBinder.Read(_settings, _launchSettingsPanel.FormControls, SetStatus, parseCommandPreview: false);
+            ApplyLaunchSettingsToControls(settings);
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Command preview failed: {ex.Message}");
+        }
     }
 
     private void AttachLaunchSettingsChangeHandlers()
@@ -192,7 +207,33 @@ public partial class MainWindow
             }
         }
 
-        LaunchSettingsFormBinder.AttachChangeHandlers(_launchSettingsPanel.FormControls, Changed, (_, _) => NormalizeContextSizeBox());
+        void CommandPreviewChanged()
+        {
+            if (_coreServices.Ui.LaunchSettingsEditor.IsProgrammaticUpdate) return;
+
+            _coreServices.Ui.LaunchSettingsEditor.RunProgrammaticUpdate(() =>
+            {
+                try
+                {
+                    var settings = ReadLaunchSettingsFromControls();
+                    ApplyLaunchSettingsToControls(settings);
+                }
+                catch (Exception ex)
+                {
+                    SetStatus($"Command preview failed: {ex.Message}");
+                }
+            });
+        }
+
+        void ValidateCommandPreview()
+            => LaunchSettingsFormBinder.ValidateCommandPreview(_launchSettingsPanel.FormControls, SetStatus, _launchSettingsPanel.SupportedFlags);
+
+        LaunchSettingsFormBinder.AttachChangeHandlers(_launchSettingsPanel.FormControls,
+            Changed,
+            (_, _) => NormalizeContextSizeBox(),
+            CommandPreviewChanged,
+            UpdateCommandPreview,
+            ValidateCommandPreview);
     }
 
     private void UpdateLaunchSaveButtonState()

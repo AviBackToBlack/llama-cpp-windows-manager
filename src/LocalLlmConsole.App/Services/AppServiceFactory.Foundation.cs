@@ -19,13 +19,19 @@ public sealed partial class AppServiceFactory
 
     public LoadedModelSessionManager CreateLoadedModelSessionManager(IProcessRunner processRunner)
         => new(() => CreateLlamaProcessSupervisor(
+            processRunner,
             CreateWslRuntimeStopService(processRunner),
             CreateNativeRuntimeStopService()));
 
     public LlamaProcessSupervisor CreateLlamaProcessSupervisor(
+        IProcessRunner processRunner,
         WslRuntimeStopService wslRuntimeStop,
         NativeRuntimeStopService nativeRuntimeStop)
-        => new(wslRuntimeStop, nativeRuntimeStop);
+    {
+        var helpRunner = new RuntimeFlagHelpRunner(processRunner);
+        var capabilityService = new RuntimeFlagCapabilityService(helpRunner, Path.Combine(_workspaceRoot, "runtime-help-cache"));
+        return new(wslRuntimeStop, nativeRuntimeStop, capabilityService);
+    }
 
     public WslRuntimeStopService CreateWslRuntimeStopService(IProcessRunner processRunner)
         => new(processRunner);

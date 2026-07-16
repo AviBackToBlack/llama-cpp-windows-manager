@@ -79,6 +79,7 @@ public sealed record AppSettings(
     string CustomParameters = "",
     string UiCulture = "en")
 {
+    public IReadOnlyDictionary<string, string> FlagValues { get; init; } = ImmutableDictionary<string, string>.Empty;
     public const int DefaultContextSize = 131_072;
     public const int DefaultGpuLayers = 999;
     public const int DefaultBatchSize = 4096;
@@ -183,5 +184,8 @@ public sealed record AppSettings(
         DefaultCacheType,
         DefaultCacheType,
         DefaultCudaPackagePreference,
-        "");
+        "")
+    {
+        FlagValues = ImmutableDictionary<string, string>.Empty
+    };
 }

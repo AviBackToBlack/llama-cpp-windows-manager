@@ -1,71 +1,78 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using WpfButton = System.Windows.Controls.Button;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfTextBox = System.Windows.Controls.TextBox;
 
 namespace LocalLlmConsole;
 
+/// <summary>Strongly-typed references to the launch settings WPF controls.</summary>
 public sealed class LaunchSettingsFormControls
 {
-    public WpfTextBox? LaunchPortBox { get; init; }
-    public WpfTextBox? ContextSizeBox { get; init; }
-    public WpfTextBox? GpuLayersBox { get; init; }
-    public WpfTextBox? ParallelSlotsBox { get; init; }
-    public WpfTextBox? BatchSizeBox { get; init; }
-    public WpfTextBox? MicroBatchSizeBox { get; init; }
-    public WpfTextBox? ThreadsBox { get; init; }
-    public WpfTextBox? ReasoningBudgetBox { get; init; }
-    public WpfTextBox? VisionProjectorPathBox { get; init; }
-    public WpfButton? VisionProjectorButton { get; init; }
-    public WpfTextBox? VisionImageMinTokensBox { get; init; }
-    public WpfTextBox? VisionImageMaxTokensBox { get; init; }
-    public WpfTextBox? TemperatureBox { get; init; }
-    public WpfTextBox? TopKBox { get; init; }
-    public WpfTextBox? TopPBox { get; init; }
-    public WpfTextBox? MinPBox { get; init; }
-    public WpfTextBox? MaxTokensBox { get; init; }
-    public WpfTextBox? SeedBox { get; init; }
-    public WpfTextBox? RepeatLastNBox { get; init; }
-    public WpfTextBox? RepeatPenaltyBox { get; init; }
-    public WpfTextBox? PresencePenaltyBox { get; init; }
-    public WpfTextBox? FrequencyPenaltyBox { get; init; }
-    public WpfTextBox? RopeScaleBox { get; init; }
-    public WpfTextBox? RopeFreqBaseBox { get; init; }
-    public WpfTextBox? RopeFreqScaleBox { get; init; }
-    public WpfTextBox? SpecDraftModelPathBox { get; init; }
-    public WpfTextBox? MtpHeadPathBox { get; init; }
-    public WpfButton? MtpHeadButton { get; init; }
-    public WpfTextBox? SpecDraftGpuLayersBox { get; init; }
-    public WpfTextBox? SpecDraftMinTokensBox { get; init; }
-    public WpfTextBox? SpecDraftMaxTokensBox { get; init; }
-    public WpfTextBox? SpecDraftPSplitBox { get; init; }
-    public WpfTextBox? SpecDraftPMinBox { get; init; }
-    public WpfTextBox? CustomParametersBox { get; init; }
+    public WpfTextBox? LaunchPortBox { get; set; }
+    public WpfTextBox? ContextSizeBox { get; set; }
+    public WpfTextBox? GpuLayersBox { get; set; }
+    public WpfTextBox? ParallelSlotsBox { get; set; }
+    public WpfTextBox? BatchSizeBox { get; set; }
+    public WpfTextBox? MicroBatchSizeBox { get; set; }
+    public WpfTextBox? ThreadsBox { get; set; }
+    public WpfTextBox? ReasoningBudgetBox { get; set; }
+    public WpfTextBox? VisionProjectorPathBox { get; set; }
+    public WpfButton? VisionProjectorButton { get; set; }
+    public WpfTextBox? VisionImageMinTokensBox { get; set; }
+    public WpfTextBox? VisionImageMaxTokensBox { get; set; }
+    public WpfTextBox? TemperatureBox { get; set; }
+    public WpfTextBox? TopKBox { get; set; }
+    public WpfTextBox? TopPBox { get; set; }
+    public WpfTextBox? MinPBox { get; set; }
+    public WpfTextBox? MaxTokensBox { get; set; }
+    public WpfTextBox? SeedBox { get; set; }
+    public WpfTextBox? RepeatLastNBox { get; set; }
+    public WpfTextBox? RepeatPenaltyBox { get; set; }
+    public WpfTextBox? PresencePenaltyBox { get; set; }
+    public WpfTextBox? FrequencyPenaltyBox { get; set; }
+    public WpfTextBox? RopeScaleBox { get; set; }
+    public WpfTextBox? RopeFreqBaseBox { get; set; }
+    public WpfTextBox? RopeFreqScaleBox { get; set; }
+    public WpfTextBox? SpecDraftModelPathBox { get; set; }
+    public WpfTextBox? MtpHeadPathBox { get; set; }
+    public WpfButton? MtpHeadButton { get; set; }
+    public WpfTextBox? SpecDraftGpuLayersBox { get; set; }
+    public WpfTextBox? SpecDraftMinTokensBox { get; set; }
+    public WpfTextBox? SpecDraftMaxTokensBox { get; set; }
+    public WpfTextBox? SpecDraftPSplitBox { get; set; }
+    public WpfTextBox? SpecDraftPMinBox { get; set; }
+    public WpfTextBox? CustomParametersBox { get; set; }
+    public WpfTextBox? CommandPreviewBox { get; set; }
+    public WpfComboBox? RuntimeCombo { get; set; }
 
-    public WpfComboBox? MetricsCombo { get; init; }
-    public WpfComboBox? ReasoningCombo { get; init; }
-    public WpfComboBox? ReasoningFormatCombo { get; init; }
-    public WpfComboBox? VisionCombo { get; init; }
-    public WpfComboBox? FlashAttentionCombo { get; init; }
-    public WpfComboBox? CacheTypeKCombo { get; init; }
-    public WpfComboBox? CacheTypeVCombo { get; init; }
-    public WpfComboBox? KvOffloadCombo { get; init; }
-    public WpfComboBox? KvUnifiedCombo { get; init; }
-    public WpfComboBox? PromptCacheCombo { get; init; }
-    public WpfTextBox? PromptCacheRamMbBox { get; init; }
-    public WpfComboBox? ContextCheckpointsCombo { get; init; }
-    public WpfTextBox? ContextCheckpointCountBox { get; init; }
-    public WpfTextBox? ContextCheckpointEveryNTokensBox { get; init; }
-    public WpfComboBox? ContinuousBatchingCombo { get; init; }
-    public WpfComboBox? JinjaCombo { get; init; }
-    public WpfComboBox? MmapCombo { get; init; }
-    public WpfComboBox? MlockCombo { get; init; }
-    public WpfComboBox? RopeScalingCombo { get; init; }
-    public WpfComboBox? SpeculativeTypeCombo { get; init; }
-    public WpfComboBox? SpecDraftCacheTypeKCombo { get; init; }
-    public WpfComboBox? SpecDraftCacheTypeVCombo { get; init; }
+    public WpfComboBox? MetricsCombo { get; set; }
+    public WpfComboBox? ReasoningCombo { get; set; }
+    public WpfComboBox? ReasoningFormatCombo { get; set; }
+    public WpfComboBox? VisionCombo { get; set; }
+    public WpfComboBox? FlashAttentionCombo { get; set; }
+    public WpfComboBox? CacheTypeKCombo { get; set; }
+    public WpfComboBox? CacheTypeVCombo { get; set; }
+    public WpfComboBox? KvOffloadCombo { get; set; }
+    public WpfComboBox? KvUnifiedCombo { get; set; }
+    public WpfComboBox? PromptCacheCombo { get; set; }
+    public WpfTextBox? PromptCacheRamMbBox { get; set; }
+    public WpfComboBox? ContextCheckpointsCombo { get; set; }
+    public WpfTextBox? ContextCheckpointCountBox { get; set; }
+    public WpfTextBox? ContextCheckpointEveryNTokensBox { get; set; }
+    public WpfComboBox? ContinuousBatchingCombo { get; set; }
+    public WpfComboBox? JinjaCombo { get; set; }
+    public WpfComboBox? MmapCombo { get; set; }
+    public WpfComboBox? MlockCombo { get; set; }
+    public WpfComboBox? RopeScalingCombo { get; set; }
+    public WpfComboBox? SpeculativeTypeCombo { get; set; }
+    public WpfComboBox? SpecDraftCacheTypeKCombo { get; set; }
+    public WpfComboBox? SpecDraftCacheTypeVCombo { get; set; }
+
+    public Dictionary<string, FrameworkElement> GeneratedControls { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public IEnumerable<WpfTextBox?> TextBoxes =>
     [
@@ -85,13 +92,428 @@ public sealed class LaunchSettingsFormControls
         ContextCheckpointsCombo, ContinuousBatchingCombo, JinjaCombo, MmapCombo, MlockCombo, RopeScalingCombo, SpeculativeTypeCombo,
         SpecDraftCacheTypeKCombo, SpecDraftCacheTypeVCombo
     ];
+
+    public bool TryGetValueByFlagName(string flagName, out string value)
+    {
+        value = "";
+        var firstClass = GetFirstClassControlByFlagName(flagName);
+        if (firstClass is not null)
+        {
+            if (firstClass is WpfTextBox textBox)
+            {
+                value = textBox.Text.Trim();
+                return true;
+            }
+            if (firstClass is WpfComboBox combo)
+            {
+                value = (combo.SelectedItem?.ToString() ?? combo.Text ?? "").Trim().ToLowerInvariant();
+                return true;
+            }
+        }
+
+        var primary = LocalLlmConsole.Services.LlamaServerFlagSchema.FindByName(flagName)?.PrimaryName ?? flagName;
+        if (GeneratedControls.TryGetValue(primary, out var generatedControl))
+        {
+            var generatedValue = LaunchSettingsControlFactory.GetControlValue(generatedControl);
+            if (generatedValue is not null)
+            {
+                value = generatedValue;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public FrameworkElement? GetFirstClassControlByFlagName(string flagName)
+    {
+        var map = new Dictionary<string, FrameworkElement?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["--ctx-size"] = ContextSizeBox,
+            ["--threads"] = ThreadsBox,
+            ["--gpu-layers"] = GpuLayersBox,
+            ["--n-gpu-layers"] = GpuLayersBox,
+            ["--batch-size"] = BatchSizeBox,
+            ["--ubatch-size"] = MicroBatchSizeBox,
+            ["--flash-attn"] = FlashAttentionCombo,
+            ["--cache-type-k"] = CacheTypeKCombo,
+            ["--cache-type-v"] = CacheTypeVCombo,
+            ["--kv-offload"] = KvOffloadCombo,
+            ["--kv-unified"] = KvUnifiedCombo,
+            ["--cache-ram-mode"] = PromptCacheCombo,
+            ["--cache-ram"] = PromptCacheRamMbBox,
+            ["--ctx-checkpoints-mode"] = ContextCheckpointsCombo,
+            ["--ctx-checkpoints"] = ContextCheckpointCountBox,
+            ["--checkpoint-min-step"] = ContextCheckpointEveryNTokensBox,
+            ["--cont-batching"] = ContinuousBatchingCombo,
+            ["--mmap"] = MmapCombo,
+            ["--mlock"] = MlockCombo,
+            ["--reasoning"] = ReasoningCombo,
+            ["--reasoning-format"] = ReasoningFormatCombo,
+            ["--reasoning-budget"] = ReasoningBudgetBox,
+            ["--jinja"] = JinjaCombo,
+            ["--mmproj-auto"] = VisionCombo,
+            ["--no-mmproj"] = VisionCombo,
+            ["--mmproj"] = VisionProjectorPathBox,
+            ["--image-min-tokens"] = VisionImageMinTokensBox,
+            ["--image-max-tokens"] = VisionImageMaxTokensBox,
+            ["--temp"] = TemperatureBox,
+            ["--top-k"] = TopKBox,
+            ["--top-p"] = TopPBox,
+            ["--min-p"] = MinPBox,
+            ["--predict"] = MaxTokensBox,
+            ["--n-predict"] = MaxTokensBox,
+            ["--seed"] = SeedBox,
+            ["--repeat-last-n"] = RepeatLastNBox,
+            ["--repeat-penalty"] = RepeatPenaltyBox,
+            ["--presence-penalty"] = PresencePenaltyBox,
+            ["--frequency-penalty"] = FrequencyPenaltyBox,
+            ["--rope-scaling"] = RopeScalingCombo,
+            ["--rope-scale"] = RopeScaleBox,
+            ["--rope-freq-base"] = RopeFreqBaseBox,
+            ["--rope-freq-scale"] = RopeFreqScaleBox,
+            ["--spec-type"] = SpeculativeTypeCombo,
+            ["--model-draft"] = SpecDraftModelPathBox,
+            ["--spec-draft-model"] = SpecDraftModelPathBox,
+            ["--mtp-head"] = MtpHeadPathBox,
+            ["--cache-type-k-draft"] = SpecDraftCacheTypeKCombo,
+            ["--cache-type-v-draft"] = SpecDraftCacheTypeVCombo,
+            ["--spec-draft-n-max"] = SpecDraftMaxTokensBox,
+            ["--spec-draft-n-min"] = SpecDraftMinTokensBox,
+            ["--spec-draft-ngl"] = SpecDraftGpuLayersBox,
+            ["--gpu-layers-draft"] = SpecDraftGpuLayersBox,
+            ["--n-gpu-layers-draft"] = SpecDraftGpuLayersBox,
+            ["--spec-draft-p-split"] = SpecDraftPSplitBox,
+            ["--spec-draft-p-min"] = SpecDraftPMinBox,
+            ["--parallel"] = ParallelSlotsBox,
+            ["--metrics"] = MetricsCombo,
+            ["--custom-params"] = CustomParametersBox
+        };
+        return map.TryGetValue(flagName, out var control) ? control : null;
+    }
+
+    public void SetValueByFlagName(string flagName, string value)
+    {
+        if (string.Equals(flagName, "--cache-ram", StringComparison.OrdinalIgnoreCase))
+        {
+            SetTextBox(PromptCacheRamMbBox, value);
+            SetComboValue(PromptCacheCombo, "on");
+            return;
+        }
+
+        if (string.Equals(flagName, "--ctx-checkpoints", StringComparison.OrdinalIgnoreCase))
+        {
+            SetTextBox(ContextCheckpointCountBox, value);
+            SetComboValue(ContextCheckpointsCombo, "on");
+            return;
+        }
+
+        if (string.Equals(flagName, "--checkpoint-min-step", StringComparison.OrdinalIgnoreCase))
+        {
+            SetTextBox(ContextCheckpointEveryNTokensBox, value);
+            SetComboValue(ContextCheckpointsCombo, "on");
+            return;
+        }
+
+        var firstClass = GetFirstClassControlByFlagName(flagName);
+        if (firstClass is not null)
+        {
+            if (firstClass is WpfTextBox textBox) textBox.Text = value;
+            else if (firstClass is WpfComboBox combo)
+            {
+                var match = combo.Items.Cast<object>().Select(item => item.ToString() ?? "").FirstOrDefault(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase));
+                combo.SelectedItem = string.IsNullOrWhiteSpace(match) ? combo.Items[0] : match;
+            }
+            return;
+        }
+
+        var primary = LocalLlmConsole.Services.LlamaServerFlagSchema.FindByName(flagName)?.PrimaryName ?? flagName;
+        if (GeneratedControls.TryGetValue(primary, out var generatedControl))
+            LaunchSettingsControlFactory.SetControlValue(generatedControl, value);
+    }
+
+    private static void SetTextBox(WpfTextBox? textBox, string value)
+    {
+        if (textBox is not null) textBox.Text = value;
+    }
+
+    private static void SetComboValue(WpfComboBox? combo, string value)
+    {
+        if (combo is null) return;
+        var match = combo.Items.Cast<object>().Select(item => item.ToString() ?? "").FirstOrDefault(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase));
+        combo.SelectedItem = string.IsNullOrWhiteSpace(match) ? combo.Items[0] : match;
+    }
 }
 
+/// <summary>Reads and applies launch settings values to and from the WPF controls and builds the command preview.</summary>
 public static class LaunchSettingsFormBinder
 {
-    public static AppSettings Read(AppSettings baseSettings, LaunchSettingsFormControls controls)
+    public static AppSettings Read(AppSettings baseSettings, LaunchSettingsFormControls controls, Action<string>? setStatus = null, bool parseCommandPreview = true, IReadOnlySet<string>? supportedFlags = null)
     {
-        var next = baseSettings with
+        var next = ReadControls(baseSettings, controls);
+
+        if (controls.CommandPreviewBox is not null && parseCommandPreview)
+        {
+            var (merged, messages) = ParseAndMergeCommandPreview(next, controls, supportedFlags);
+            if (!string.IsNullOrWhiteSpace(messages))
+                setStatus?.Invoke(messages);
+            next = merged;
+        }
+
+        next = next with { FlagValues = ReadGeneratedFlagValues(controls, next.FlagValues) };
+
+        var validationCommand = BuildCommandPreview(next, GetSelectedBackend(controls));
+        var validation = LocalLlmConsole.Services.LaunchCommandService.ParseCommand(validationCommand);
+        if (validation.Errors.Count > 0)
+        {
+            var message = string.Join(" ", validation.Errors);
+            setStatus?.Invoke(message);
+            throw new InvalidOperationException(message);
+        }
+
+        ValidateCrossFieldRules(next);
+        return next;
+    }
+
+    public static void ValidateCommandPreview(LaunchSettingsFormControls controls, Action<string>? setStatus = null, IReadOnlySet<string>? supportedFlags = null)
+    {
+        if (controls.CommandPreviewBox is null) return;
+
+        var parsed = LocalLlmConsole.Services.LaunchCommandService.ParseCommand(controls.CommandPreviewBox.Text, supportedFlags);
+        var messages = new List<string>();
+        messages.AddRange(parsed.Errors);
+        messages.AddRange(parsed.SecurityWarnings);
+
+        if (parsed.ExtraArgs.Count > 0)
+        {
+            messages.Add($"Unsupported flags in command preview: {string.Join(", ", parsed.ExtraArgs.Where(t => t.StartsWith("--", StringComparison.Ordinal)))}.");
+        }
+
+        var box = controls.CommandPreviewBox;
+        if (messages.Count > 0)
+        {
+            var message = string.Join(" ", messages);
+            setStatus?.Invoke(message);
+            box.BorderBrush = System.Windows.Media.Brushes.Red;
+            box.BorderThickness = new Thickness(1);
+            box.ToolTip = message;
+        }
+        else
+        {
+            box.BorderBrush = null;
+            box.BorderThickness = new Thickness(0);
+            box.ToolTip = null;
+        }
+    }
+
+    private static (AppSettings settings, string messages) ParseAndMergeCommandPreview(AppSettings baseSettings, LaunchSettingsFormControls controls, IReadOnlySet<string>? supportedFlags)
+    {
+        var previewText = controls.CommandPreviewBox!.Text;
+        var parsed = LocalLlmConsole.Services.LaunchCommandService.ParseCommand(previewText, supportedFlags);
+        var messages = new List<string>();
+        messages.AddRange(parsed.Errors);
+        messages.AddRange(parsed.SecurityWarnings);
+
+        foreach (var (flagName, value) in parsed.Flags)
+            controls.SetValueByFlagName(flagName, value);
+
+        if (parsed.ExtraArgs.Count > 0)
+        {
+            var existingCustom = LocalLlmConsole.Services.CustomLaunchParameterParser.Parse(controls.CustomParametersBox?.Text ?? "");
+            var combined = existingCustom.Concat(parsed.ExtraArgs).Select(QuoteIfNeeded);
+            if (controls.CustomParametersBox is not null)
+                controls.CustomParametersBox.Text = string.Join(" ", combined);
+
+            messages.Add($"Unsupported flags moved to CustomParameters: {string.Join(", ", parsed.ExtraArgs.Where(t => t.StartsWith("--", StringComparison.Ordinal)))}.");
+        }
+
+        var settings = ReadControls(baseSettings, controls);
+        return (settings, string.Join(" ", messages));
+    }
+
+    private static string QuoteIfNeeded(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        if (value.Any(c => char.IsWhiteSpace(c) || c == '"' || c == '\\'))
+        {
+            return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        }
+        return value;
+    }
+
+    public static void Apply(LaunchSettingsFormControls controls, AppSettings settings, Action<string>? setStatus = null)
+    {
+        SetText(controls.LaunchPortBox, settings.Port);
+        SetText(controls.ContextSizeBox, settings.ContextSize);
+        SetText(controls.GpuLayersBox, settings.GpuLayers);
+        SetText(controls.ParallelSlotsBox, settings.ParallelSlots);
+        SetText(controls.BatchSizeBox, settings.BatchSize);
+        SetText(controls.MicroBatchSizeBox, settings.MicroBatchSize);
+        SetText(controls.ThreadsBox, settings.Threads);
+        SetText(controls.ReasoningBudgetBox, settings.ReasoningBudget);
+        SetText(controls.VisionProjectorPathBox, settings.VisionProjectorPath);
+        SetText(controls.VisionImageMinTokensBox, settings.VisionImageMinTokens);
+        SetText(controls.VisionImageMaxTokensBox, settings.VisionImageMaxTokens);
+        SetText(controls.TemperatureBox, settings.Temperature);
+        SetText(controls.TopKBox, settings.TopK);
+        SetText(controls.TopPBox, settings.TopP);
+        SetText(controls.MinPBox, settings.MinP);
+        SetText(controls.MaxTokensBox, settings.MaxTokens);
+        SetText(controls.SeedBox, settings.Seed);
+        SetText(controls.RepeatLastNBox, settings.RepeatLastN);
+        SetText(controls.RepeatPenaltyBox, settings.RepeatPenalty);
+        SetText(controls.PresencePenaltyBox, settings.PresencePenalty);
+        SetText(controls.FrequencyPenaltyBox, settings.FrequencyPenalty);
+        SetText(controls.RopeScaleBox, settings.RopeScale);
+        SetText(controls.RopeFreqBaseBox, settings.RopeFreqBase);
+        SetText(controls.RopeFreqScaleBox, settings.RopeFreqScale);
+        SetText(controls.SpecDraftModelPathBox, settings.SpecDraftModelPath);
+        SetText(controls.MtpHeadPathBox, settings.MtpHeadPath);
+        SetText(controls.SpecDraftGpuLayersBox, settings.SpecDraftGpuLayers);
+        SetText(controls.SpecDraftMinTokensBox, settings.SpecDraftMinTokens);
+        SetText(controls.SpecDraftMaxTokensBox, settings.SpecDraftMaxTokens);
+        SetText(controls.SpecDraftPSplitBox, settings.SpecDraftPSplit);
+        SetText(controls.SpecDraftPMinBox, settings.SpecDraftPMin);
+        SetText(controls.CustomParametersBox, settings.CustomParameters);
+        SetCombo(controls.MetricsCombo, settings.EnableMetrics ? "on" : "off");
+        SetCombo(controls.ReasoningCombo, settings.ReasoningMode);
+        SetCombo(controls.ReasoningFormatCombo, settings.ReasoningFormat);
+        SetCombo(controls.VisionCombo, settings.VisionMode);
+        SetCombo(controls.FlashAttentionCombo, settings.FlashAttention);
+        SetCombo(controls.CacheTypeKCombo, settings.CacheTypeK);
+        SetCombo(controls.CacheTypeVCombo, settings.CacheTypeV);
+        SetCombo(controls.KvOffloadCombo, settings.KvOffload);
+        SetCombo(controls.KvUnifiedCombo, settings.KvUnified);
+        SetCombo(controls.PromptCacheCombo, settings.PromptCacheMode);
+        SetText(controls.PromptCacheRamMbBox, settings.PromptCacheRamMb);
+        SetCombo(controls.ContextCheckpointsCombo, settings.ContextCheckpointsMode);
+        SetText(controls.ContextCheckpointCountBox, settings.ContextCheckpointCount);
+        SetText(controls.ContextCheckpointEveryNTokensBox, settings.ContextCheckpointEveryNTokens);
+        SetCombo(controls.ContinuousBatchingCombo, settings.ContinuousBatching);
+        SetCombo(controls.JinjaCombo, settings.JinjaMode);
+        SetCombo(controls.MmapCombo, settings.MmapMode);
+        SetCombo(controls.MlockCombo, settings.MlockMode);
+        SetCombo(controls.RopeScalingCombo, settings.RopeScaling);
+        SetCombo(controls.SpeculativeTypeCombo, LocalLlmConsole.Services.LaunchSettingMetadataService.NormalizeSpeculativeType(settings.SpeculativeType));
+        SetCombo(controls.SpecDraftCacheTypeKCombo, settings.SpecDraftCacheTypeK);
+        SetCombo(controls.SpecDraftCacheTypeVCombo, settings.SpecDraftCacheTypeV);
+
+        ApplyGeneratedFlagValues(controls, settings.FlagValues);
+
+        if (controls.CommandPreviewBox is not null)
+        {
+            try
+            {
+                controls.CommandPreviewBox.Text = BuildCommandPreview(settings, GetSelectedBackend(controls));
+            }
+            catch (Exception ex)
+            {
+                setStatus?.Invoke($"Command preview failed: {ex.Message}");
+            }
+        }
+    }
+
+    public static void AttachChangeHandlers(LaunchSettingsFormControls controls, Action changed, RoutedEventHandler contextSizeLostFocus, Action? commandPreviewChanged = null, Action? updatePreview = null, Action? validateCommandPreview = null)
+    {
+        if (controls.ContextSizeBox is not null)
+            controls.ContextSizeBox.LostFocus += contextSizeLostFocus;
+
+        foreach (var box in controls.TextBoxes.Where(box => box is not null))
+        {
+            box!.TextChanged += (_, _) => changed();
+            if (updatePreview is not null)
+                box.LostFocus += (_, _) => updatePreview();
+        }
+
+        foreach (var combo in controls.ComboBoxes.Where(combo => combo is not null))
+        {
+            combo!.SelectionChanged += (_, _) => changed();
+            if (updatePreview is not null)
+                combo.SelectionChanged += (_, _) => updatePreview();
+        }
+
+        foreach (var generated in controls.GeneratedControls.Values)
+        {
+            if (LaunchSettingsControlFactory.FindEditor(generated) is WpfTextBox textBox)
+            {
+                textBox.TextChanged += (_, _) => changed();
+                if (updatePreview is not null)
+                    textBox.LostFocus += (_, _) => updatePreview();
+            }
+            else if (generated is WpfComboBox combo)
+            {
+                combo.SelectionChanged += (_, _) => changed();
+                if (updatePreview is not null)
+                    combo.SelectionChanged += (_, _) => updatePreview();
+            }
+        }
+
+        if (controls.CommandPreviewBox is not null)
+        {
+            if (commandPreviewChanged is not null)
+                controls.CommandPreviewBox.TextChanged += (_, _) => commandPreviewChanged();
+            if (validateCommandPreview is not null)
+            {
+                controls.CommandPreviewBox.LostFocus += (_, _) => validateCommandPreview();
+                controls.CommandPreviewBox.KeyDown += (_, e) =>
+                {
+                    if (e.Key == Key.Enter)
+                        validateCommandPreview();
+                };
+            }
+        }
+    }
+
+    public static string BuildCommandPreview(AppSettings settings, RuntimeBackend backend = RuntimeBackend.Cpu)
+    {
+        var options = BuildLaunchOptions(settings, backend);
+        return LocalLlmConsole.Services.LaunchCommandService.BuildCommand(options);
+    }
+
+    private static RuntimeBackend GetSelectedBackend(LaunchSettingsFormControls controls)
+    {
+        if (controls.RuntimeCombo?.SelectedItem is RuntimeChoice choice)
+            return choice.Backend;
+        return RuntimeBackend.Cpu;
+    }
+
+    public static void ValidateCrossFieldRules(AppSettings next)
+    {
+        if (next.SpecDraftPSplit < 0 && Math.Abs(next.SpecDraftPSplit + 1) > 0.000_001)
+            throw new InvalidOperationException("Draft split probability must be -1 for default or between 0 and 1.");
+        if (next.SpecDraftPMin < 0 && Math.Abs(next.SpecDraftPMin + 1) > 0.000_001)
+            throw new InvalidOperationException("Draft min probability must be -1 for default or between 0 and 1.");
+        if (string.Equals(next.PromptCacheMode, "on", StringComparison.OrdinalIgnoreCase) && next.PromptCacheRamMb == 0)
+            throw new InvalidOperationException("Prompt cache MB must be -1 or greater than 0 when prompt cache is on.");
+        if (string.Equals(next.ContextCheckpointsMode, "on", StringComparison.OrdinalIgnoreCase) && next.ContextCheckpointCount < 1)
+            throw new InvalidOperationException("Checkpoint count must be at least 1 when checkpoints are on.");
+        if (string.Equals(next.ContextCheckpointsMode, "on", StringComparison.OrdinalIgnoreCase) && next.ContextCheckpointEveryNTokens < 1)
+            throw new InvalidOperationException("Checkpoint spacing must be at least 1 when checkpoints are on.");
+        if (next.SpecDraftMaxTokens > 0 && next.SpecDraftMinTokens > next.SpecDraftMaxTokens)
+            throw new InvalidOperationException("Draft min tokens cannot be larger than draft max tokens.");
+        if (next.VisionImageMaxTokens > 0 && next.VisionImageMinTokens > next.VisionImageMaxTokens)
+            throw new InvalidOperationException("Image min tokens cannot be larger than image max tokens.");
+        _ = LocalLlmConsole.Services.CustomLaunchParameterParser.Parse(next.CustomParameters);
+    }
+
+    private static void SetText(WpfTextBox? box, int value) => SetText(box, value.ToString(CultureInfo.InvariantCulture));
+
+    private static void SetText(WpfTextBox? box, double value) => SetText(box, value.ToString("0.###", CultureInfo.InvariantCulture));
+
+    private static void SetText(WpfTextBox? box, string value)
+    {
+        if (box is not null) box.Text = value;
+    }
+
+    private static void SetCombo(WpfComboBox? combo, string value)
+    {
+        if (combo is null) return;
+        var match = combo.Items.Cast<object>().Select(item => item.ToString() ?? "").FirstOrDefault(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase));
+        combo.SelectedItem = string.IsNullOrWhiteSpace(match) ? combo.Items[0] : match;
+    }
+
+    private static AppSettings ReadControls(AppSettings baseSettings, LaunchSettingsFormControls controls)
+        => baseSettings with
         {
             Port = ReadInt(controls.LaunchPortBox, "Port", min: 1, max: 65535),
             ContextSize = ReadContextSize(controls.ContextSizeBox),
@@ -149,113 +571,92 @@ public static class LaunchSettingsFormBinder
             CustomParameters = controls.CustomParametersBox?.Text.Trim() ?? ""
         };
 
-        ValidateCrossFieldRules(next);
-        return next;
+    private static IReadOnlyDictionary<string, string> ReadGeneratedFlagValues(LaunchSettingsFormControls controls, IReadOnlyDictionary<string, string> existing)
+    {
+        var merged = new Dictionary<string, string>(existing, StringComparer.OrdinalIgnoreCase);
+        foreach (var (flagName, control) in controls.GeneratedControls)
+        {
+            var value = LaunchSettingsControlFactory.GetControlValue(control);
+            if (string.IsNullOrWhiteSpace(value)) continue;
+            var primary = LlamaServerFlagSchema.FindByName(flagName)?.PrimaryName ?? flagName;
+            merged[primary] = value;
+        }
+        return merged.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
     }
 
-    public static void Apply(LaunchSettingsFormControls controls, AppSettings settings)
+    private static void ApplyGeneratedFlagValues(LaunchSettingsFormControls controls, IReadOnlyDictionary<string, string> flagValues)
     {
-        SetText(controls.LaunchPortBox, settings.Port);
-        SetText(controls.ContextSizeBox, settings.ContextSize);
-        SetText(controls.GpuLayersBox, settings.GpuLayers);
-        SetText(controls.ParallelSlotsBox, settings.ParallelSlots);
-        SetText(controls.BatchSizeBox, settings.BatchSize);
-        SetText(controls.MicroBatchSizeBox, settings.MicroBatchSize);
-        SetText(controls.ThreadsBox, settings.Threads);
-        SetText(controls.ReasoningBudgetBox, settings.ReasoningBudget);
-        SetText(controls.VisionProjectorPathBox, settings.VisionProjectorPath);
-        SetText(controls.VisionImageMinTokensBox, settings.VisionImageMinTokens);
-        SetText(controls.VisionImageMaxTokensBox, settings.VisionImageMaxTokens);
-        SetText(controls.TemperatureBox, settings.Temperature);
-        SetText(controls.TopKBox, settings.TopK);
-        SetText(controls.TopPBox, settings.TopP);
-        SetText(controls.MinPBox, settings.MinP);
-        SetText(controls.MaxTokensBox, settings.MaxTokens);
-        SetText(controls.SeedBox, settings.Seed);
-        SetText(controls.RepeatLastNBox, settings.RepeatLastN);
-        SetText(controls.RepeatPenaltyBox, settings.RepeatPenalty);
-        SetText(controls.PresencePenaltyBox, settings.PresencePenalty);
-        SetText(controls.FrequencyPenaltyBox, settings.FrequencyPenalty);
-        SetText(controls.RopeScaleBox, settings.RopeScale);
-        SetText(controls.RopeFreqBaseBox, settings.RopeFreqBase);
-        SetText(controls.RopeFreqScaleBox, settings.RopeFreqScale);
-        SetText(controls.SpecDraftModelPathBox, settings.SpecDraftModelPath);
-        SetText(controls.MtpHeadPathBox, settings.MtpHeadPath);
-        SetText(controls.SpecDraftGpuLayersBox, settings.SpecDraftGpuLayers);
-        SetText(controls.SpecDraftMinTokensBox, settings.SpecDraftMinTokens);
-        SetText(controls.SpecDraftMaxTokensBox, settings.SpecDraftMaxTokens);
-        SetText(controls.SpecDraftPSplitBox, settings.SpecDraftPSplit);
-        SetText(controls.SpecDraftPMinBox, settings.SpecDraftPMin);
-        SetText(controls.CustomParametersBox, settings.CustomParameters);
-        SetCombo(controls.MetricsCombo, settings.EnableMetrics ? "on" : "off");
-        SetCombo(controls.ReasoningCombo, settings.ReasoningMode);
-        SetCombo(controls.ReasoningFormatCombo, settings.ReasoningFormat);
-        SetCombo(controls.VisionCombo, settings.VisionMode);
-        SetCombo(controls.FlashAttentionCombo, settings.FlashAttention);
-        SetCombo(controls.CacheTypeKCombo, settings.CacheTypeK);
-        SetCombo(controls.CacheTypeVCombo, settings.CacheTypeV);
-        SetCombo(controls.KvOffloadCombo, settings.KvOffload);
-        SetCombo(controls.KvUnifiedCombo, settings.KvUnified);
-        SetCombo(controls.PromptCacheCombo, settings.PromptCacheMode);
-        SetText(controls.PromptCacheRamMbBox, settings.PromptCacheRamMb);
-        SetCombo(controls.ContextCheckpointsCombo, settings.ContextCheckpointsMode);
-        SetText(controls.ContextCheckpointCountBox, settings.ContextCheckpointCount);
-        SetText(controls.ContextCheckpointEveryNTokensBox, settings.ContextCheckpointEveryNTokens);
-        SetCombo(controls.ContinuousBatchingCombo, settings.ContinuousBatching);
-        SetCombo(controls.JinjaCombo, settings.JinjaMode);
-        SetCombo(controls.MmapCombo, settings.MmapMode);
-        SetCombo(controls.MlockCombo, settings.MlockMode);
-        SetCombo(controls.RopeScalingCombo, settings.RopeScaling);
-        SetCombo(controls.SpeculativeTypeCombo, LocalLlmConsole.Services.LaunchSettingMetadataService.NormalizeSpeculativeType(settings.SpeculativeType));
-        SetCombo(controls.SpecDraftCacheTypeKCombo, settings.SpecDraftCacheTypeK);
-        SetCombo(controls.SpecDraftCacheTypeVCombo, settings.SpecDraftCacheTypeV);
+        foreach (var (flagName, control) in controls.GeneratedControls)
+        {
+            var primary = LlamaServerFlagSchema.FindByName(flagName)?.PrimaryName ?? flagName;
+            if (flagValues.TryGetValue(primary, out var value))
+                LaunchSettingsControlFactory.SetControlValue(control, value);
+        }
     }
 
-    public static void AttachChangeHandlers(LaunchSettingsFormControls controls, Action changed, RoutedEventHandler contextSizeLostFocus)
+    private static LlamaServerLaunchOptions BuildLaunchOptions(AppSettings settings, RuntimeBackend backend)
     {
-        if (controls.ContextSizeBox is not null)
-            controls.ContextSizeBox.LostFocus += contextSizeLostFocus;
-
-        foreach (var box in controls.TextBoxes.Where(box => box is not null))
-            box!.TextChanged += (_, _) => changed();
-
-        foreach (var combo in controls.ComboBoxes.Where(combo => combo is not null))
-            combo!.SelectionChanged += (_, _) => changed();
-    }
-
-    public static void ValidateCrossFieldRules(AppSettings next)
-    {
-        if (next.SpecDraftPSplit < 0 && Math.Abs(next.SpecDraftPSplit + 1) > 0.000_001)
-            throw new InvalidOperationException("Draft split probability must be -1 for default or between 0 and 1.");
-        if (next.SpecDraftPMin < 0 && Math.Abs(next.SpecDraftPMin + 1) > 0.000_001)
-            throw new InvalidOperationException("Draft min probability must be -1 for default or between 0 and 1.");
-        if (string.Equals(next.PromptCacheMode, "on", StringComparison.OrdinalIgnoreCase) && next.PromptCacheRamMb == 0)
-            throw new InvalidOperationException("Prompt cache MB must be -1 or greater than 0 when prompt cache is on.");
-        if (string.Equals(next.ContextCheckpointsMode, "on", StringComparison.OrdinalIgnoreCase) && next.ContextCheckpointCount < 1)
-            throw new InvalidOperationException("Checkpoint count must be at least 1 when checkpoints are on.");
-        if (string.Equals(next.ContextCheckpointsMode, "on", StringComparison.OrdinalIgnoreCase) && next.ContextCheckpointEveryNTokens < 1)
-            throw new InvalidOperationException("Checkpoint spacing must be at least 1 when checkpoints are on.");
-        if (next.SpecDraftMaxTokens > 0 && next.SpecDraftMinTokens > next.SpecDraftMaxTokens)
-            throw new InvalidOperationException("Draft min tokens cannot be larger than draft max tokens.");
-        if (next.VisionImageMaxTokens > 0 && next.VisionImageMinTokens > next.VisionImageMaxTokens)
-            throw new InvalidOperationException("Image min tokens cannot be larger than image max tokens.");
-        _ = LocalLlmConsole.Services.CustomLaunchParameterParser.Parse(next.CustomParameters);
-    }
-
-    private static void SetText(WpfTextBox? box, int value) => SetText(box, value.ToString(CultureInfo.InvariantCulture));
-
-    private static void SetText(WpfTextBox? box, double value) => SetText(box, value.ToString("0.###", CultureInfo.InvariantCulture));
-
-    private static void SetText(WpfTextBox? box, string value)
-    {
-        if (box is not null) box.Text = value;
-    }
-
-    private static void SetCombo(WpfComboBox? combo, string value)
-    {
-        if (combo is null) return;
-        var match = combo.Items.Cast<object>().Select(item => item.ToString() ?? "").FirstOrDefault(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase));
-        combo.SelectedItem = string.IsNullOrWhiteSpace(match) ? combo.Items[0] : match;
+        return new LlamaServerLaunchOptions
+        {
+            Backend = backend,
+            ModelPath = "",
+            Host = "127.0.0.1",
+            Port = settings.Port,
+            ContextSize = settings.ContextSize,
+            GpuLayers = settings.GpuLayers,
+            EnableMetrics = settings.EnableMetrics,
+            ParallelSlots = settings.ParallelSlots,
+            BatchSize = settings.BatchSize,
+            MicroBatchSize = settings.MicroBatchSize,
+            Threads = settings.Threads,
+            FlashAttention = settings.FlashAttention,
+            CacheTypeK = settings.CacheTypeK,
+            CacheTypeV = settings.CacheTypeV,
+            KvOffload = settings.KvOffload,
+            KvUnified = settings.KvUnified,
+            PromptCacheMode = settings.PromptCacheMode,
+            PromptCacheRamMb = settings.PromptCacheRamMb,
+            ContextCheckpointsMode = settings.ContextCheckpointsMode,
+            ContextCheckpointCount = settings.ContextCheckpointCount,
+            ContextCheckpointEveryNTokens = settings.ContextCheckpointEveryNTokens,
+            ContinuousBatching = settings.ContinuousBatching,
+            ReasoningMode = settings.ReasoningMode,
+            ReasoningFormat = settings.ReasoningFormat,
+            ReasoningBudget = settings.ReasoningBudget,
+            JinjaMode = settings.JinjaMode,
+            VisionMode = settings.VisionMode,
+            VisionProjectorPath = settings.VisionProjectorPath,
+            VisionProjectorEmbedded = false,
+            VisionImageMinTokens = settings.VisionImageMinTokens,
+            VisionImageMaxTokens = settings.VisionImageMaxTokens,
+            MmapMode = settings.MmapMode,
+            MlockMode = settings.MlockMode,
+            Temperature = settings.Temperature,
+            TopK = settings.TopK,
+            TopP = settings.TopP,
+            MinP = settings.MinP,
+            MaxTokens = settings.MaxTokens,
+            Seed = settings.Seed,
+            RepeatLastN = settings.RepeatLastN,
+            RepeatPenalty = settings.RepeatPenalty,
+            PresencePenalty = settings.PresencePenalty,
+            FrequencyPenalty = settings.FrequencyPenalty,
+            RopeScaling = settings.RopeScaling,
+            RopeScale = settings.RopeScale,
+            RopeFreqBase = settings.RopeFreqBase,
+            RopeFreqScale = settings.RopeFreqScale,
+            SpeculativeType = settings.SpeculativeType,
+            SpecDraftModelPath = settings.SpecDraftModelPath,
+            MtpHeadPath = settings.MtpHeadPath,
+            SpecDraftGpuLayers = settings.SpecDraftGpuLayers,
+            SpecDraftMinTokens = settings.SpecDraftMinTokens,
+            SpecDraftMaxTokens = settings.SpecDraftMaxTokens,
+            SpecDraftPSplit = settings.SpecDraftPSplit,
+            SpecDraftPMin = settings.SpecDraftPMin,
+            SpecDraftCacheTypeK = settings.SpecDraftCacheTypeK,
+            SpecDraftCacheTypeV = settings.SpecDraftCacheTypeV,
+            FlagValues = settings.FlagValues
+        };
     }
 
     private static string ComboValue(WpfComboBox? combo)

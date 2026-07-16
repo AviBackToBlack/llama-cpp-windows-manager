@@ -15,6 +15,7 @@ public sealed class HelpSectionService
         new(FirstSteps, "First Steps", "First Steps", "Install a runtime, download a model, save launch settings, and load it."),
         new("overview", "Overview", "Overview", "Load models, inspect endpoints, and switch model status from active sessions."),
         new("models", "Models", "Models", "Find GGUF files, manage local models, and tune launch settings."),
+        new("launch-settings", "Launch Settings", "Launch Settings", "Tune llama-server flags, preview the command line, and detect runtime support."),
         new("runtimes", "Runtimes", "Runtimes", "Install official llama.cpp packages or use advanced Windows and WSL tooling."),
         new("settings", "Settings", "Settings", "Configure app behavior, network access, the gateway, logs, and secrets."),
         new("opencode", "OpenCode", "OpenCode", "Add local models and agents to OpenCode with gateway or direct endpoints."),

@@ -12,6 +12,7 @@ public partial class MainWindow
             _coreServices.Ui.AdvancedSections.ShowLaunchSettings,
             () =>
             {
+                RunBackground(ApplyRuntimeCapabilitiesAsync, "Runtime capability detection failed");
                 UpdateLaunchControlVisibility();
                 UpdateLaunchSaveButtonState();
             },

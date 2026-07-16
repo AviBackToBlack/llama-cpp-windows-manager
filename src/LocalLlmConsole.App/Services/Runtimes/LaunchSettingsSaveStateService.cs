@@ -1,5 +1,6 @@
 namespace LocalLlmConsole.Services;
 
+/// <summary>Input for evaluating the enabled state of launch settings save buttons.</summary>
 public sealed record LaunchSettingsSaveStateRequest(
     ModelRecord? SelectedModel,
     bool HasSavedProfile,
@@ -8,11 +9,13 @@ public sealed record LaunchSettingsSaveStateRequest(
     ModelLaunchSettings? CurrentProfile,
     string RequestedVariantName);
 
+/// <summary>Result describing whether Save For Model and Save As New can be activated.</summary>
 public sealed record LaunchSettingsSaveState(
     string SaveForModelContent,
     bool CanSaveForModel,
     bool CanSaveAsNewVariant);
 
+/// <summary>Evaluates the enabled state of launch settings save buttons.</summary>
 public static class LaunchSettingsSaveStateService
 {
     public const string SaveForModelText = "Save For Model";

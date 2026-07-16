@@ -57,6 +57,8 @@ public sealed record ModelLaunchSettings(
     int ContextCheckpointEveryNTokens = AppSettings.DefaultContextCheckpointEveryNTokens,
     string CustomParameters = "")
 {
+    public IReadOnlyDictionary<string, string> FlagValues { get; init; } = ImmutableDictionary<string, string>.Empty;
+
     public static ModelLaunchSettings FromAppSettings(AppSettings settings, string runtimeId = "") => new(
         settings.ContextSize,
         settings.GpuLayers,
@@ -112,7 +114,10 @@ public sealed record ModelLaunchSettings(
         settings.ContextCheckpointsMode,
         settings.ContextCheckpointCount,
         settings.ContextCheckpointEveryNTokens,
-        settings.CustomParameters);
+        settings.CustomParameters)
+    {
+        FlagValues = settings.FlagValues
+    };
 
     public AppSettings ApplyTo(AppSettings settings) => settings with
     {
@@ -169,6 +174,7 @@ public sealed record ModelLaunchSettings(
         ContextCheckpointsMode = ContextCheckpointsMode,
         ContextCheckpointCount = ContextCheckpointCount,
         ContextCheckpointEveryNTokens = ContextCheckpointEveryNTokens,
-        CustomParameters = CustomParameters ?? ""
+        CustomParameters = CustomParameters ?? "",
+        FlagValues = FlagValues
     };
 }
