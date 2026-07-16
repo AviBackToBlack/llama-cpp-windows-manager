@@ -532,5 +532,5 @@
   "Updates.RepositoryLabel": "Depo",
   "Logs.DeleteBlockedActive": "Mevcut günlüğünü silmeden önce aktif çalışma ortamını durdurun.",
   "Overview.Metric.Slots": "Slots",
-  "Tooltip.Setting.AutoSyncEntries": "Automatically rewrites OpenCode local model entries after Settings saves, saved model launch settings, or saved variants change. Turn off to leave existing OpenCode config untouched unless you add or update entries from the OpenCode page. OpenCode provider config stores the synced API key in plain text."
+  "Tooltip.Setting.AutoSyncEntries": "Ayarlar kaydedildiğinde, kaydedilmiş model başlatma ayarları veya kaydedilmiş varyantlar değiştiğinde OpenCode yerel model girişlerini otomatik olarak yeniden yazar. Mevcut OpenCode yapılandırmasına dokunmamak için kapatın; yalnızca OpenCode sayfasından giriş eklediğinizde veya güncellediğinizde değiştirin. OpenCode sağlayıcı yapılandırması, senkronize edilmiş API anahtarını düz metin olarak saklar."
 }

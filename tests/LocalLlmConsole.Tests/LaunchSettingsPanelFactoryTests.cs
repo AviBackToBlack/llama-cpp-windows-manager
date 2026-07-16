@@ -325,6 +325,27 @@ public sealed class LaunchSettingsPanelFactoryTests
         });
     }
 
+    [Fact]
+    public void Read_ShortFormAliases_RoundTripToFirstClassFields()
+    {
+        RunInSta(() =>
+        {
+            var controls = CreateFullControls();
+            var defaults = AppSettings.CreateDefault("C:\\Workspace");
+            LaunchSettingsFormBinder.Apply(controls, defaults);
+
+            // ParseCommand keys these by the short alias; the form must still populate the
+            // long-name-mapped first-class fields instead of dropping the pasted values.
+            controls.CommandPreviewBox!.Text = "-ngl 50 -c 2048 -t 8 -b 4096";
+            LaunchSettingsFormBinder.Read(defaults, controls, parseCommandPreview: true);
+
+            Assert.Equal("50", controls.GpuLayersBox!.Text);
+            Assert.Equal("2048", controls.ContextSizeBox!.Text);
+            Assert.Equal("8", controls.ThreadsBox!.Text);
+            Assert.Equal("4096", controls.BatchSizeBox!.Text);
+        });
+    }
+
     private static LaunchSettingsFormControls CreateFullControls()
     {
         var comboOptions = new[] { "auto", "on", "off", "none", "f16", "q8_0", "linear", "yarn", "deepseek", "deepseek-legacy" };

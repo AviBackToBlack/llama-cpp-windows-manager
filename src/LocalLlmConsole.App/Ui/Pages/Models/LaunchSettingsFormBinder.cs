@@ -189,7 +189,19 @@ public sealed class LaunchSettingsFormControls
             ["--metrics"] = MetricsCombo,
             ["--custom-params"] = CustomParametersBox
         };
-        return map.TryGetValue(flagName, out var control) ? control : null;
+        if (map.TryGetValue(flagName, out var control)) return control;
+
+        // ParseCommand keys flags by the exact alias typed (e.g. "-ngl", "-c"), so a pasted
+        // short-form flag would miss the long-name map. Fall back to the flag's other names
+        // to keep first-class fields in sync instead of silently dropping the value.
+        var schemaFlag = LocalLlmConsole.Services.LlamaServerFlagSchema.FindByName(flagName);
+        if (schemaFlag is not null)
+        {
+            foreach (var name in schemaFlag.Names)
+                if (map.TryGetValue(name, out var aliasControl)) return aliasControl;
+        }
+
+        return null;
     }
 
     public void SetValueByFlagName(string flagName, string value)
