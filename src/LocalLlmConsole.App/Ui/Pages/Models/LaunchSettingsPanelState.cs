@@ -41,7 +41,10 @@ public sealed class LaunchSettingsPanelState
 
     public void SetSupportedFlags(IReadOnlySet<string>? supportedFlags)
     {
-        _supportedFlags = supportedFlags;
+        // An empty set means the runtime's --help could not be parsed, not that it
+        // supports no flags. Treat it as null (no filtering) so the whole form isn't
+        // disabled and recognized flags aren't shifted into custom parameters on save.
+        _supportedFlags = supportedFlags is { Count: > 0 } ? supportedFlags : null;
     }
 
     public string SaveAsNewModelName => (SaveAsNewModelNameBox?.Text ?? "").Trim();

@@ -197,7 +197,9 @@ public sealed class LaunchSettingsFormControls
         if (string.Equals(flagName, "--cache-ram", StringComparison.OrdinalIgnoreCase))
         {
             SetTextBox(PromptCacheRamMbBox, value);
-            SetComboValue(PromptCacheCombo, "on");
+            // The builder emits "--cache-ram 0" for the off mode, so a zero value must map
+            // back to off; forcing "on" here produces an on-with-zero-RAM combo the validator rejects.
+            SetComboValue(PromptCacheCombo, string.Equals(value.Trim(), "0", StringComparison.Ordinal) ? "off" : "on");
             return;
         }
 

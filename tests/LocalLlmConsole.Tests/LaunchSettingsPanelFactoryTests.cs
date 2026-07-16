@@ -198,6 +198,25 @@ public sealed class LaunchSettingsPanelFactoryTests
     }
 
     [Fact]
+    public void SetValueByFlagName_CacheRamZero_SetsModeOffAndSavesWithoutError()
+    {
+        RunInSta(() =>
+        {
+            var controls = CreateFullControls();
+            var defaults = AppSettings.CreateDefault("C:\\Workspace");
+            LaunchSettingsFormBinder.Apply(controls, defaults);
+
+            // The builder emits "--cache-ram 0" for prompt-cache off; the round-trip must
+            // map it back to off rather than an on-with-zero-RAM combo the validator rejects.
+            controls.CommandPreviewBox!.Text = "--cache-ram 0";
+            var settings = LaunchSettingsFormBinder.Read(defaults, controls, parseCommandPreview: true);
+
+            Assert.Equal("off", controls.PromptCacheCombo!.SelectedItem!.ToString());
+            Assert.Equal("off", settings.PromptCacheMode);
+        });
+    }
+
+    [Fact]
     public void SetValueByFlagName_ContextCheckpoints_SetsModeOnAndCount()
     {
         RunInSta(() =>
