@@ -39,6 +39,17 @@ public sealed class RuntimeAdapterTests
     }
 
     [Fact]
+    public void BuildArgsPreservesLiteralWindowsModelPath()
+    {
+        const string modelPath = @"C:\Models\my model.gguf";
+
+        var args = RuntimeAdapter.BuildArgs(ValidRequest() with { ModelPath = modelPath });
+
+        Assert.Contains(modelPath, args);
+        Assert.DoesNotContain("\"C:\\\\Models\\\\my model.gguf\"", args);
+    }
+
+    [Fact]
     public void BuildArgsAppendsCustomExtraArgs()
     {
         var args = RuntimeAdapter.BuildArgs(ValidRequest() with

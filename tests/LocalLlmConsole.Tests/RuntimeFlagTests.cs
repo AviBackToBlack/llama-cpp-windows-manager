@@ -284,6 +284,8 @@ public sealed class RuntimeFlagTests
         var secondService = new RuntimeFlagCapabilityService(secondRunner, root, TimeSpan.FromMinutes(5));
         var second = await secondService.GetCapabilitiesAsync(executable, RuntimeMode.Native, null, CancellationToken.None);
 
+        Assert.Single(Directory.GetFiles(root, "llama-server-help-*.json"));
+        Assert.False(Directory.Exists(Path.Combine(root, "cache")));
         Assert.Equal(first.Supported, second.Supported);
         Assert.Equal(1, runner.InvocationCount);
         Assert.Equal(0, secondRunner.InvocationCount);
