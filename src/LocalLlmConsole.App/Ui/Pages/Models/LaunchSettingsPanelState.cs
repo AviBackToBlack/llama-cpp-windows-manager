@@ -150,7 +150,9 @@ public sealed class LaunchSettingsPanelState
         foreach (var section in LaunchSettingSections)
         {
             var hiddenByAdvanced = section.IsAdvancedSection && !plan.ShowAdvancedSections && !search.HasQuery;
-            var hasVisibleSetting = section.SettingLabels.Any(LaunchSettingCurrentlyVisible);
+            var hasVisibleSetting = section.SettingLabels.Count == 0
+                ? !section.IsAdvancedSection
+                : section.SettingLabels.Any(LaunchSettingCurrentlyVisible);
             section.Section.Visibility = !hiddenByAdvanced && hasVisibleSetting ? Visibility.Visible : Visibility.Collapsed;
         }
     }
@@ -161,9 +163,35 @@ public sealed class LaunchSettingsPanelState
 
     private string SearchTextFor(string label)
     {
+        var parts = new List<string> { label };
+
         var section = LaunchSettingSections.FirstOrDefault(candidate =>
             candidate.SettingLabels.Contains(label, StringComparer.OrdinalIgnoreCase));
-        return $"{label} {section?.Title ?? ""} {LaunchSettingMetadataService.Tooltip(label)}";
+        if (section is not null)
+            parts.Add(section.Title);
+
+        parts.Add(LaunchSettingMetadataService.Tooltip(label));
+
+        if (LaunchSettingElements.TryGetValue(label, out var elements))
+        {
+            foreach (var element in elements)
+            {
+                var tag = element.Tag as string;
+                if (string.IsNullOrWhiteSpace(tag) || !tag.StartsWith("-", StringComparison.Ordinal))
+                    continue;
+
+                parts.Add(tag);
+
+                var flag = LlamaServerFlagSchema.FindByName(tag);
+                if (flag is not null)
+                {
+                    foreach (var name in flag.Names)
+                        parts.Add(name);
+                }
+            }
+        }
+
+        return string.Join(" ", parts);
     }
 
     private void ApplyLaunchSettingEnabled(IReadOnlyDictionary<string, bool> enabledSettings)
@@ -199,7 +227,7 @@ public sealed class LaunchSettingsPanelState
                 if (IsFlagSupported(flag))
                 {
                     if (existing.Contains(NotSupportedMessage, StringComparison.OrdinalIgnoreCase))
-                        control.ToolTip = LaunchSettingMetadataService.Tooltip(flagName);
+                        control.ToolTip = RestoreTooltipWithoutMessage(existing, NotSupportedMessage, flagName);
                     continue;
                 }
 
@@ -211,6 +239,19 @@ public sealed class LaunchSettingsPanelState
                     : $"{existing}\n\n{NotSupportedMessage}";
             }
         }
+    }
+
+    private static string? RestoreTooltipWithoutMessage(string existing, string message, string flagName)
+    {
+        var index = existing.IndexOf(message, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+            return existing;
+
+        var restored = existing[..index].TrimEnd('\r', '\n', ' ');
+        if (string.IsNullOrWhiteSpace(restored))
+            restored = LaunchSettingMetadataService.Tooltip(flagName);
+
+        return restored;
     }
 
     private bool IsFlagSupported(LlamaServerFlag flag)

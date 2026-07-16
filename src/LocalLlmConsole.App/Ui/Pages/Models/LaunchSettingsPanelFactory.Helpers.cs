@@ -67,7 +67,7 @@ public static partial class LaunchSettingsPanelFactory
         bool advanced = false)
     {
         control.Tag = flagName;
-        control.ToolTip = LaunchSettingMetadataService.Tooltip(label);
+        control.ToolTip = LaunchSettingMetadataService.Tooltip(label, flagName);
         if (advanced)
             builder.AddAdvancedLaunchSetting(grid, label, control);
         else

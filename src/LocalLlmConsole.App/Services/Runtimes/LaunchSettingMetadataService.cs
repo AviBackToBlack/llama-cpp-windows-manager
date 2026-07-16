@@ -33,6 +33,20 @@ public static class LaunchSettingMetadataService
     public static string Tooltip(LlamaServerFlag flag)
         => $"({flag.PrimaryName}) {flag.Description}";
 
+    public static string Tooltip(string label, string flagName)
+    {
+        var baseTooltip = Tooltip(label);
+        var flag = LlamaServerFlagSchema.FindByName(flagName);
+        if (flag is not null)
+        {
+            var defaultTooltip = Loc.T("Tooltip.Field.Default");
+            if (string.Equals(baseTooltip, defaultTooltip, StringComparison.Ordinal))
+                baseTooltip = flag.Description;
+        }
+
+        return $"({flagName}) {baseTooltip}";
+    }
+
     public static string Tooltip(string label) => label switch
     {
         "Context size" => Loc.T("Tooltip.Field.ContextSize"),
@@ -100,7 +114,7 @@ public static class LaunchSettingMetadataService
 
     public static string ContextSizeTooltip(string text)
     {
-        var tooltip = Tooltip("Context size");
+        var tooltip = Tooltip("Context size", "--ctx-size");
         if (!LaunchSettingParser.TryNormalizeContextSize(text, out var value) || value <= 0)
             return tooltip;
 
