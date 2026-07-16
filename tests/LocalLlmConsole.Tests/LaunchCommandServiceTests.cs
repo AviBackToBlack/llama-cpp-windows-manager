@@ -137,6 +137,15 @@ public sealed class LaunchCommandServiceTests : IDisposable
     }
 
     [Fact]
+    public void ParseCommandPreservesAutoBooleanDefaults()
+    {
+        var parsed = LaunchCommandService.ParseCommand("--flash-attn auto");
+
+        Assert.Empty(parsed.Errors);
+        Assert.Equal("auto", parsed.Flags["--flash-attn"]);
+    }
+
+    [Fact]
     public void ParseCommandInvertsExplicitValuesForNegatedBooleanFlags()
     {
         var parsed = LaunchCommandService.ParseCommand("--no-kv-offload on --no-kv-unified off");
