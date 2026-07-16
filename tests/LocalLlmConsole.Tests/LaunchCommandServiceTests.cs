@@ -269,6 +269,23 @@ public sealed class LaunchCommandServiceTests : IDisposable
     }
 
     [Fact]
+    public void BuildCommandTokensAlwaysIncludesModelEvenWhenNotInSupportedFlags()
+    {
+        var options = new LlamaServerLaunchOptions
+        {
+            ModelPath = _modelFile,
+            ContextSize = 4096,
+            // Simulate a --help parse that produced a non-empty set missing the model flag.
+            SupportedFlags = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "--ctx-size" }
+        };
+
+        var tokens = LaunchCommandService.BuildCommandTokens(options);
+
+        Assert.Contains("--model", tokens);
+        Assert.Contains(_modelFile, tokens);
+    }
+
+    [Fact]
     public void ParseCommandFiltersUnsupportedFlagsWhenSupportedFlagsProvided()
     {
         var command = $"--model \"{_modelFile}\" --ctx-size 4096 --threads 4 --flash-attn on";

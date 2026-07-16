@@ -7,6 +7,10 @@ public static class LaunchCommandService
 {
     private static readonly string[] DisallowedFlags = ["--host", "--port", "--api-key"];
 
+    // The model flag is mandatory and universal to every llama-server build, so it must never
+    // be dropped by runtime capability filtering (a --help parse miss must not launch modelless).
+    private static readonly string[] EssentialFlags = ["--model", "-m"];
+
     /// <summary>
     /// Builds the command line for llama-server as a display string.
     /// If <see cref="LlamaServerLaunchOptions.SupportedFlags"/> is set, known flags that the selected runtime does not advertise in --help are omitted.
@@ -302,6 +306,7 @@ public static class LaunchCommandService
     private static bool IsSupportedByRuntime(LlamaServerFlag schemaFlag, string token, IReadOnlySet<string>? supportedFlags)
     {
         if (supportedFlags is null) return true;
+        if (schemaFlag.Names.Any(n => EssentialFlags.Contains(n, StringComparer.OrdinalIgnoreCase))) return true;
         if (supportedFlags.Contains(token)) return true;
         // For negated tokens (--no-*), don't fall back to the positive form
         if (token.StartsWith("--no-", StringComparison.OrdinalIgnoreCase))
