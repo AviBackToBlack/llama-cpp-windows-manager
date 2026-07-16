@@ -258,7 +258,7 @@ public static class LaunchCommandService
     }
 
     private static string GetBooleanDefault(LlamaServerFlag flag)
-        => flag.Default is true ? "true" : "false";
+        => flag.Default is true or "true" or "on" ? "true" : flag.Default is "auto" ? "auto" : "false";
 
     private static bool IsTruthyBoolean(string value)
         => string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
