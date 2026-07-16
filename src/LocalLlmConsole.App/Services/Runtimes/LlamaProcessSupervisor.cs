@@ -178,7 +178,11 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
                     runtime.ExecutablePath,
                     runtime.Mode,
                     runtime.Mode == RuntimeMode.Wsl ? settings.WslDistro : null);
-                request = request with { SupportedFlags = supportedFlags };
+                // An empty set means --help produced no parseable flags (parser miss or a
+                // non-standard build), not that the runtime supports nothing. Treat it as
+                // "no filtering" so recognized flags (including --model) are not stripped.
+                if (supportedFlags.Count > 0)
+                    request = request with { SupportedFlags = supportedFlags };
             }
             catch
             {

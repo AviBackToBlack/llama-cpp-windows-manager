@@ -35,6 +35,8 @@ public sealed class LaunchSettingsPanelState
 
     private IReadOnlySet<string>? _supportedFlags;
 
+    private readonly HashSet<FrameworkElement> _runtimeDisabledControls = [];
+
     public IReadOnlySet<string>? SupportedFlags => _supportedFlags;
 
     public void SetSupportedFlags(IReadOnlySet<string>? supportedFlags)
@@ -61,6 +63,8 @@ public sealed class LaunchSettingsPanelState
 
         AdvancedLaunchSections.Clear();
         AdvancedLaunchSections.AddRange(controls.AdvancedLaunchSections);
+
+        _runtimeDisabledControls.Clear();
 
         RuntimeCombo = controls.RuntimeCombo;
         ModelCapabilityText = controls.ModelCapabilityText;
@@ -95,6 +99,11 @@ public sealed class LaunchSettingsPanelState
     public void ApplyControlState(LaunchSettingsControlStatePlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
+
+        // Undo any disabling this state applied for a previously selected runtime before
+        // the control-state plan runs, so controls a new runtime supports become editable
+        // again while the plan below still governs model-driven vision/MTP/GPU disabling.
+        RestoreRuntimeDisabledControls();
 
         var search = LaunchSettingsSearch.From(LaunchSettingsSearchBox?.Text);
         ApplyLaunchSettingVisibility(plan, search);
@@ -207,6 +216,13 @@ public sealed class LaunchSettingsPanelState
             element.IsEnabled = enabled;
     }
 
+    private void RestoreRuntimeDisabledControls()
+    {
+        foreach (var control in _runtimeDisabledControls)
+            control.IsEnabled = true;
+        _runtimeDisabledControls.Clear();
+    }
+
     private void ApplyRuntimeSupport()
     {
         if (_supportedFlags is null) return;
@@ -232,6 +248,7 @@ public sealed class LaunchSettingsPanelState
                 }
 
                 control.IsEnabled = false;
+                _runtimeDisabledControls.Add(control);
                 ToolTipService.SetShowOnDisabled(control, true);
                 if (existing.Contains(NotSupportedMessage, StringComparison.OrdinalIgnoreCase)) continue;
                 control.ToolTip = string.IsNullOrWhiteSpace(existing)

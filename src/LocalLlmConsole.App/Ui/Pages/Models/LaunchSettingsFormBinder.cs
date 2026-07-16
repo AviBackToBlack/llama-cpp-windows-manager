@@ -215,6 +215,20 @@ public sealed class LaunchSettingsFormControls
             return;
         }
 
+        // The vision boolean flags map to the auto/on/off VisionCombo, so translate their
+        // parsed true/false into the matching combo item instead of falling back to auto.
+        if (string.Equals(flagName, "--no-mmproj", StringComparison.OrdinalIgnoreCase))
+        {
+            SetComboValue(VisionCombo, IsTruthy(value) ? "off" : "auto");
+            return;
+        }
+
+        if (string.Equals(flagName, "--mmproj-auto", StringComparison.OrdinalIgnoreCase))
+        {
+            SetComboValue(VisionCombo, IsTruthy(value) ? "auto" : "off");
+            return;
+        }
+
         var firstClass = GetFirstClassControlByFlagName(flagName);
         if (firstClass is not null)
         {
@@ -231,6 +245,10 @@ public sealed class LaunchSettingsFormControls
         if (GeneratedControls.TryGetValue(primary, out var generatedControl))
             LaunchSettingsControlFactory.SetControlValue(generatedControl, value);
     }
+
+    private static bool IsTruthy(string value)
+        => string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "on", StringComparison.OrdinalIgnoreCase);
 
     private static void SetTextBox(WpfTextBox? textBox, string value)
     {

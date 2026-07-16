@@ -250,6 +250,39 @@ public sealed class LaunchSettingsPanelFactoryTests
         });
     }
 
+    [Fact]
+    public void SetValueByFlagName_NoMmproj_SelectsVisionOff()
+    {
+        RunInSta(() =>
+        {
+            var controls = new LaunchSettingsFormControls
+            {
+                VisionCombo = new ComboBox { ItemsSource = new[] { "auto", "on", "off" } }
+            };
+
+            var parsed = LaunchCommandService.ParseCommand("--no-mmproj true");
+            controls.SetValueByFlagName("--no-mmproj", parsed.Flags["--no-mmproj"]);
+
+            Assert.Equal("off", controls.VisionCombo!.SelectedItem!.ToString());
+        });
+    }
+
+    [Fact]
+    public void SetValueByFlagName_MmprojAuto_SelectsVisionAuto()
+    {
+        RunInSta(() =>
+        {
+            var controls = new LaunchSettingsFormControls
+            {
+                VisionCombo = new ComboBox { ItemsSource = new[] { "auto", "on", "off" } }
+            };
+
+            controls.SetValueByFlagName("--mmproj-auto", "true");
+
+            Assert.Equal("auto", controls.VisionCombo!.SelectedItem!.ToString());
+        });
+    }
+
     private static LaunchSettingsFormControls CreateFullControls()
     {
         var comboOptions = new[] { "auto", "on", "off", "none", "f16", "q8_0", "linear", "yarn", "deepseek", "deepseek-legacy" };
