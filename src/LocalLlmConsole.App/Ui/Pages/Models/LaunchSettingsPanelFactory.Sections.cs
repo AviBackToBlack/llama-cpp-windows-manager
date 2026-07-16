@@ -51,6 +51,20 @@ public static partial class LaunchSettingsPanelFactory
         var memoryGrid = LaunchSettingsGrid();
         var memoryControls = AddPerformanceMemorySettings(memoryGrid, builder, settings, excludedFlags);
         AddGeneratedFlags(memoryGrid, builder, "Memory", excludedFlags, generatedControls, formControls, skip: f => IsContextExtensionFlag(f));
+        formControls.BatchSizeBox = memoryControls.BatchSizeBox;
+        formControls.MicroBatchSizeBox = memoryControls.MicroBatchSizeBox;
+        formControls.FlashAttentionCombo = memoryControls.FlashAttentionCombo;
+        formControls.CacheTypeKCombo = memoryControls.CacheTypeKCombo;
+        formControls.CacheTypeVCombo = memoryControls.CacheTypeVCombo;
+        formControls.KvOffloadCombo = memoryControls.KvOffloadCombo;
+        formControls.KvUnifiedCombo = memoryControls.KvUnifiedCombo;
+        formControls.PromptCacheCombo = memoryControls.PromptCacheCombo;
+        formControls.PromptCacheRamMbBox = memoryControls.PromptCacheRamMbBox;
+        formControls.ContextCheckpointsCombo = memoryControls.ContextCheckpointsCombo;
+        formControls.ContextCheckpointCountBox = memoryControls.ContextCheckpointCountBox;
+        formControls.ContextCheckpointEveryNTokensBox = memoryControls.ContextCheckpointEveryNTokensBox;
+        formControls.MmapCombo = memoryControls.MmapCombo;
+        formControls.MlockCombo = memoryControls.MlockCombo;
         AddLaunchSection(panel, builder, Loc.T("Launch.Section.PerformanceMemory"), memoryGrid);
 
         var ropeGrid = LaunchSettingsGrid();
