@@ -48,6 +48,7 @@ public partial class MainWindow
 
     private async Task SaveLaunchSettingsForSelectedModelAsync()
     {
+        CommitPendingLaunchSettingsEdit();
         await _coreServices.Models.ModelLaunchSettingsSaveApplication.SaveSelectedProfileAsync(
             SelectedModel(),
             ModelLaunchProfileSaveSelectedActions());
@@ -55,6 +56,7 @@ public partial class MainWindow
 
     private async Task SaveLaunchSettingsAsNewModelAsync()
     {
+        CommitPendingLaunchSettingsEdit();
         await _coreServices.Models.ModelLaunchVariantSaveApplication.SaveSelectedAsNewAsync(
             SelectedModel(),
             _launchSettingsPanel.SaveAsNewModelName,
@@ -64,7 +66,21 @@ public partial class MainWindow
 
     private async Task SaveLaunchDefaultsFromControlsAsync()
     {
+        CommitPendingLaunchSettingsEdit();
         await _coreServices.Models.ModelLaunchSettingsSaveApplication.SaveDefaultsFromControlsAsync(LaunchDefaultsSaveFromControlsActions());
+    }
+
+    // A form field only mirrors its edit into the command preview on LostFocus, while the
+    // save/validate read path resets the controls and reparses the preview. A save triggered
+    // without the edited field first losing focus (programmatic or focus-less) would otherwise
+    // parse a stale preview and drop the edit, so rebuild the preview from the live controls
+    // first. When the preview box itself is focused it is already the source of truth, so skip.
+    private void CommitPendingLaunchSettingsEdit()
+    {
+        if (_coreServices.Ui.LaunchSettingsEditor.IsProgrammaticUpdate) return;
+        if (ReferenceEquals(System.Windows.Input.Keyboard.FocusedElement, _launchSettingsPanel.FormControls.CommandPreviewBox))
+            return;
+        UpdateCommandPreview();
     }
 
     private ModelLaunchProfileSaveSelectedActions ModelLaunchProfileSaveSelectedActions()
