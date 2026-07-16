@@ -181,14 +181,16 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
                 // An empty set means --help produced no parseable flags (parser miss or a
                 // non-standard build), not that the runtime supports nothing. Treat it as
                 // "no filtering" so recognized flags (including --model) are not stripped.
-                if (supportedFlags.Count > 0)
-                    request = request with { SupportedFlags = supportedFlags };
+                request = request with { SupportedFlags = supportedFlags is { Count: > 0 } ? supportedFlags : null };
             }
             catch
             {
                 // If capability detection fails, fall back to sending the full command.
             }
         }
+
+        if (runtime.Mode == RuntimeMode.Wsl)
+            request = ConvertFlagValuesForWsl(request);
 
         _lastApiKey = settings.ModelApiKey ?? "";
         var args = RuntimeAdapter.BuildArgs(request);

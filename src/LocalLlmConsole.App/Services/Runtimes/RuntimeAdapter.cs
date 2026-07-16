@@ -185,7 +185,7 @@ public static class RuntimeAdapter
         if (!IsOneOf(request.SpecDraftCacheTypeV, CacheTypes))
             errors.Add($"Draft V cache type must be one of: {string.Join(", ", CacheTypes)}.");
 
-        var flagValidation = LaunchCommandValidator.Validate(request.FlagValues);
+        var flagValidation = LaunchCommandValidator.Validate(request.FlagValues, validateFilePaths: false);
         errors.AddRange(flagValidation.Errors);
 
         ValidateExtraArgs(request.ExtraArgs, errors);

@@ -305,7 +305,7 @@ public static class LaunchCommandService
 
     private static bool IsSupportedByRuntime(LlamaServerFlag schemaFlag, string token, IReadOnlySet<string>? supportedFlags)
     {
-        if (supportedFlags is null) return true;
+        if (supportedFlags is null || supportedFlags.Count == 0) return true;
         if (schemaFlag.Names.Any(n => EssentialFlags.Contains(n, StringComparer.OrdinalIgnoreCase))) return true;
         if (supportedFlags.Contains(token)) return true;
         // For negated tokens (--no-*), don't fall back to the positive form

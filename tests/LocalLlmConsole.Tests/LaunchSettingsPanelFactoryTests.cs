@@ -310,7 +310,7 @@ public sealed class LaunchSettingsPanelFactoryTests
     }
 
     [Fact]
-    public void SetValueByFlagName_MmprojAuto_SelectsVisionAuto()
+    public void SetValueByFlagName_MmprojAuto_SetsVisionComboCorrectly()
     {
         RunInSta(() =>
         {
@@ -320,8 +320,10 @@ public sealed class LaunchSettingsPanelFactoryTests
             };
 
             controls.SetValueByFlagName("--mmproj-auto", "true");
-
             Assert.Equal("auto", controls.VisionCombo!.SelectedItem!.ToString());
+
+            controls.SetValueByFlagName("--mmproj-auto", "false");
+            Assert.Equal("off", controls.VisionCombo!.SelectedItem!.ToString());
         });
     }
 
@@ -343,6 +345,29 @@ public sealed class LaunchSettingsPanelFactoryTests
             Assert.Equal("2048", controls.ContextSizeBox!.Text);
             Assert.Equal("8", controls.ThreadsBox!.Text);
             Assert.Equal("4096", controls.BatchSizeBox!.Text);
+        });
+    }
+
+    [Fact]
+    public void Read_WithParseCommandPreviewFalse_DoesNotMutateControls()
+    {
+        RunInSta(() =>
+        {
+            var controls = CreateFullControls();
+            var defaults = AppSettings.CreateDefault("C:\\Workspace");
+            LaunchSettingsFormBinder.Apply(controls, defaults);
+
+            controls.ContextSizeBox!.Text = "4096";
+            controls.BatchSizeBox!.Text = "1024";
+            controls.CommandPreviewBox!.Text = "--ctx-size 2048";
+            var temperatureBefore = controls.TemperatureBox!.Text;
+
+            var settings = LaunchSettingsFormBinder.Read(defaults, controls, parseCommandPreview: false);
+
+            Assert.Equal("4096", controls.ContextSizeBox.Text);
+            Assert.Equal("1024", controls.BatchSizeBox.Text);
+            Assert.Equal(temperatureBefore, controls.TemperatureBox.Text);
+            Assert.Equal(4096, settings.ContextSize);
         });
     }
 

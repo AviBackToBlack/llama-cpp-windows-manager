@@ -185,7 +185,7 @@ public partial class MainWindow
             applySelectedPath);
 
     private AppSettings ReadLaunchSettingsFromControls()
-        => LaunchSettingsFormBinder.Read(_settings, _launchSettingsPanel.FormControls, SetStatus, supportedFlags: _launchSettingsPanel.SupportedFlags);
+        => LaunchSettingsFormBinder.Read(_settings, _launchSettingsPanel.FormControls, SetStatus, parseCommandPreview: false, supportedFlags: _launchSettingsPanel.SupportedFlags);
 
     private void ApplyLaunchSettingsToControls(AppSettings? source = null)
     {
@@ -231,7 +231,12 @@ public partial class MainWindow
             {
                 try
                 {
-                    var settings = ReadLaunchSettingsFromControls();
+                    var settings = LaunchSettingsFormBinder.Read(
+                        _settings,
+                        _launchSettingsPanel.FormControls,
+                        SetStatus,
+                        parseCommandPreview: true,
+                        supportedFlags: _launchSettingsPanel.SupportedFlags);
                     ApplyLaunchSettingsToControls(settings);
                 }
                 catch (Exception ex)

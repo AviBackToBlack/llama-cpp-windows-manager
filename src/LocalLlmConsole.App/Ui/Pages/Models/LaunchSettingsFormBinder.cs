@@ -231,15 +231,16 @@ public sealed class LaunchSettingsFormControls
 
         // The vision boolean flags map to the auto/on/off VisionCombo, so translate their
         // parsed true/false into the matching combo item instead of falling back to auto.
-        if (string.Equals(flagName, "--no-mmproj", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(flagName, "--no-mmproj", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(flagName, "--no-mmproj-auto", StringComparison.OrdinalIgnoreCase))
         {
-            SetComboValue(VisionCombo, IsTruthy(value) ? "off" : "auto");
+            SetComboValue(VisionCombo, "off");
             return;
         }
 
         if (string.Equals(flagName, "--mmproj-auto", StringComparison.OrdinalIgnoreCase))
         {
-            SetComboValue(VisionCombo, IsTruthy(value) ? "auto" : "off");
+            SetComboValue(VisionCombo, IsTruthyBoolean(value) ? "auto" : "off");
             return;
         }
 
@@ -255,10 +256,6 @@ public sealed class LaunchSettingsFormControls
         if (GeneratedControls.TryGetValue(primary, out var generatedControl))
             LaunchSettingsControlFactory.SetControlValue(generatedControl, value);
     }
-
-    private static bool IsTruthy(string value)
-        => string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(value, "on", StringComparison.OrdinalIgnoreCase);
 
     private static void SetTextBox(WpfTextBox? textBox, string value)
     {
@@ -277,6 +274,11 @@ public sealed class LaunchSettingsFormControls
         var match = combo.Items.Cast<object>().Select(item => item.ToString() ?? "").FirstOrDefault(item => string.Equals(item, normalized, StringComparison.OrdinalIgnoreCase));
         combo.SelectedItem = string.IsNullOrWhiteSpace(match) ? combo.Items[0] : match;
     }
+
+    private static bool IsTruthyBoolean(string value)
+        => string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "on", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "auto", StringComparison.OrdinalIgnoreCase);
 
     public void ResetControlsToDefaults()
     {

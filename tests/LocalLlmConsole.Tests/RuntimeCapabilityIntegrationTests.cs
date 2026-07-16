@@ -54,6 +54,62 @@ public sealed class RuntimeCapabilityIntegrationTests
     }
 
     [Fact]
+    public void UnsupportedFlagThenSupportedReEnablesControl()
+    {
+        RunInSta(() =>
+        {
+            var state = new LaunchSettingsPanelState();
+            state.FormControls.FlashAttentionCombo = new ComboBox { Tag = "--flash-attn" };
+            state.LaunchSettingElements["Flash attention"] = new List<FrameworkElement>
+            {
+                new TextBlock(),
+                state.FormControls.FlashAttentionCombo
+            };
+
+            var plan = EmptyPlan();
+            state.SetSupportedFlags(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "--ctx-size" });
+            state.ApplyControlState(plan);
+            Assert.False(state.FormControls.FlashAttentionCombo.IsEnabled);
+
+            state.SetSupportedFlags(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "--ctx-size", "--flash-attn" });
+            state.ApplyControlState(plan);
+            Assert.True(state.FormControls.FlashAttentionCombo.IsEnabled);
+        });
+    }
+
+    [Fact]
+    public void PlanDisabledControlIsNotReEnabledByRuntimeSupport()
+    {
+        RunInSta(() =>
+        {
+            var state = new LaunchSettingsPanelState();
+            state.FormControls.FlashAttentionCombo = new ComboBox { Tag = "--flash-attn" };
+            state.LaunchSettingElements["Flash attention"] = new List<FrameworkElement>
+            {
+                new TextBlock(),
+                state.FormControls.FlashAttentionCombo
+            };
+
+            var plan = EmptyPlan();
+            state.SetSupportedFlags(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "--ctx-size" });
+            state.ApplyControlState(plan);
+            Assert.False(state.FormControls.FlashAttentionCombo.IsEnabled);
+
+            var disabledPlan = EmptyPlan();
+            disabledPlan = disabledPlan with
+            {
+                EnabledSettings = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Flash attention"] = false
+                }
+            };
+            state.SetSupportedFlags(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "--ctx-size", "--flash-attn" });
+            state.ApplyControlState(disabledPlan);
+            Assert.False(state.FormControls.FlashAttentionCombo.IsEnabled);
+        });
+    }
+
+    [Fact]
     public async Task LaunchSettingsRuntimeCapabilityServiceResolvesRuntimeAndQueriesCapabilities()
     {
         var tempExecutable = Path.GetTempFileName();

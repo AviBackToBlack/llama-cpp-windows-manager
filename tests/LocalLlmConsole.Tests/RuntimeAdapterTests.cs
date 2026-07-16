@@ -91,6 +91,17 @@ public sealed class RuntimeAdapterTests
     }
 
     [Fact]
+    public void ValidateDoesNotCheckFlagValuesFilePaths()
+    {
+        var result = RuntimeAdapter.Validate(ValidRequest() with
+        {
+            FlagValues = new Dictionary<string, string> { ["--grammar-file"] = "C:\\nonexistent\\grammar.gbnf" }
+        });
+
+        Assert.True(result.Ok);
+    }
+
+    [Fact]
     public void ValidateRejectsInvalidFlagValues()
     {
         var result = RuntimeAdapter.Validate(ValidRequest() with

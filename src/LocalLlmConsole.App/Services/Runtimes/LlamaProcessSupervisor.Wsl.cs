@@ -17,6 +17,22 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         return full.Replace('\\', '/');
     }
 
+    private static RuntimeLaunchRequest ConvertFlagValuesForWsl(RuntimeLaunchRequest request)
+    {
+        var convertedFlagValues = request.FlagValues.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value,
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in request.FlagValues)
+        {
+            if (string.IsNullOrWhiteSpace(value)) continue;
+            var flag = LlamaServerFlagSchema.FindByName(key);
+            if (flag?.ValueType is FlagValueType.File or FlagValueType.Path)
+                convertedFlagValues[key] = ToWslPath(value);
+        }
+        return request with { FlagValues = convertedFlagValues.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase) };
+    }
+
     private static string WslDirectoryName(string path)
     {
         var normalized = (path ?? "").Replace('\\', '/').TrimEnd('/');
