@@ -235,11 +235,7 @@ public sealed class LaunchSettingsFormControls
         if (firstClass is not null)
         {
             if (firstClass is WpfTextBox textBox) textBox.Text = value;
-            else if (firstClass is WpfComboBox combo)
-            {
-                var match = combo.Items.Cast<object>().Select(item => item.ToString() ?? "").FirstOrDefault(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase));
-                combo.SelectedItem = string.IsNullOrWhiteSpace(match) ? combo.Items[0] : match;
-            }
+            else if (firstClass is WpfComboBox combo) SetComboValue(combo, value);
             return;
         }
 
@@ -260,7 +256,13 @@ public sealed class LaunchSettingsFormControls
     private static void SetComboValue(WpfComboBox? combo, string value)
     {
         if (combo is null) return;
-        var match = combo.Items.Cast<object>().Select(item => item.ToString() ?? "").FirstOrDefault(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase));
+        // ParseCommand normalizes boolean flags to "true"/"false", but the on/off/auto combos
+        // only contain "on"/"off"/"auto", so translate before matching or the value would fall
+        // back to the first item and silently discard the user's choice on a save round-trip.
+        var normalized = string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ? "on"
+            : string.Equals(value, "false", StringComparison.OrdinalIgnoreCase) ? "off"
+            : value;
+        var match = combo.Items.Cast<object>().Select(item => item.ToString() ?? "").FirstOrDefault(item => string.Equals(item, normalized, StringComparison.OrdinalIgnoreCase));
         combo.SelectedItem = string.IsNullOrWhiteSpace(match) ? combo.Items[0] : match;
     }
 

@@ -197,6 +197,29 @@ public sealed class LaunchSettingsPanelFactoryTests
         });
     }
 
+    [Theory]
+    [InlineData("--flash-attn", "on")]
+    [InlineData("--mlock", "on")]
+    public void Read_BooleanOnOffCombos_SurviveCommandPreviewRoundTrip(string flag, string mode)
+    {
+        RunInSta(() =>
+        {
+            var controls = CreateFullControls();
+            var defaults = AppSettings.CreateDefault("C:\\Workspace");
+            LaunchSettingsFormBinder.Apply(controls, defaults);
+
+            // ParseCommand emits boolean flags as true/false; the combo round-trip must map
+            // those back to on/off rather than silently reverting to the first combo item.
+            controls.CommandPreviewBox!.Text = flag;
+            LaunchSettingsFormBinder.Read(defaults, controls, parseCommandPreview: true);
+
+            var combo = string.Equals(flag, "--flash-attn", StringComparison.Ordinal)
+                ? controls.FlashAttentionCombo!
+                : controls.MlockCombo!;
+            Assert.Equal(mode, combo.SelectedItem!.ToString());
+        });
+    }
+
     [Fact]
     public void SetValueByFlagName_CacheRamZero_SetsModeOffAndSavesWithoutError()
     {
