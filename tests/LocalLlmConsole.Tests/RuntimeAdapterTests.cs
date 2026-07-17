@@ -193,14 +193,26 @@ public sealed class RuntimeAdapterTests
     }
 
     [Fact]
-    public void ValidateReportsDuplicateFlagWhenAliasesUsedInExtraArgs()
+    public void ValidateAllowsDuplicateFlagsInExtraArgs()
     {
         var result = RuntimeAdapter.Validate(ValidRequest() with
         {
             ExtraArgs = CustomLaunchParameterParser.Parse("--temp 0.5 --temperature 0.8")
         });
 
-        Assert.False(result.Ok);
-        Assert.Contains(result.Errors, e => e.Contains("Duplicate flag", StringComparison.OrdinalIgnoreCase));
+        Assert.True(result.Ok);
+        Assert.DoesNotContain(result.Errors, e => e.Contains("Duplicate flag", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ValidateAllowsRepeatableFlagsInExtraArgs()
+    {
+        var result = RuntimeAdapter.Validate(ValidRequest() with
+        {
+            ExtraArgs = CustomLaunchParameterParser.Parse("--lora path1.gguf --lora path2.gguf")
+        });
+
+        Assert.True(result.Ok);
+        Assert.DoesNotContain(result.Errors, e => e.Contains("Duplicate flag", StringComparison.OrdinalIgnoreCase));
     }
 }

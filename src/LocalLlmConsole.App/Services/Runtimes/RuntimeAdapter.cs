@@ -197,7 +197,6 @@ public static class RuntimeAdapter
     {
         if (extraArgs is null || extraArgs.Count == 0) return;
 
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var arg in extraArgs)
         {
             if (string.IsNullOrWhiteSpace(arg)) continue;
@@ -211,21 +210,6 @@ public static class RuntimeAdapter
             {
                 errors.Add($"Custom parameter '{arg}' is not allowed because it would override a security-critical setting.");
                 continue;
-            }
-
-            if (arg.StartsWith("--", StringComparison.Ordinal))
-            {
-                var flagKey = arg.Split('=')[0];
-                var schemaFlag = LlamaServerFlagSchema.FindByName(flagKey);
-                var normalizedKey = schemaFlag?.PrimaryName ?? flagKey;
-                if (seen.Contains(normalizedKey))
-                {
-                    errors.Add($"Duplicate flag '{flagKey}' in custom parameters.");
-                }
-                else
-                {
-                    seen.Add(normalizedKey);
-                }
             }
         }
     }
