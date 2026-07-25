@@ -66,15 +66,13 @@ public static partial class LaunchSettingsPanelFactory
         out WpfTextBox searchBox,
         out WpfButton advancedButton)
     {
-        const double toolbarControlHeight = 30;
         var grid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
         grid.ColumnDefinitions.Add(new ColumnDefinition());
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         searchBox = new WpfTextBox
         {
-            Height = toolbarControlHeight,
-            MinHeight = toolbarControlHeight,
+            MinHeight = 29,
             MinWidth = 150,
             Margin = new Thickness(0, 0, 6, 0),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
@@ -88,8 +86,7 @@ public static partial class LaunchSettingsPanelFactory
         var toggleButton = new WpfButton
         {
             Content = AdvancedButtonText(showAdvanced),
-            Height = toolbarControlHeight,
-            MinHeight = toolbarControlHeight,
+            MinHeight = 29,
             MinWidth = 126,
             Margin = new Thickness(0),
             ToolTip = Loc.T("Tooltip.AdvancedSettings")

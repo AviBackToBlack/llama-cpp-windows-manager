@@ -9,6 +9,7 @@ using WpfTextBox = System.Windows.Controls.TextBox;
 
 namespace LocalLlmConsole;
 
+/// <summary>Input parameters for creating the launch settings panel.</summary>
 public sealed record LaunchSettingsPanelRequest(
     AppSettings Settings,
     IEnumerable<RuntimeChoice> RuntimeChoices,
@@ -24,6 +25,7 @@ public sealed record LaunchSettingsPanelRequest(
     Func<Task> ChooseMtpHeadAsync,
     Action SaveAsNewNameChanged);
 
+/// <summary>Container for the controls and layout metadata produced by <see cref="LaunchSettingsPanelFactory"/>.</summary>
 public sealed class LaunchSettingsPanelControls
 {
     public required UIElement Root { get; init; }
@@ -41,12 +43,14 @@ public sealed class LaunchSettingsPanelControls
     public required List<FrameworkElement> AdvancedLaunchSections { get; init; }
 }
 
+/// <summary>Describes a launch settings section and the labels it contains.</summary>
 public sealed record LaunchSettingsSectionElements(
     string Title,
     FrameworkElement Section,
     IReadOnlyList<string> SettingLabels,
     bool IsAdvancedSection);
 
+/// <summary>Factory that builds the launch settings panel and its control layout from the flag schema.</summary>
 public static partial class LaunchSettingsPanelFactory
 {
     public static LaunchSettingsPanelControls Create(LaunchSettingsPanelRequest request)
@@ -80,6 +84,8 @@ public static partial class LaunchSettingsPanelFactory
             launchSettingSections,
             advancedLaunchSections);
         var formControls = AddLaunchSections(panel, builder, request, launchPortBox);
+        formControls.RuntimeCombo = runtimeCombo;
+        formControls.FlagOrder.AddRange(builder.FlagOrder);
 
         panel.Children.Add(ActionButtons(request, out var saveForModelButton));
         panel.Children.Add(SaveAsNewRow(request, out var saveAsNewModelNameBox, out var saveAsNewModelButton));

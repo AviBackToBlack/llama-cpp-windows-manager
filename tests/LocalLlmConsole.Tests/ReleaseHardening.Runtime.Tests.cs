@@ -453,7 +453,9 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.Contains("--cache-ram", offArgs);
         Assert.Contains("0", offArgs);
-        Assert.Contains("--ctx-checkpoints", offArgs);
+        var offCheckpointIndex = offArgs.ToList().IndexOf("--ctx-checkpoints");
+        Assert.True(offCheckpointIndex >= 0);
+        Assert.Equal("0", offArgs[offCheckpointIndex + 1]);
         Assert.DoesNotContain("--checkpoint-min-step", offArgs);
     }
 
@@ -476,7 +478,7 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.Contains("--n-gpu-layers", onArgs);
         Assert.Contains("99", onArgs);
-        Assert.Contains("--mmap", onArgs);
+        Assert.DoesNotContain("--no-mmap", onArgs);
         Assert.Contains("--n-gpu-layers", offArgs);
         Assert.Contains("88", offArgs);
         Assert.Contains("--no-mmap", offArgs);
@@ -486,9 +488,18 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public void RuntimeAdapterTreatsMetalAsGpuBackend()
     {
-        var source = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeAdapter.cs"));
+        // Validate rejects Metal on Windows, so assert at the emission layer that owns the
+        // GPU-backend set: Metal must produce --n-gpu-layers like the other GPU backends.
+        var tokens = LaunchCommandService.BuildCommandTokens(new LlamaServerLaunchOptions
+        {
+            ModelPath = "model.gguf",
+            Backend = RuntimeBackend.Metal,
+            GpuLayers = 12
+        }).ToList();
 
-        Assert.Contains("request.Backend is RuntimeBackend.Cuda or RuntimeBackend.Vulkan or RuntimeBackend.Metal or RuntimeBackend.Sycl", source, StringComparison.Ordinal);
+        var index = tokens.IndexOf("--n-gpu-layers");
+        Assert.True(index >= 0);
+        Assert.Equal("12", tokens[index + 1]);
     }
 
 

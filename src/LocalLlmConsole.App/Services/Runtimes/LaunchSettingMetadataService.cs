@@ -1,6 +1,7 @@
 
 namespace LocalLlmConsole.Services;
 
+/// <summary>Provides labels, tooltips, and normalized option values for launch settings UI.</summary>
 public static class LaunchSettingMetadataService
 {
     public const string AtomicMtpSpeculativeType = "atomic-mtp";
@@ -28,6 +29,23 @@ public static class LaunchSettingMetadataService
 
     public static string LlamaSpeculativeTypeArgument(string value)
         => IsAtomicMtpSpeculativeType(value) ? "mtp" : NormalizeSpeculativeType(value);
+
+    public static string Tooltip(LlamaServerFlag flag)
+        => $"({flag.PrimaryName}) {flag.Description}";
+
+    public static string Tooltip(string label, string flagName)
+    {
+        var baseTooltip = Tooltip(label);
+        var flag = LlamaServerFlagSchema.FindByName(flagName);
+        if (flag is not null)
+        {
+            var defaultTooltip = Loc.T("Tooltip.Field.Default");
+            if (string.Equals(baseTooltip, defaultTooltip, StringComparison.Ordinal))
+                baseTooltip = flag.Description;
+        }
+
+        return $"({flagName}) {baseTooltip}";
+    }
 
     public static string Tooltip(string label) => label switch
     {
@@ -84,12 +102,19 @@ public static class LaunchSettingMetadataService
         "Draft min" => Loc.T("Tooltip.Field.DraftMin"),
         "Split prob" => Loc.T("Tooltip.Field.SplitProb"),
         "Min prob" => Loc.T("Tooltip.Field.MinProb"),
-        _ => Loc.T("Tooltip.Field.Default")
+        "Command line" => Loc.T("Tooltip.Field.CommandLine"),
+        _ => TryTooltipFromFlag(label)
     };
+
+    private static string TryTooltipFromFlag(string label)
+    {
+        var flag = LlamaServerFlagSchema.FindByName(label);
+        return flag is not null ? Tooltip(flag) : Loc.T("Tooltip.Field.Default");
+    }
 
     public static string ContextSizeTooltip(string text)
     {
-        var tooltip = Tooltip("Context size");
+        var tooltip = Tooltip("Context size", "--ctx-size");
         if (!LaunchSettingParser.TryNormalizeContextSize(text, out var value) || value <= 0)
             return tooltip;
 

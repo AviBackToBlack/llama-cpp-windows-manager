@@ -1,5 +1,6 @@
 namespace LocalLlmConsole.Services;
 
+/// <summary>Input for evaluating the enabled state of launch settings save buttons.</summary>
 public sealed record LaunchSettingsSaveStateRequest(
     ModelRecord? SelectedModel,
     bool HasSavedProfile,
@@ -8,11 +9,13 @@ public sealed record LaunchSettingsSaveStateRequest(
     ModelLaunchSettings? CurrentProfile,
     string RequestedVariantName);
 
+/// <summary>Result describing whether Save For Model and Save As New can be activated.</summary>
 public sealed record LaunchSettingsSaveState(
     string SaveForModelContent,
     bool CanSaveForModel,
     bool CanSaveAsNewVariant);
 
+/// <summary>Evaluates the enabled state of launch settings save buttons.</summary>
 public static class LaunchSettingsSaveStateService
 {
     public const string SaveForModelText = "Save For Model";
@@ -32,11 +35,24 @@ public static class LaunchSettingsSaveStateService
         if (!request.CurrentProfileReadable || request.CurrentProfile is null)
             return new LaunchSettingsSaveState(SaveForModelText, true, canSaveAsNewVariant);
 
-        var currentMatchesSavedProfile = Equals(request.CurrentProfile, request.SavedProfile);
+        var currentMatchesSavedProfile = ProfilesMatch(request.CurrentProfile, request.SavedProfile);
         return new LaunchSettingsSaveState(
             currentMatchesSavedProfile ? SavedText : SaveForModelText,
             !currentMatchesSavedProfile,
             canSaveAsNewVariant);
+    }
+
+    private static bool ProfilesMatch(ModelLaunchSettings current, ModelLaunchSettings saved)
+    {
+        var currentWithoutFlags = current with { FlagValues = ImmutableDictionary<string, string>.Empty };
+        var savedWithoutFlags = saved with { FlagValues = ImmutableDictionary<string, string>.Empty };
+
+        return Equals(currentWithoutFlags, savedWithoutFlags)
+            && current.FlagValues.Count == saved.FlagValues.Count
+            && current.FlagValues.All(currentFlag =>
+                saved.FlagValues.Any(savedFlag =>
+                    string.Equals(currentFlag.Key, savedFlag.Key, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(currentFlag.Value, savedFlag.Value, StringComparison.Ordinal)));
     }
 
     public static bool CanSaveAsNewVariant(ModelRecord? selectedModel, string requestedVariantName)

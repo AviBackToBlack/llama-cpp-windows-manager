@@ -121,6 +121,36 @@ Useful test groups:
 - `ReleaseHardening.HuggingFace.Tests.cs`: search/download/safety behavior.
 - `ReleaseHardening.Ui.Tests.cs`: view model and UI composition invariants.
 
+## Launch Settings Development
+
+The launch settings panel is schema-driven:
+
+- `src/LocalLlmConsole.App/Services/Runtimes/LlamaServerFlagSchema.cs` is the
+  single source of truth for `llama-server` flag metadata.
+- `LaunchSettingsPanelFactory` lays out first-class controls and generated
+  sections from the schema.
+- `LaunchSettingsControlFactory` creates the WPF control for each flag value
+  type.
+- `LaunchSettingsFormBinder` reads values from the controls, writes the command
+  preview, and parses pasted commands back into the form.
+- `LaunchCommandService` builds and parses the command line, while
+  `LaunchCommandValidator` validates flag values.
+- `RuntimeFlagCapabilityService` detects which flags a runtime supports by
+  running `llama-server --help`.
+
+When adding or changing a `llama-server` flag:
+
+1. Add or update the `LlamaServerFlag` entry in `LlamaServerFlagSchema`.
+2. If the flag is common enough, map it to a first-class control in
+   `LaunchSettingsPanelFactory`; otherwise it appears in generated sections.
+3. Add a test in `LaunchSettingsPanelFactoryTests` that ensures
+   `LaunchSettingsControlFactory` can create a control for the flag.
+4. Add validation and command-builder coverage in
+   `LaunchCommandValidatorTests`, `LaunchCommandServiceTests`, and
+   `RuntimeAdapterTests`.
+5. Update `HelpContentFactory` and `docs/ARCHITECTURE.md`/`README.md` if the
+  flag is user-facing.
+
 ## Documentation Guidance
 
 When behavior changes, update both the repo docs and in-app Help in the same

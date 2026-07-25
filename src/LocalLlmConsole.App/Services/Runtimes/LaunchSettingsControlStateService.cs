@@ -1,11 +1,13 @@
 namespace LocalLlmConsole.Services;
 
+/// <summary>Input describing the current launch settings UI state.</summary>
 public sealed record LaunchSettingsControlStateRequest(
     bool ShowAdvancedSections,
     RuntimeBackend? RuntimeBackend,
     bool VisionLaunchSettingsAvailable,
     string SpeculativeType);
 
+/// <summary>Plan for which launch settings controls are visible and enabled.</summary>
 public sealed record LaunchSettingsControlStatePlan(
     bool ShowAdvancedSections,
     bool GpuLayersAvailable,
@@ -15,6 +17,7 @@ public sealed record LaunchSettingsControlStatePlan(
     IReadOnlyDictionary<string, bool> VisibleSettings,
     IReadOnlyDictionary<string, bool> EnabledSettings);
 
+/// <summary>Builds visibility and enabled state for launch settings controls.</summary>
 public sealed class LaunchSettingsControlStateService
 {
     public static readonly string[] DraftSettingLabels =
