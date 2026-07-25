@@ -121,10 +121,14 @@ public static partial class LaunchSettingsPanelFactory
         List<FrameworkElement> advancedLaunchSections)
     {
         private readonly Dictionary<Grid, List<string>> _sectionLabelsByGrid = new();
+        private readonly List<string> _flagOrder = [];
+
+        public IReadOnlyList<string> FlagOrder => _flagOrder;
 
         public void AddLaunchSetting(Grid grid, string label, FrameworkElement control)
         {
-            control.ToolTip = TooltipText(LaunchSettingMetadataService.Tooltip(label));
+            if (control.ToolTip is null)
+                control.ToolTip = TooltipText(LaunchSettingMetadataService.Tooltip(label));
             var index = grid.Children.Count / 2;
             var row = index / 2;
             var rightSide = index % 2 == 1;
@@ -148,6 +152,8 @@ public static partial class LaunchSettingsPanelFactory
             Grid.SetColumn(control, rightSide ? 4 : 1);
             grid.Children.Add(control);
             launchSettingElements[label] = new List<FrameworkElement> { labelText, control };
+            if (control.Tag is string flagName && !string.IsNullOrWhiteSpace(flagName) && flagName.StartsWith("-", StringComparison.Ordinal) && !_flagOrder.Contains(flagName))
+                _flagOrder.Add(flagName);
             if (!_sectionLabelsByGrid.TryGetValue(grid, out var labels))
             {
                 labels = [];

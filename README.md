@@ -40,6 +40,10 @@ library replacement.
 - Supports saved launch variants, reasoning/template options, vision
   head/projector selection, dynamic-resolution image token settings, MTP head
   selection, and upstream-style speculative draft helpers.
+- Generates the launch settings panel from a schema-driven catalog of
+  `llama-server` flags, with first-class and generated controls, a live two-way
+  command preview, and runtime support detection that disables flags the
+  runtime does not advertise.
 - Shows loaded sessions, logs, jobs, runtime-aware hardware summary, live slot
   activity, preserved model load duration, and two-row token monitors with
   live, average, and total values for normal and MTP token streams on the
@@ -156,6 +160,15 @@ For official upstream `llama.cpp` draft modes, set **Spec type** to a
 compatible Atomic MTP forks that accept `--mtp-head`, use **Spec type** =
 `atomic-mtp` and **MTP head** instead. MTP assistant GGUFs are separate from
 Vision head / `--mmproj` projectors.
+
+The launch settings panel is generated from the `LlamaServerFlagSchema` catalog,
+so it exposes every known `llama-server` flag. First-class controls appear for
+the most common values; the remaining flags are generated into categorized
+sections when **Advanced Settings** is enabled. The **Command line** preview at
+the top is two-way: editing the form updates the preview, and pasting a full
+`llama-server` command into the preview updates the form fields. Values are
+validated before save and before launch, and security-critical flags (`--host`,
+`--port`, `--api-key`) cannot be overridden.
 
 Advanced launch settings include **Server > Custom params** for raw
 `llama-server` flags that do not yet have a first-class app field. These values

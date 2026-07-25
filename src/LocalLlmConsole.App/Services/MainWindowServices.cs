@@ -151,6 +151,7 @@ public sealed record MainWindowCoreModelServices(
     LaunchSettingsControlStateService LaunchSettingsControlStates,
     ModelRuntimeLaunchApplicationService ModelRuntimeLaunchApplication,
     LaunchSettingsRenderApplicationService LaunchSettingsRenderApplication,
+    LaunchSettingsRuntimeCapabilityApplicationService LaunchSettingsRuntimeCapabilities,
     ModelLaunchHeadSelectionApplicationService ModelLaunchHeadSelectionApplication,
     ModelLaunchSettingsSaveApplicationService ModelLaunchSettingsSaveApplication,
     ModelLaunchVariantSaveApplicationService ModelLaunchVariantSaveApplication);

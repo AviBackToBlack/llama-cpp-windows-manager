@@ -949,7 +949,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("overview", sections.Select("overview").Key);
         Assert.Equal("overview", sections.ActiveSection);
         Assert.Equal(HelpSectionService.FirstSteps, sections.Select("missing").Key);
-        Assert.Equal(["first-steps", "overview", "models", "runtimes", "settings", "opencode", "maintenance"], sections.Sections.Select(section => section.Key).ToArray());
+        Assert.Equal(["first-steps", "overview", "models", "launch-settings", "runtimes", "settings", "opencode", "maintenance"], sections.Sections.Select(section => section.Key).ToArray());
         Assert.Contains("FirstStepsCount = 5", helpContent, StringComparison.Ordinal);
         Assert.Contains("Step 1", helpContent, StringComparison.Ordinal);
         Assert.Contains("Install an official runtime", helpContent, StringComparison.Ordinal);

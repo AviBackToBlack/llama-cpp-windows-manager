@@ -19,4 +19,19 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
             return configuredHeadPath.Trim();
         return ModelCatalogService.FindDraftModel(modelPath);
     }
+
+    private IReadOnlyList<string> BuildArgsWithDroppedFlagLogging(RuntimeLaunchRequest request)
+    {
+        var droppedFlags = new List<string>();
+        var args = RuntimeAdapter.BuildArgs(request, droppedFlags);
+        if (droppedFlags.Count > 0)
+        {
+            // The command preview intentionally shows the unfiltered command; log what
+            // capability filtering removed so the divergence is visible somewhere.
+            _log?.WriteLine(
+                "[launcher] Omitted flags not advertised by this runtime's --help: "
+                + string.Join(" ", droppedFlags.Distinct(StringComparer.OrdinalIgnoreCase)));
+        }
+        return args;
+    }
 }

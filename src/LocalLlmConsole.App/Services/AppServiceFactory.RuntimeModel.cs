@@ -75,6 +75,11 @@ public sealed partial class AppServiceFactory
     public LaunchRuntimeSelectionService CreateLaunchRuntimeSelectionService()
         => new();
 
+    public LaunchSettingsRuntimeCapabilityApplicationService CreateLaunchSettingsRuntimeCapabilityApplicationService()
+    {
+        return new(GetOrCreateRuntimeFlagCapabilityService());
+    }
+
     public ModelRuntimeLoadApplicationService CreateModelRuntimeLoadApplicationService(
         ModelRuntimeCommandDecisionService commands,
         LaunchRuntimeSelectionService runtimeSelection)

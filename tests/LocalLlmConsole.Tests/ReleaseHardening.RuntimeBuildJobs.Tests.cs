@@ -941,6 +941,8 @@ public sealed partial class ReleaseHardeningTests
     [Fact]
     public async Task RuntimeBuildExecutionServiceRunsNativeBuildRegistersRuntimeAndDeletesSource()
     {
+        Assert.SkipUnless(CanResolveNativeBuildTools(), "Native build tools (PowerShell, git, cmake) are not installed in this environment.");
+
         var root = CreateTempRoot();
         await using var store = new StateStore(Path.Combine(root, "state", "local-llm-console.db"));
         await store.InitializeAsync();
@@ -1010,5 +1012,19 @@ public sealed partial class ReleaseHardeningTests
         Assert.Empty(await store.ListRuntimesAsync());
     }
 
+    private static bool CanResolveNativeBuildTools()
+    {
+        try
+        {
+            _ = HostExecutableResolver.WindowsPowerShellExe();
+            _ = HostExecutableResolver.GitExe();
+            _ = HostExecutableResolver.CMakeExe();
+            return true;
+        }
+        catch (FileNotFoundException)
+        {
+            return false;
+        }
+    }
 
 }

@@ -1,6 +1,7 @@
 <Application x:Class="LocalLlmConsole.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:LocalLlmConsole">
   <Application.Resources>
     <SolidColorBrush x:Key="AppBack" Color="#0A0D12"/>
     <SolidColorBrush x:Key="PanelBack" Color="#171C24"/>
@@ -212,6 +213,12 @@
               </Trigger>
               <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Opacity" Value="0.52"/>
+              </Trigger>
+              <Trigger Property="local:LaunchInputVisualState.State" Value="Valid">
+                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+              </Trigger>
+              <Trigger Property="local:LaunchInputVisualState.State" Value="Invalid">
+                <Setter TargetName="Chrome" Property="BorderBrush" Value="Red"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>

@@ -9,36 +9,46 @@ public static partial class LaunchSettingsPanelFactory
     private static MemoryLaunchControls AddPerformanceMemorySettings(
         Grid memoryGrid,
         LaunchSettingsPanelBuilder builder,
-        AppSettings settings)
+        AppSettings settings,
+        HashSet<string> excludedFlags)
     {
         var batchSizeBox = LaunchTextBox(settings.BatchSize);
-        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.BatchSize"), batchSizeBox);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.BatchSize"), "--batch-size", batchSizeBox, excludedFlags);
         var microBatchSizeBox = LaunchTextBox(settings.MicroBatchSize);
-        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.MicroBatch"), microBatchSizeBox);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.MicroBatch"), "--ubatch-size", microBatchSizeBox, excludedFlags);
         var flashAttentionCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.FlashAttention"), flashAttentionCombo);
+        SetComboValue(flashAttentionCombo, settings.FlashAttention);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.FlashAttention"), "--flash-attn", flashAttentionCombo, excludedFlags);
         var cacheTypeKCombo = LaunchCombo(LaunchSettingMetadataService.CacheTypeOptions);
-        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.KCache"), cacheTypeKCombo);
+        SetComboValue(cacheTypeKCombo, settings.CacheTypeK);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.KCache"), "--cache-type-k", cacheTypeKCombo, excludedFlags);
         var cacheTypeVCombo = LaunchCombo(LaunchSettingMetadataService.CacheTypeOptions);
-        builder.AddLaunchSetting(memoryGrid, Loc.T("Launch.Field.VCache"), cacheTypeVCombo);
+        SetComboValue(cacheTypeVCombo, settings.CacheTypeV);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.VCache"), "--cache-type-v", cacheTypeVCombo, excludedFlags);
         var kvOffloadCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.KvOffload"), kvOffloadCombo);
+        SetComboValue(kvOffloadCombo, settings.KvOffload);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.KvOffload"), "--kv-offload", kvOffloadCombo, excludedFlags, advanced: true);
         var kvUnifiedCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.UnifiedKv"), kvUnifiedCombo);
+        SetComboValue(kvUnifiedCombo, settings.KvUnified);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.UnifiedKv"), "--kv-unified", kvUnifiedCombo, excludedFlags, advanced: true);
         var promptCacheCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.PromptCache"), promptCacheCombo);
+        SetComboValue(promptCacheCombo, settings.PromptCacheMode);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.PromptCache"), "--cache-ram-mode", promptCacheCombo, excludedFlags, advanced: true);
         var promptCacheRamMbBox = LaunchTextBox(settings.PromptCacheRamMb);
-        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.PromptCacheMb"), promptCacheRamMbBox);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.PromptCacheMb"), "--cache-ram", promptCacheRamMbBox, excludedFlags, advanced: true);
         var contextCheckpointsCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.Checkpoints"), contextCheckpointsCombo);
+        SetComboValue(contextCheckpointsCombo, settings.ContextCheckpointsMode);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.Checkpoints"), "--ctx-checkpoints-mode", contextCheckpointsCombo, excludedFlags, advanced: true);
         var contextCheckpointCountBox = LaunchTextBox(settings.ContextCheckpointCount);
-        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.CheckpointCount"), contextCheckpointCountBox);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.CheckpointCount"), "--ctx-checkpoints", contextCheckpointCountBox, excludedFlags, advanced: true);
         var contextCheckpointEveryNTokensBox = LaunchTextBox(settings.ContextCheckpointEveryNTokens);
-        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.CheckpointSpacing"), contextCheckpointEveryNTokensBox);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.CheckpointSpacing"), "--checkpoint-min-step", contextCheckpointEveryNTokensBox, excludedFlags, advanced: true);
         var mmapCombo = LaunchCombo(LaunchSettingMetadataService.AutoOnOffOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.MemoryMap"), mmapCombo);
+        SetComboValue(mmapCombo, settings.MmapMode);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.MemoryMap"), "--mmap", mmapCombo, excludedFlags, advanced: true);
         var mlockCombo = LaunchCombo(LaunchSettingMetadataService.OffOnOptions);
-        builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T("Launch.Field.MemoryLock"), mlockCombo);
+        SetComboValue(mlockCombo, settings.MlockMode);
+        AddFirstClassControl(memoryGrid, builder, Loc.T("Launch.Field.MemoryLock"), "--mlock", mlockCombo, excludedFlags, advanced: true);
 
         return new MemoryLaunchControls(
             batchSizeBox,

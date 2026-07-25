@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Media;
+using System.Windows.Threading;
 using Forms = System.Windows.Forms;
 using WpfApplication = System.Windows.Application;
 using WpfBinding = System.Windows.Data.Binding;
@@ -48,6 +48,7 @@ public partial class MainWindow
 
     private async Task SaveLaunchSettingsForSelectedModelAsync()
     {
+        CommitPendingLaunchSettingsEdit();
         await _coreServices.Models.ModelLaunchSettingsSaveApplication.SaveSelectedProfileAsync(
             SelectedModel(),
             ModelLaunchProfileSaveSelectedActions());
@@ -55,6 +56,7 @@ public partial class MainWindow
 
     private async Task SaveLaunchSettingsAsNewModelAsync()
     {
+        CommitPendingLaunchSettingsEdit();
         await _coreServices.Models.ModelLaunchVariantSaveApplication.SaveSelectedAsNewAsync(
             SelectedModel(),
             _launchSettingsPanel.SaveAsNewModelName,
@@ -64,7 +66,21 @@ public partial class MainWindow
 
     private async Task SaveLaunchDefaultsFromControlsAsync()
     {
+        CommitPendingLaunchSettingsEdit();
         await _coreServices.Models.ModelLaunchSettingsSaveApplication.SaveDefaultsFromControlsAsync(LaunchDefaultsSaveFromControlsActions());
+    }
+
+    // A form field only mirrors its edit into the command preview on LostFocus, while the
+    // save/validate read path resets the controls and reparses the preview. A save triggered
+    // without the edited field first losing focus (programmatic or focus-less) would otherwise
+    // parse a stale preview and drop the edit, so rebuild the preview from the live controls
+    // first. When the preview box itself is focused it is already the source of truth, so skip.
+    private void CommitPendingLaunchSettingsEdit()
+    {
+        if (_coreServices.Ui.LaunchSettingsEditor.IsProgrammaticUpdate) return;
+        if (ReferenceEquals(System.Windows.Input.Keyboard.FocusedElement, _launchSettingsPanel.FormControls.CommandPreviewBox))
+            return;
+        UpdateCommandPreview();
     }
 
     private ModelLaunchProfileSaveSelectedActions ModelLaunchProfileSaveSelectedActions()
@@ -169,15 +185,83 @@ public partial class MainWindow
             applySelectedPath);
 
     private AppSettings ReadLaunchSettingsFromControls()
-        => LaunchSettingsFormBinder.Read(_settings, _launchSettingsPanel.FormControls);
+        => LaunchSettingsFormBinder.Read(_settings, _launchSettingsPanel.FormControls, SetStatus, parseCommandPreview: false, supportedFlags: _launchSettingsPanel.SupportedFlags);
 
     private void ApplyLaunchSettingsToControls(AppSettings? source = null)
     {
         _coreServices.Ui.LaunchSettingsEditor.RunProgrammaticUpdate(() =>
-            LaunchSettingsFormBinder.Apply(_launchSettingsPanel.FormControls, source ?? _settings));
+            LaunchSettingsFormBinder.Apply(_launchSettingsPanel.FormControls, source ?? _settings, SetStatus));
 
         UpdateLaunchControlVisibility();
         UpdateLaunchSaveButtonState();
+        LaunchSettingsFormBinder.UpdateFlagVisualStates(_launchSettingsPanel.FormControls, _launchSettingsPanel);
+    }
+
+    private DispatcherTimer? _commandPreviewDebounceTimer;
+
+    private void UpdateCommandPreview()
+    {
+        if (_coreServices.Ui.LaunchSettingsEditor.IsProgrammaticUpdate) return;
+
+        if (_commandPreviewDebounceTimer is null)
+        {
+            _commandPreviewDebounceTimer = new DispatcherTimer(
+                TimeSpan.FromMilliseconds(200),
+                DispatcherPriority.Input,
+                (_, _) =>
+                {
+                    _commandPreviewDebounceTimer?.Stop();
+                    UpdateCommandPreviewCore(treatEmptyAsDefault: true);
+                },
+                Dispatcher.CurrentDispatcher);
+            _commandPreviewDebounceTimer.IsEnabled = false;
+        }
+
+        _commandPreviewDebounceTimer.Stop();
+        _commandPreviewDebounceTimer.Start();
+    }
+
+    private void UpdateCommandPreviewImmediate()
+    {
+        if (_coreServices.Ui.LaunchSettingsEditor.IsProgrammaticUpdate) return;
+
+        _commandPreviewDebounceTimer?.Stop();
+        UpdateCommandPreviewCore(treatEmptyAsDefault: true);
+    }
+
+    private void UpdateCommandPreviewCore(bool treatEmptyAsDefault)
+    {
+        var controls = _launchSettingsPanel.FormControls;
+        var (settings, errors) = LaunchSettingsFormBinder.TryReadForPreview(_settings, controls, treatEmptyAsDefault);
+
+        string preview;
+        try
+        {
+            preview = LaunchSettingsFormBinder.BuildCommandPreview(
+                settings,
+                LaunchSettingsFormBinder.GetSelectedBackend(controls),
+                controls.FlagOrder);
+        }
+        catch (Exception ex)
+        {
+            if (controls.CommandPreviewBox is not null)
+                controls.CommandPreviewBox.Text = "";
+            LaunchSettingsFormBinder.ApplyFormDrivenCommandPreviewState(
+                controls,
+                [$"Command preview failed: {ex.Message}"],
+                SetStatus);
+            LaunchSettingsFormBinder.UpdateFlagVisualStates(controls, _launchSettingsPanel);
+            return;
+        }
+
+        _coreServices.Ui.LaunchSettingsEditor.RunProgrammaticUpdate(() =>
+        {
+            if (controls.CommandPreviewBox is not null)
+                controls.CommandPreviewBox.Text = preview;
+        });
+
+        LaunchSettingsFormBinder.ApplyFormDrivenCommandPreviewState(controls, errors, SetStatus);
+        LaunchSettingsFormBinder.UpdateFlagVisualStates(controls, _launchSettingsPanel);
     }
 
     private void AttachLaunchSettingsChangeHandlers()
@@ -189,10 +273,49 @@ public partial class MainWindow
                 UpdateContextSizeSuggestion();
                 UpdateLaunchControlVisibility();
                 UpdateLaunchSaveButtonState();
+                LaunchSettingsFormBinder.UpdateFlagVisualStates(_launchSettingsPanel.FormControls, _launchSettingsPanel);
             }
         }
 
-        LaunchSettingsFormBinder.AttachChangeHandlers(_launchSettingsPanel.FormControls, Changed, (_, _) => NormalizeContextSizeBox());
+        void CommandPreviewChanged()
+        {
+            if (_coreServices.Ui.LaunchSettingsEditor.IsProgrammaticUpdate) return;
+
+            _coreServices.Ui.LaunchSettingsEditor.RunProgrammaticUpdate(() =>
+            {
+                try
+                {
+                    var settings = LaunchSettingsFormBinder.Read(
+                        _settings,
+                        _launchSettingsPanel.FormControls,
+                        SetStatus,
+                        parseCommandPreview: true,
+                        supportedFlags: _launchSettingsPanel.SupportedFlags);
+                    ApplyLaunchSettingsToControls(settings);
+                }
+                catch (Exception ex)
+                {
+                    SetStatus($"Command preview failed: {ex.Message}");
+                }
+            });
+        }
+
+        void ValidateCommandPreview()
+        {
+            var isUserEdit = !_coreServices.Ui.LaunchSettingsEditor.IsProgrammaticUpdate
+                && (_launchSettingsPanel.FormControls.CommandPreviewBox?.IsFocused ?? false);
+            LaunchSettingsFormBinder.ValidateCommandPreview(_launchSettingsPanel.FormControls, SetStatus, supportedFlags: null, isUserEdit: isUserEdit);
+        }
+
+        LaunchSettingsFormBinder.AttachChangeHandlers(_launchSettingsPanel.FormControls,
+            Changed,
+            (_, _) => NormalizeContextSizeBox(),
+            CommandPreviewChanged,
+            UpdateCommandPreview,
+            ValidateCommandPreview);
+
+        foreach (var box in _launchSettingsPanel.FormControls.TextBoxes.Where(b => b is not null))
+            box!.LostFocus += (_, _) => UpdateCommandPreviewImmediate();
     }
 
     private void UpdateLaunchSaveButtonState()

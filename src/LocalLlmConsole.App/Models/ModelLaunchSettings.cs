@@ -55,9 +55,60 @@ public sealed record ModelLaunchSettings(
     string ContextCheckpointsMode = AppSettings.DefaultContextCheckpointsMode,
     int ContextCheckpointCount = AppSettings.DefaultContextCheckpointCount,
     int ContextCheckpointEveryNTokens = AppSettings.DefaultContextCheckpointEveryNTokens,
-    string CustomParameters = "")
+    string CustomParameters = "",
+    IReadOnlyDictionary<string, string> FlagValues = null!)
 {
-    public static ModelLaunchSettings FromAppSettings(AppSettings settings, string runtimeId = "") => new(
+    private readonly IReadOnlyDictionary<string, string> _flagValues = FlagValues ?? ImmutableDictionary<string, string>.Empty;
+    public IReadOnlyDictionary<string, string> FlagValues
+    {
+        get => _flagValues;
+        init => _flagValues = value ?? ImmutableDictionary<string, string>.Empty;
+    }
+
+    private static string Normalize(string? value, IReadOnlyList<string> allowed, string defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return defaultValue;
+
+        foreach (var allowedValue in allowed)
+        {
+            if (string.Equals(allowedValue, value, StringComparison.OrdinalIgnoreCase))
+                return allowedValue;
+        }
+
+        return defaultValue;
+    }
+
+    private ModelLaunchSettings Sanitize()
+        => this with
+        {
+            ReasoningMode = Normalize(ReasoningMode, LaunchSettingMetadataService.AutoOnOffOptions, "auto"),
+            ReasoningFormat = Normalize(ReasoningFormat, LaunchSettingMetadataService.ReasoningFormatOptions, "auto"),
+            VisionMode = Normalize(VisionMode, LaunchSettingMetadataService.AutoOnOffOptions, "auto"),
+            FlashAttention = Normalize(FlashAttention, LaunchSettingMetadataService.AutoOnOffOptions, "auto"),
+            CacheTypeK = Normalize(CacheTypeK, LaunchSettingMetadataService.CacheTypeOptions, AppSettings.DefaultCacheType),
+            CacheTypeV = Normalize(CacheTypeV, LaunchSettingMetadataService.CacheTypeOptions, AppSettings.DefaultCacheType),
+            KvOffload = Normalize(KvOffload, LaunchSettingMetadataService.AutoOnOffOptions, "auto"),
+            KvUnified = Normalize(KvUnified, LaunchSettingMetadataService.AutoOnOffOptions, "auto"),
+            ContinuousBatching = Normalize(ContinuousBatching, LaunchSettingMetadataService.OnOffOptions, "on"),
+            JinjaMode = Normalize(JinjaMode, LaunchSettingMetadataService.AutoOnOffOptions, "auto"),
+            MmapMode = Normalize(MmapMode, LaunchSettingMetadataService.AutoOnOffOptions, "auto"),
+            MlockMode = Normalize(MlockMode, LaunchSettingMetadataService.OnOffOptions, "off"),
+            RopeScaling = Normalize(RopeScaling, LaunchSettingMetadataService.RopeScalingOptions, AppSettings.DefaultRopeScaling),
+            SpeculativeType = Normalize(
+                LaunchSettingMetadataService.NormalizeSpeculativeType(SpeculativeType),
+                LaunchSettingMetadataService.SpeculativeTypeOptions,
+                AppSettings.DefaultSpeculativeType),
+            SpecDraftCacheTypeK = Normalize(SpecDraftCacheTypeK, LaunchSettingMetadataService.CacheTypeOptions, AppSettings.DefaultCacheType),
+            SpecDraftCacheTypeV = Normalize(SpecDraftCacheTypeV, LaunchSettingMetadataService.CacheTypeOptions, AppSettings.DefaultCacheType),
+            PromptCacheMode = Normalize(PromptCacheMode, LaunchSettingMetadataService.AutoOnOffOptions, AppSettings.DefaultPromptCacheMode),
+            ContextCheckpointsMode = Normalize(ContextCheckpointsMode, LaunchSettingMetadataService.AutoOnOffOptions, AppSettings.DefaultContextCheckpointsMode),
+            FlagValues = LaunchCommandService.SanitizeFlagValues(FlagValues)
+        };
+
+    public static ModelLaunchSettings FromAppSettings(AppSettings settings, string runtimeId = "")
+    {
+        return new ModelLaunchSettings(
         settings.ContextSize,
         settings.GpuLayers,
         settings.EnableMetrics,
@@ -112,63 +163,72 @@ public sealed record ModelLaunchSettings(
         settings.ContextCheckpointsMode,
         settings.ContextCheckpointCount,
         settings.ContextCheckpointEveryNTokens,
-        settings.CustomParameters);
+        settings.CustomParameters,
+        settings.FlagValues)
+        {
+        }.Sanitize();
+    }
 
-    public AppSettings ApplyTo(AppSettings settings) => settings with
+    public AppSettings ApplyTo(AppSettings settings)
     {
-        ContextSize = ContextSize,
-        GpuLayers = GpuLayers,
-        EnableMetrics = EnableMetrics,
-        ReasoningMode = ReasoningMode,
-        ReasoningFormat = ReasoningFormat,
-        ReasoningBudget = ReasoningBudget,
-        VisionMode = VisionMode,
-        VisionProjectorPath = VisionProjectorPath ?? "",
-        FlashAttention = FlashAttention,
-        CacheTypeK = CacheTypeK,
-        CacheTypeV = CacheTypeV,
-        KvOffload = KvOffload,
-        KvUnified = KvUnified,
-        ContinuousBatching = ContinuousBatching,
-        JinjaMode = JinjaMode,
-        ParallelSlots = ParallelSlots,
-        BatchSize = BatchSize,
-        MicroBatchSize = MicroBatchSize,
-        Threads = Threads,
-        MmapMode = MmapMode,
-        MlockMode = MlockMode,
-        Temperature = Temperature,
-        TopK = TopK,
-        TopP = TopP,
-        MinP = MinP,
-        Port = Port is >= 1 and <= 65535 ? Port : settings.Port,
-        MaxTokens = MaxTokens,
-        Seed = Seed,
-        RepeatLastN = RepeatLastN,
-        RepeatPenalty = RepeatPenalty,
-        PresencePenalty = PresencePenalty,
-        FrequencyPenalty = FrequencyPenalty,
-        RopeScaling = RopeScaling,
-        RopeScale = RopeScale,
-        RopeFreqBase = RopeFreqBase,
-        RopeFreqScale = RopeFreqScale,
-        SpeculativeType = SpeculativeType,
-        SpecDraftModelPath = SpecDraftModelPath,
-        MtpHeadPath = MtpHeadPath ?? "",
-        SpecDraftGpuLayers = SpecDraftGpuLayers,
-        SpecDraftMinTokens = SpecDraftMinTokens,
-        SpecDraftMaxTokens = SpecDraftMaxTokens,
-        SpecDraftPSplit = SpecDraftPSplit,
-        SpecDraftPMin = SpecDraftPMin,
-        SpecDraftCacheTypeK = SpecDraftCacheTypeK,
-        SpecDraftCacheTypeV = SpecDraftCacheTypeV,
-        VisionImageMinTokens = VisionImageMinTokens,
-        VisionImageMaxTokens = VisionImageMaxTokens,
-        PromptCacheMode = PromptCacheMode,
-        PromptCacheRamMb = PromptCacheRamMb,
-        ContextCheckpointsMode = ContextCheckpointsMode,
-        ContextCheckpointCount = ContextCheckpointCount,
-        ContextCheckpointEveryNTokens = ContextCheckpointEveryNTokens,
-        CustomParameters = CustomParameters ?? ""
-    };
+        var s = Sanitize();
+        return settings with
+        {
+            ContextSize = ContextSize,
+            GpuLayers = GpuLayers,
+            EnableMetrics = EnableMetrics,
+            ReasoningMode = s.ReasoningMode,
+            ReasoningFormat = s.ReasoningFormat,
+            ReasoningBudget = ReasoningBudget,
+            VisionMode = s.VisionMode,
+            VisionProjectorPath = VisionProjectorPath ?? "",
+            FlashAttention = s.FlashAttention,
+            CacheTypeK = s.CacheTypeK,
+            CacheTypeV = s.CacheTypeV,
+            KvOffload = s.KvOffload,
+            KvUnified = s.KvUnified,
+            ContinuousBatching = s.ContinuousBatching,
+            JinjaMode = s.JinjaMode,
+            ParallelSlots = ParallelSlots,
+            BatchSize = BatchSize,
+            MicroBatchSize = MicroBatchSize,
+            Threads = Threads,
+            MmapMode = s.MmapMode,
+            MlockMode = s.MlockMode,
+            Temperature = Temperature,
+            TopK = TopK,
+            TopP = TopP,
+            MinP = MinP,
+            Port = Port is >= 1 and <= 65535 ? Port : settings.Port,
+            MaxTokens = MaxTokens,
+            Seed = Seed,
+            RepeatLastN = RepeatLastN,
+            RepeatPenalty = RepeatPenalty,
+            PresencePenalty = PresencePenalty,
+            FrequencyPenalty = FrequencyPenalty,
+            RopeScaling = s.RopeScaling,
+            RopeScale = RopeScale,
+            RopeFreqBase = RopeFreqBase,
+            RopeFreqScale = RopeFreqScale,
+            SpeculativeType = s.SpeculativeType,
+            SpecDraftModelPath = SpecDraftModelPath,
+            MtpHeadPath = MtpHeadPath ?? "",
+            SpecDraftGpuLayers = SpecDraftGpuLayers,
+            SpecDraftMinTokens = SpecDraftMinTokens,
+            SpecDraftMaxTokens = SpecDraftMaxTokens,
+            SpecDraftPSplit = SpecDraftPSplit,
+            SpecDraftPMin = SpecDraftPMin,
+            SpecDraftCacheTypeK = s.SpecDraftCacheTypeK,
+            SpecDraftCacheTypeV = s.SpecDraftCacheTypeV,
+            VisionImageMinTokens = VisionImageMinTokens,
+            VisionImageMaxTokens = VisionImageMaxTokens,
+            PromptCacheMode = s.PromptCacheMode,
+            PromptCacheRamMb = PromptCacheRamMb,
+            ContextCheckpointsMode = s.ContextCheckpointsMode,
+            ContextCheckpointCount = ContextCheckpointCount,
+            ContextCheckpointEveryNTokens = ContextCheckpointEveryNTokens,
+            CustomParameters = CustomParameters ?? "",
+            FlagValues = s.FlagValues
+        };
+    }
 }

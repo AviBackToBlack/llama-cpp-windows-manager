@@ -6,6 +6,7 @@ using WpfTextBox = System.Windows.Controls.TextBox;
 
 namespace LocalLlmConsole;
 
+/// <summary>Mutable state for the launch settings panel, including visibility, enabled state, and support checks.</summary>
 public sealed class LaunchSettingsPanelState
 {
     public WpfComboBox? RuntimeCombo { get; private set; }
@@ -32,6 +33,62 @@ public sealed class LaunchSettingsPanelState
 
     private WpfButton? SaveAsNewModelButton { get; set; }
 
+    private IReadOnlySet<string>? _supportedFlags;
+
+    private IReadOnlySet<string> _runtimeUnknownFlags = new HashSet<string>(StringComparer.Ordinal);
+
+    private readonly HashSet<FrameworkElement> _runtimeDisabledControls = [];
+
+    public IReadOnlySet<string>? SupportedFlags => _supportedFlags;
+
+    public IReadOnlySet<string> RuntimeUnknownFlags => _runtimeUnknownFlags;
+
+    public void SetSupportedFlags(IReadOnlySet<string>? supportedFlags)
+    {
+        SetSupportedFlagsCore(supportedFlags);
+        _runtimeUnknownFlags = new HashSet<string>(StringComparer.Ordinal);
+        UpdateRuntimeDiscoveredFlags();
+    }
+
+    public void SetRuntimeCapabilities(RuntimeFlagCapabilityResult? capabilities)
+    {
+        SetSupportedFlagsCore(capabilities?.Supported);
+        _runtimeUnknownFlags = capabilities?.Unknown is { Count: > 0 }
+            ? new HashSet<string>(capabilities.Unknown, StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+        UpdateRuntimeDiscoveredFlags();
+    }
+
+    private void SetSupportedFlagsCore(IReadOnlySet<string>? supportedFlags)
+    {
+        // An empty set means the runtime's --help could not be parsed, not that it
+        // supports no flags. Treat it as null (no filtering) so the whole form isn't
+        // disabled and recognized flags aren't shifted into custom parameters on save.
+        _supportedFlags = supportedFlags is { Count: > 0 } ? supportedFlags : null;
+    }
+
+    private void UpdateRuntimeDiscoveredFlags()
+    {
+        var text = FormControls.RuntimeDiscoveredFlagsText;
+        var customParameters = FormControls.CustomParametersBox;
+        if (_runtimeUnknownFlags.Count == 0)
+        {
+            if (text is not null) text.Text = "";
+            if (customParameters is not null)
+                customParameters.ToolTip = Loc.T("Tooltip.Field.CustomParams");
+            return;
+        }
+
+        var names = string.Join(", ", _runtimeUnknownFlags.OrderBy(name => name, StringComparer.Ordinal));
+        var template = Loc.T("Launch.RuntimeDiscoveredFlags.Usage");
+        var message = string.Equals(template, "Launch.RuntimeDiscoveredFlags.Usage", StringComparison.Ordinal)
+            ? $"Available through Custom params (value syntax comes from this runtime's --help): {names}"
+            : string.Format(template, names);
+        if (text is not null) text.Text = message;
+        if (customParameters is not null)
+            customParameters.ToolTip = $"{Loc.T("Tooltip.Field.CustomParams")}\n\n{message}";
+    }
+
     public string SaveAsNewModelName => (SaveAsNewModelNameBox?.Text ?? "").Trim();
 
     public void Apply(LaunchSettingsPanelControls controls)
@@ -52,6 +109,8 @@ public sealed class LaunchSettingsPanelState
         AdvancedLaunchSections.Clear();
         AdvancedLaunchSections.AddRange(controls.AdvancedLaunchSections);
 
+        _runtimeDisabledControls.Clear();
+
         RuntimeCombo = controls.RuntimeCombo;
         ModelCapabilityText = controls.ModelCapabilityText;
         LaunchSettingsSearchBox = controls.LaunchSettingsSearchBox;
@@ -60,6 +119,7 @@ public sealed class LaunchSettingsPanelState
         SaveAsNewModelNameBox = controls.SaveAsNewModelNameBox;
         SaveAsNewModelButton = controls.SaveAsNewModelButton;
         FormControls = controls.FormControls;
+        UpdateRuntimeDiscoveredFlags();
     }
 
     public void SetSaveForModelState(string content, bool enabled)
@@ -86,6 +146,11 @@ public sealed class LaunchSettingsPanelState
     {
         ArgumentNullException.ThrowIfNull(plan);
 
+        // Undo any disabling this state applied for a previously selected runtime before
+        // the control-state plan runs, so controls a new runtime supports become editable
+        // again while the plan below still governs model-driven vision/MTP/GPU disabling.
+        RestoreRuntimeDisabledControls();
+
         var search = LaunchSettingsSearch.From(LaunchSettingsSearchBox?.Text);
         ApplyLaunchSettingVisibility(plan, search);
         ApplyLaunchSectionVisibility(plan, search);
@@ -107,6 +172,8 @@ public sealed class LaunchSettingsPanelState
             FormControls.MtpHeadPathBox.IsEnabled = plan.MtpHeadSettingsAvailable;
         if (FormControls.MtpHeadButton is not null)
             FormControls.MtpHeadButton.IsEnabled = plan.MtpHeadSettingsAvailable;
+
+        ApplyRuntimeSupport();
     }
 
     private void ApplyLaunchSettingVisibility(LaunchSettingsControlStatePlan plan, LaunchSettingsSearch search)
@@ -124,11 +191,15 @@ public sealed class LaunchSettingsPanelState
 
     private bool LaunchSettingVisible(string label, LaunchSettingsControlStatePlan plan, LaunchSettingsSearch search)
     {
+        if (string.Equals(label, Loc.T("Launch.Field.RuntimeDiscoveredFlags"), StringComparison.OrdinalIgnoreCase)
+            && _runtimeUnknownFlags.Count == 0)
+            return false;
+
         var baseVisible = !plan.VisibleSettings.TryGetValue(label, out var visible) || visible;
         if (!baseVisible) return false;
 
         var advancedSetting = AdvancedLaunchSettingLabels.Contains(label);
-        if (advancedSetting && !plan.ShowAdvancedSections && !search.HasQuery) return false;
+        if (advancedSetting && !plan.ShowAdvancedSections) return false;
 
         return !search.HasQuery || search.Matches(SearchTextFor(label));
     }
@@ -137,8 +208,10 @@ public sealed class LaunchSettingsPanelState
     {
         foreach (var section in LaunchSettingSections)
         {
-            var hiddenByAdvanced = section.IsAdvancedSection && !plan.ShowAdvancedSections && !search.HasQuery;
-            var hasVisibleSetting = section.SettingLabels.Any(LaunchSettingCurrentlyVisible);
+            var hiddenByAdvanced = section.IsAdvancedSection && !plan.ShowAdvancedSections;
+            var hasVisibleSetting = section.SettingLabels.Count == 0
+                ? !section.IsAdvancedSection
+                : section.SettingLabels.Any(LaunchSettingCurrentlyVisible);
             section.Section.Visibility = !hiddenByAdvanced && hasVisibleSetting ? Visibility.Visible : Visibility.Collapsed;
         }
     }
@@ -149,9 +222,35 @@ public sealed class LaunchSettingsPanelState
 
     private string SearchTextFor(string label)
     {
+        var parts = new List<string> { label };
+
         var section = LaunchSettingSections.FirstOrDefault(candidate =>
             candidate.SettingLabels.Contains(label, StringComparer.OrdinalIgnoreCase));
-        return $"{label} {section?.Title ?? ""} {LaunchSettingMetadataService.Tooltip(label)}";
+        if (section is not null)
+            parts.Add(section.Title);
+
+        parts.Add(LaunchSettingMetadataService.Tooltip(label));
+
+        if (LaunchSettingElements.TryGetValue(label, out var elements))
+        {
+            foreach (var element in elements)
+            {
+                var tag = element.Tag as string;
+                if (string.IsNullOrWhiteSpace(tag) || !tag.StartsWith("-", StringComparison.Ordinal))
+                    continue;
+
+                parts.Add(tag);
+
+                var flag = LlamaServerFlagSchema.FindByName(tag);
+                if (flag is not null)
+                {
+                    foreach (var name in flag.Names)
+                        parts.Add(name);
+                }
+            }
+        }
+
+        return string.Join(" ", parts);
     }
 
     private void ApplyLaunchSettingEnabled(IReadOnlyDictionary<string, bool> enabledSettings)
@@ -165,6 +264,67 @@ public sealed class LaunchSettingsPanelState
         if (!LaunchSettingElements.TryGetValue(label, out var elements)) return;
         foreach (var element in elements)
             element.IsEnabled = enabled;
+    }
+
+    private void RestoreRuntimeDisabledControls()
+    {
+        foreach (var control in _runtimeDisabledControls)
+            control.IsEnabled = true;
+        _runtimeDisabledControls.Clear();
+    }
+
+    private void ApplyRuntimeSupport()
+    {
+        if (_supportedFlags is null) return;
+
+        const string NotSupportedMessage = "Not supported by this runtime.";
+        foreach (var elements in LaunchSettingElements.Values)
+        {
+            foreach (var element in elements)
+            {
+                if (element is not FrameworkElement control) continue;
+                var flagName = control.Tag as string;
+                if (string.IsNullOrWhiteSpace(flagName) || !flagName.StartsWith("-", StringComparison.Ordinal)) continue;
+
+                var flag = LlamaServerFlagSchema.FindByName(flagName);
+                if (flag is null) continue;
+
+                var existing = control.ToolTip?.ToString() ?? "";
+                if (IsFlagSupported(flag))
+                {
+                    if (existing.Contains(NotSupportedMessage, StringComparison.OrdinalIgnoreCase))
+                        control.ToolTip = RestoreTooltipWithoutMessage(existing, NotSupportedMessage, flagName);
+                    continue;
+                }
+
+                control.IsEnabled = false;
+                _runtimeDisabledControls.Add(control);
+                ToolTipService.SetShowOnDisabled(control, true);
+                if (existing.Contains(NotSupportedMessage, StringComparison.OrdinalIgnoreCase)) continue;
+                control.ToolTip = string.IsNullOrWhiteSpace(existing)
+                    ? NotSupportedMessage
+                    : $"{existing}\n\n{NotSupportedMessage}";
+            }
+        }
+    }
+
+    private static string? RestoreTooltipWithoutMessage(string existing, string message, string flagName)
+    {
+        var index = existing.IndexOf(message, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+            return existing;
+
+        var restored = existing[..index].TrimEnd('\r', '\n', ' ');
+        if (string.IsNullOrWhiteSpace(restored))
+            restored = LaunchSettingMetadataService.Tooltip(flagName);
+
+        return restored;
+    }
+
+    private bool IsFlagSupported(LlamaServerFlag flag)
+    {
+        if (_supportedFlags is null) return true;
+        return flag.Names.Any(n => LocalLlmConsole.Services.LaunchCommandService.RuntimeSupportsToken(n, _supportedFlags));
     }
 
     private readonly record struct LaunchSettingsSearch(string[] Terms)

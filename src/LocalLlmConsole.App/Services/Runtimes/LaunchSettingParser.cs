@@ -28,6 +28,86 @@ public static class LaunchSettingParser
         return value;
     }
 
+    public static bool TryReadInt(string text, string label, int min, int? max, out int value, out string? error)
+    {
+        value = 0;
+        var trimmed = (text ?? "").Trim();
+        if (trimmed.Length == 0)
+        {
+            error = null;
+            return true;
+        }
+
+        if (!int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+        {
+            error = $"{label} must be a whole number.";
+            return false;
+        }
+        if (value < min)
+        {
+            error = $"{label} must be at least {min}.";
+            return false;
+        }
+        if (max is not null && value > max.Value)
+        {
+            error = $"{label} must be no more than {max.Value}.";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
+    public static bool TryReadDouble(string text, string label, double min, double? max, out double value, out string? error)
+    {
+        value = 0;
+        var trimmed = (text ?? "").Trim();
+        if (trimmed.Length == 0)
+        {
+            error = null;
+            return true;
+        }
+
+        if (!double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+        {
+            error = $"{label} must be a number.";
+            return false;
+        }
+        if (value < min)
+        {
+            error = $"{label} must be at least {min.ToString("0.###", CultureInfo.InvariantCulture)}.";
+            return false;
+        }
+        if (max is not null && value > max.Value)
+        {
+            error = $"{label} must be no more than {max.Value.ToString("0.###", CultureInfo.InvariantCulture)}.";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
+    public static bool TryReadContextSize(string text, out int value, out string? error)
+    {
+        value = 0;
+        var trimmed = (text ?? "").Trim();
+        if (trimmed.Length == 0)
+        {
+            error = null;
+            return true;
+        }
+
+        if (!TryNormalizeContextSize(text ?? "", out value))
+        {
+            error = "Context size must be 0, a token count, or shorthand like 196k.";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
     public static bool TryNormalizeContextSize(string text, out int value)
     {
         value = 0;

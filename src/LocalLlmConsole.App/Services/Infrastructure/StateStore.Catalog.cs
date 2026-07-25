@@ -74,6 +74,12 @@ ON CONFLICT(id) DO UPDATE SET
                 var settings = JsonSerializer.Deserialize<ModelLaunchSettings>(json);
                 if (settings is null) return null;
                 var migrated = MigrateLegacyModelLaunchDefaults(settings, LooksLikeLegacyModelLaunchDefaultsJson(json), out var changed);
+                var sanitizedFlagValues = LaunchCommandService.SanitizeFlagValues(migrated.FlagValues);
+                if (sanitizedFlagValues.Count != migrated.FlagValues.Count)
+                {
+                    migrated = migrated with { FlagValues = sanitizedFlagValues };
+                    changed = true;
+                }
                 if (changed)
                 {
                     await using var update = _connection.CreateCommand();

@@ -16,6 +16,7 @@ public static class HelpContentFactory
         "first-steps",
         "overview",
         "models",
+        "launch-settings",
         "runtimes",
         "settings",
         "opencode",
@@ -31,6 +32,9 @@ public static class HelpContentFactory
                 break;
             case "models":
                 AddModelsHelp(panel, navigate);
+                break;
+            case "launch-settings":
+                AddLaunchSettingsHelp(panel, navigate);
                 break;
             case "runtimes":
                 AddRuntimesHelp(panel, navigate);
@@ -144,6 +148,23 @@ public static class HelpContentFactory
             ("MTP head", "Assistant/head GGUF used by compatible MTP forks. It is separate from Vision head and is not passed as --mmproj."),
             ("Custom params", "Advanced raw llama-server flags appended after the app-generated launch args. Quote values with spaces, for example --n-cpu-moe 999 or --model-draft \"D:\\Models\\draft model.gguf\"."),
             ("Port", "This is the model's direct API port. It must not equal the gateway port."));
+        AddHelpActions(panel, navigate, ("Open Models", "models"));
+    }
+
+    private static void AddLaunchSettingsHelp(StackPanel panel, Action<string> navigate)
+    {
+        AddHelpArticle(panel, "Schema-driven launch settings", "The launch settings panel is generated from the static LlamaServerFlagSchema catalog. First-class controls show the most common flags; the rest appear in generated sections when Advanced is enabled.");
+        AddHelpDefinitionList(panel,
+            ("Command line preview", "Shows the live llama-server command. Edit the form to update the command, or paste a command into the preview to update the form. Unsupported flags in the preview are moved to Custom params."),
+            ("Runtime support", "When a runtime is selected, the app runs llama-server --help and disables flags that the runtime does not advertise."),
+            ("Validation", "Values are checked before save and before launch. Out-of-range numbers, unknown enum values, missing files, and invalid flag combinations are rejected with a message."),
+            ("Security blocks", "--host, --port, and --api-key cannot be overridden. The app passes the API key through the LLAMA_API_KEY environment variable and inserts the host and port itself."),
+            ("Custom params", "Additional raw llama-server flags appended after the app-generated launch arguments. Use this for experimental flags that are not in the schema or first-class UI."));
+        AddHelpBullets(panel,
+            "Use the search box to filter settings by name or description.",
+            "Show Advanced to reveal memory, RoPE, speculative/MTP, server, model, and logging flags.",
+            "If a pasted command contains a flag the selected runtime does not support, the control is disabled and the value is not saved.",
+            "Save For Model stores the profile. Save As Default stores the settings for new models. Save As New creates a named launch variant.");
         AddHelpActions(panel, navigate, ("Open Models", "models"));
     }
 

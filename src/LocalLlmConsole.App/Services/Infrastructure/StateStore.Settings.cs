@@ -50,6 +50,22 @@ public sealed partial class StateStore
             return fallback;
         }
 
+        IReadOnlyDictionary<string, string> FlagValuesValue(string key, IReadOnlyDictionary<string, string> fallback)
+        {
+            if (!values.TryGetValue(key, out var value)) return fallback;
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<Dictionary<string, string>>(value);
+                if (parsed == null || parsed.Count == 0) return fallback;
+                return parsed.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                corrupt[key] = value;
+                return fallback;
+            }
+        }
+
         var settings = defaults with
         {
             WorkspaceRoot = StringValue("workspaceRoot", defaults.WorkspaceRoot),
@@ -128,7 +144,8 @@ public sealed partial class StateStore
             SpecDraftCacheTypeV = StringValue("specDraftCacheTypeV", defaults.SpecDraftCacheTypeV),
             CudaPackagePreference = AppPreferenceService.CudaPackagePreference(StringValue("cudaPackagePreference", defaults.CudaPackagePreference)),
             CustomParameters = StringValue("customParameters", defaults.CustomParameters),
-            UiCulture = StringValue("uiCulture", defaults.UiCulture)
+            UiCulture = StringValue("uiCulture", defaults.UiCulture),
+            FlagValues = FlagValuesValue("flagValues", defaults.FlagValues)
         };
 
         var migratedLegacyLaunchDefaults = false;
@@ -258,7 +275,8 @@ public sealed partial class StateStore
             ("specDraftCacheTypeV", settings.SpecDraftCacheTypeV),
             ("cudaPackagePreference", AppPreferenceService.CudaPackagePreference(settings.CudaPackagePreference)),
             ("customParameters", settings.CustomParameters),
-            ("uiCulture", settings.UiCulture)
+            ("uiCulture", settings.UiCulture),
+            ("flagValues", settings.FlagValues)
         };
 
         await WithConnectionAsync(async () =>

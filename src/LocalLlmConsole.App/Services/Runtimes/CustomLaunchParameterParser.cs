@@ -1,5 +1,6 @@
 namespace LocalLlmConsole.Services;
 
+/// <summary>Pastes custom llama-server parameters from a free-form text field.</summary>
 public static class CustomLaunchParameterParser
 {
     public static IReadOnlyList<string> Parse(string? value)

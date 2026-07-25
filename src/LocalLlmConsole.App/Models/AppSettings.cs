@@ -77,8 +77,16 @@ public sealed record AppSettings(
     int ContextCheckpointCount = 32,
     int ContextCheckpointEveryNTokens = 256,
     string CustomParameters = "",
-    string UiCulture = "en")
+    string UiCulture = "en",
+    IReadOnlyDictionary<string, string> FlagValues = null!)
 {
+    private readonly IReadOnlyDictionary<string, string> _flagValues = FlagValues ?? ImmutableDictionary<string, string>.Empty;
+    public IReadOnlyDictionary<string, string> FlagValues
+    {
+        get => _flagValues;
+        init => _flagValues = value ?? ImmutableDictionary<string, string>.Empty;
+    }
+
     public const int DefaultContextSize = 131_072;
     public const int DefaultGpuLayers = 999;
     public const int DefaultBatchSize = 4096;
@@ -183,5 +191,7 @@ public sealed record AppSettings(
         DefaultCacheType,
         DefaultCacheType,
         DefaultCudaPackagePreference,
-        "");
+        "")
+    {
+    };
 }

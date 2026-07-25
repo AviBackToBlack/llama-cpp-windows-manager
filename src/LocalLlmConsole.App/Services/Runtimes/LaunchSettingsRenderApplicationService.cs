@@ -1,5 +1,6 @@
 namespace LocalLlmConsole.Services;
 
+/// <summary>Callbacks used by <see cref="LaunchSettingsRenderApplicationService"/> to render the launch settings editor.</summary>
 public sealed record LaunchSettingsRenderActions(
     Func<ModelRecord?> SelectedModel,
     Action ClearEditor,
@@ -11,6 +12,7 @@ public sealed record LaunchSettingsRenderActions(
     Func<ModelRecord?, CancellationToken, Task> ApplyModelCapabilitiesAsync,
     Action UpdateLaunchSaveButtonState);
 
+/// <summary>Coordinates rendering the launch settings editor for the selected model.</summary>
 public sealed class LaunchSettingsRenderApplicationService
 {
     public async Task RenderSelectedAsync(

@@ -14,6 +14,8 @@ namespace LocalLlmConsole;
 
 public partial class MainWindow
 {
+    private readonly RuntimeCapabilityRequestCoordinator _runtimeCapabilityRequests = new();
+
     private async Task ApplyModelCapabilitiesAsync(ModelRecord? model, CancellationToken cancellationToken = default)
     {
         var capabilities = model is null
@@ -33,6 +35,56 @@ public partial class MainWindow
 
     private async Task<ModelCapabilitySummary> CachedModelCapabilitiesAsync(ModelRecord model, CancellationToken cancellationToken = default)
         => await _coreServices.Models.ModelCapabilities.ReadAsync(model, cancellationToken);
+
+    private async Task ApplyRuntimeCapabilitiesAsync()
+    {
+        var runtimeId = SelectedLaunchRuntimeId();
+        var request = _runtimeCapabilityRequests.Begin(runtimeId);
+        if (string.IsNullOrWhiteSpace(runtimeId) || _appServices is null)
+        {
+            _launchSettingsPanel.SetRuntimeCapabilities(null);
+            UpdateLaunchControlVisibility();
+            UpdateLaunchSaveButtonState();
+            return;
+        }
+
+        try
+        {
+            var capabilities = await _coreServices.Models.LaunchSettingsRuntimeCapabilities.GetCapabilitiesAsync(
+                runtimeId,
+                _appServices.StateStore.ListRuntimesAsync,
+                _settings.WslDistro);
+
+            if (!_runtimeCapabilityRequests.IsCurrent(request, SelectedLaunchRuntimeId()))
+                return;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (!_runtimeCapabilityRequests.IsCurrent(request, SelectedLaunchRuntimeId()))
+                    return;
+
+                _launchSettingsPanel.SetRuntimeCapabilities(capabilities);
+                UpdateLaunchControlVisibility();
+                UpdateLaunchSaveButtonState();
+            });
+        }
+        catch (Exception ex)
+        {
+            if (!_runtimeCapabilityRequests.IsCurrent(request, SelectedLaunchRuntimeId()))
+                return;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (!_runtimeCapabilityRequests.IsCurrent(request, SelectedLaunchRuntimeId()))
+                    return;
+
+                _launchSettingsPanel.SetRuntimeCapabilities(null);
+                UpdateLaunchControlVisibility();
+                UpdateLaunchSaveButtonState();
+            });
+            SetStatus($"Runtime capability detection failed: {ex.Message}");
+        }
+    }
 
     private void UpdateLaunchControlVisibility()
     {
