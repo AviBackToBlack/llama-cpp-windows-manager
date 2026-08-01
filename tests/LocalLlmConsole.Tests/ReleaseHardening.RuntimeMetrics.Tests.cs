@@ -930,6 +930,8 @@ public sealed partial class ReleaseHardeningTests
         var warm = RuntimeSession(root, settings with { Port = 8082 }, LoadedModelSessionStatus.Warm, isRunning: true) with { SessionId = "session-2" };
         var loading = RuntimeSession(root, settings with { Port = 8083 }, LoadedModelSessionStatus.Loading, isRunning: true) with { SessionId = "session-3" };
         var stopped = RuntimeSession(root, settings with { Port = 8084 }, LoadedModelSessionStatus.Running, isRunning: false) with { SessionId = "session-4" };
+        var unreachable = RuntimeSession(root, settings with { Port = 8085 }, LoadedModelSessionStatus.Unreachable, isRunning: true) with { SessionId = "session-5" };
+        var stoppedUnreachable = RuntimeSession(root, settings with { Port = 8086 }, LoadedModelSessionStatus.Unreachable, isRunning: false) with { SessionId = "session-6" };
 
         Assert.True(coordinator.ShouldRunTimer("Overview", hasRunningSessions: false));
         Assert.True(coordinator.ShouldRunTimer("Models", hasRunningSessions: true));
@@ -945,8 +947,8 @@ public sealed partial class ReleaseHardeningTests
         using var nextRefresh = coordinator.TryBeginRefresh(new RuntimeDashboardRefreshTarget(true, false, false, false));
         Assert.NotNull(nextRefresh);
 
-        var pollable = coordinator.PollableSessions([running, warm, loading, stopped]);
-        Assert.Equal(["session-1", "session-2"], pollable.Select(session => session.SessionId).ToArray());
+        var pollable = coordinator.PollableSessions([running, warm, loading, stopped, unreachable, stoppedUnreachable]);
+        Assert.Equal(["session-1", "session-2", "session-5"], pollable.Select(session => session.SessionId).ToArray());
         Assert.Contains("_coreServices.Ui.RuntimeDashboardRefreshTimer.Start(", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Ui.RuntimeDashboardRefreshTimer.Stop()", source, StringComparison.Ordinal);
         Assert.Contains("RuntimeDashboardTimerRefreshAsync", source, StringComparison.Ordinal);
@@ -1466,7 +1468,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("await _telemetry.PollSessionsAsync(actions.SessionSnapshots()", refreshApplication, StringComparison.Ordinal);
         Assert.Contains("var pollableSessions = _refreshCoordinator.PollableSessions(sessions)", telemetry, StringComparison.Ordinal);
         Assert.Contains("_poller.PollSessionsAsync(pollableSessions, cancellationToken)", telemetry, StringComparison.Ordinal);
-        Assert.Contains("Where(session => session is { IsRunning: true, Status: LoadedModelSessionStatus.Running or LoadedModelSessionStatus.Warm })", refreshCoordinator, StringComparison.Ordinal);
+        Assert.Contains("or LoadedModelSessionStatus.Unreachable", refreshCoordinator, StringComparison.Ordinal);
         Assert.Contains("await actions.TrackLifetimeTokenDeltasAsync(pollResults)", refreshApplication, StringComparison.Ordinal);
         Assert.True(
             refreshApplication.IndexOf("await actions.TrackLifetimeTokenDeltasAsync(pollResults)", StringComparison.Ordinal)

@@ -953,7 +953,7 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
         Assert.IsType<WindowsEnvironmentService>(infrastructure.WindowsEnvironment);
         Assert.IsType<WslEnvironmentService>(infrastructure.WslEnvironment);
         Assert.Equal(TimeSpan.FromSeconds(1.5), infrastructure.RuntimeProbeClient.Timeout);
-        Assert.Equal(TimeSpan.FromSeconds(2), infrastructure.MetricsClient.Timeout);
+        Assert.Equal(TimeSpan.FromSeconds(5), infrastructure.MetricsClient.Timeout);
         Assert.Equal(TimeSpan.FromMinutes(60), infrastructure.RuntimePackageClient.Timeout);
         Assert.IsType<MainWindowUiState>(core.Ui.UiState);
         Assert.IsType<MainWindowViewModel>(core.Ui.UiState.ViewModel);

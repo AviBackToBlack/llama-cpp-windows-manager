@@ -31,7 +31,15 @@ public sealed class RuntimeDashboardRefreshCoordinator
         ArgumentNullException.ThrowIfNull(sessions);
 
         return sessions
-            .Where(session => session is { IsRunning: true, Status: LoadedModelSessionStatus.Running or LoadedModelSessionStatus.Warm })
+            // An unreachable process must remain pollable so a transient endpoint stall can
+            // produce a later successful sample and restore the session to Healthy.
+            .Where(session => session is
+            {
+                IsRunning: true,
+                Status: LoadedModelSessionStatus.Running
+                    or LoadedModelSessionStatus.Warm
+                    or LoadedModelSessionStatus.Unreachable
+            })
             .ToArray();
     }
 

@@ -46,7 +46,7 @@ public sealed partial class AppServiceFactory
         => new() { Timeout = TimeSpan.FromSeconds(1.5) };
 
     public HttpClient CreateRuntimeMetricsClient()
-        => new() { Timeout = TimeSpan.FromSeconds(2) };
+        => new() { Timeout = TimeSpan.FromSeconds(5) };
 
     public HttpClient CreateRuntimePackageClient()
         => new() { Timeout = TimeSpan.FromMinutes(60) };
