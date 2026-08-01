@@ -72,6 +72,45 @@ public static class GpuStatusService
         }
     }
 
+    public static string FormatWindowsCpuStatusJson(string output)
+    {
+        var json = ExtractJsonPayload(output);
+        if (string.IsNullOrWhiteSpace(json)) return "";
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var element = document.RootElement.ValueKind == JsonValueKind.Array
+                ? document.RootElement.EnumerateArray().FirstOrDefault()
+                : document.RootElement;
+            if (element.ValueKind != JsonValueKind.Object) return "";
+
+            var name = CleanCpuName(JsonString(element, "Name"));
+            var utilization = JsonDouble(element, "Utilization") ?? JsonDouble(element, "LoadPercentage");
+            var physicalCores = JsonInt(element, "PhysicalCores") ?? JsonInt(element, "NumberOfCores");
+            var logicalProcessors = JsonInt(element, "LogicalProcessors") ?? JsonInt(element, "NumberOfLogicalProcessors");
+            var temperature = CpuTemperatureCelsius(element);
+            var lines = new List<string>();
+            if (!string.IsNullOrWhiteSpace(name)) lines.Add($"CPU: {name}");
+
+            var observations = new List<string>();
+            if (utilization is { } load && double.IsFinite(load))
+                observations.Add($"{Math.Clamp(load, 0, 100):0.#}% load");
+            if (physicalCores is > 0 && logicalProcessors is > 0)
+                observations.Add($"{physicalCores}C/{logicalProcessors}T");
+            if (temperature is { } celsius && double.IsFinite(celsius))
+                observations.Add($"{Math.Clamp(celsius, -20, 125):0.#} °C thermal");
+            if (observations.Count > 0)
+                lines.Add($"Telemetry: {string.Join(" | ", observations)}");
+
+            return lines.Count > 0 ? string.Join(Environment.NewLine, lines) : "";
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
     public static string FormatIntelArcStatus(string? syclLsLine)
     {
         if (string.IsNullOrWhiteSpace(syclLsLine))
@@ -141,6 +180,13 @@ public static class GpuStatusService
     {
         var cleaned = Regex.Replace(name ?? "", @"\s+", " ").Trim();
         return cleaned.Length > 72 ? $"{cleaned[..69]}..." : cleaned;
+    }
+
+    private static string CleanCpuName(string? name)
+    {
+        var cleaned = Regex.Replace(name ?? "", @"\s+", " ").Trim();
+        cleaned = Regex.Replace(cleaned, @"\s+\d+-Core Processor$", "", RegexOptions.IgnoreCase);
+        return cleaned.Length > 64 ? $"{cleaned[..61]}..." : cleaned;
     }
 
     private static double? CpuTemperatureCelsius(JsonElement element)

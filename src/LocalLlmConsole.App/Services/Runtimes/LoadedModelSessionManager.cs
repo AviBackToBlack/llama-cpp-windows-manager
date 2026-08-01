@@ -10,9 +10,18 @@ public sealed class LoadedModelSessionManager : IDisposable
         public required AppSettings LaunchSettings { get; set; }
         public required DateTimeOffset StartedAt { get; set; }
         public required LlamaProcessSupervisor Supervisor { get; init; }
+        public string LaunchProfileId { get; init; } = "";
+        public string LaunchProfileName { get; init; } = "";
+        public RuntimeEndpointHealth EndpointHealth { get; set; }
+        public int ConsecutiveEndpointFailures { get; set; }
+        public string StatusReason { get; set; } = "";
+        public bool IsStopping { get; set; }
     }
 
+    private static readonly TimeSpan RecentStoppedLifetime = TimeSpan.FromSeconds(20);
+    private const int EndpointFailureThreshold = 3;
     private readonly Dictionary<string, LoadedModelSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<LoadedModelSessionSnapshot> _recentlyStopped = [];
     private readonly Func<LlamaProcessSupervisor> _createSupervisor;
     private readonly LlamaProcessSupervisor _inactiveSupervisor;
 
@@ -36,12 +45,25 @@ public sealed class LoadedModelSessionManager : IDisposable
 
     public bool HasRunningSessions => _sessions.Values.Any(session => session.Supervisor.IsRunning);
 
+    public bool HasRunningGpuSessions => _sessions.Values.Any(session =>
+        session.Supervisor.IsRunning
+        && session.Runtime.Backend is RuntimeBackend.Cuda or RuntimeBackend.Vulkan or RuntimeBackend.Sycl);
+
     public IReadOnlyList<LoadedModelSessionSnapshot> Snapshots()
         => _sessions.Values
             .Select(ToSnapshot)
             .OrderByDescending(snapshot => snapshot.IsSelected)
             .ThenBy(snapshot => snapshot.ModelName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+    public IReadOnlyList<LoadedModelSessionSnapshot> OverviewSnapshots()
+    {
+        PruneRecentStopped();
+        return Snapshots().Concat(_recentlyStopped)
+            .OrderByDescending(snapshot => snapshot.IsSelected)
+            .ThenBy(snapshot => snapshot.ModelName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
 
     public LoadedModelSessionSnapshot? SelectedSnapshot()
         => Snapshots().FirstOrDefault(snapshot => snapshot.IsSelected)
@@ -63,7 +85,13 @@ public sealed class LoadedModelSessionManager : IDisposable
             .Where(RuntimePortAllocator.IsValidPort)
             .Distinct();
 
-    public async Task<LoadedModelSessionSnapshot> StartAsync(RuntimeRecord runtime, ModelRecord model, AppSettings settings, string logRoot)
+    public async Task<LoadedModelSessionSnapshot> StartAsync(
+        RuntimeRecord runtime,
+        ModelRecord model,
+        AppSettings settings,
+        string logRoot,
+        string launchProfileId = "",
+        string launchProfileName = "")
     {
         var sessionId = SessionIdFor(model.Id);
         await StopAsync(sessionId);
@@ -76,7 +104,9 @@ public sealed class LoadedModelSessionManager : IDisposable
             Runtime = runtime,
             LaunchSettings = settings,
             StartedAt = DateTimeOffset.UtcNow,
-            Supervisor = supervisor
+            Supervisor = supervisor,
+            LaunchProfileId = launchProfileId ?? "",
+            LaunchProfileName = launchProfileName ?? ""
         };
         _sessions[sessionId] = session;
         SelectedSessionId = sessionId;
@@ -92,7 +122,9 @@ public sealed class LoadedModelSessionManager : IDisposable
         string processMarker,
         string sessionId,
         DateTimeOffset startedAt,
-        int processId = 0)
+        int processId = 0,
+        string launchProfileId = "",
+        string launchProfileName = "")
     {
         var resolvedSessionId = string.IsNullOrWhiteSpace(sessionId) ? SessionIdFor(model.Id) : sessionId;
         var supervisor = CreateSupervisor();
@@ -104,7 +136,10 @@ public sealed class LoadedModelSessionManager : IDisposable
             Runtime = runtime,
             LaunchSettings = settings,
             StartedAt = startedAt,
-            Supervisor = supervisor
+            Supervisor = supervisor,
+            LaunchProfileId = launchProfileId ?? "",
+            LaunchProfileName = launchProfileName ?? "",
+            EndpointHealth = RuntimeEndpointHealth.Healthy
         };
         _sessions[resolvedSessionId] = session;
         if (string.IsNullOrWhiteSpace(SelectedSessionId))
@@ -140,10 +175,24 @@ public sealed class LoadedModelSessionManager : IDisposable
             await StopAsync(SelectedSessionId);
     }
 
-    public Task StopAsync(string sessionId)
+    public Task StopAsync(string sessionId, string reason = "Unloaded by user")
     {
-        if (!_sessions.Remove(sessionId, out var session)) return Task.CompletedTask;
-        session.Supervisor.Stop();
+        if (!_sessions.TryGetValue(sessionId, out var session)) return Task.CompletedTask;
+        session.IsStopping = true;
+        session.StatusReason = "Stopping runtime process";
+        var stop = session.Supervisor.StopVerified();
+        if (!stop.VerifiedStopped)
+        {
+            session.IsStopping = false;
+            session.EndpointHealth = RuntimeEndpointHealth.Unreachable;
+            session.StatusReason = string.IsNullOrWhiteSpace(stop.Error)
+                ? "Runtime process did not stop"
+                : stop.Error;
+            throw new InvalidOperationException($"Could not verify that {session.Model.Name} stopped. {session.StatusReason}");
+        }
+
+        _sessions.Remove(sessionId);
+        AddRecentlyStopped(session, reason);
         session.Supervisor.Dispose();
         if (string.Equals(SelectedSessionId, sessionId, StringComparison.OrdinalIgnoreCase))
             SelectedSessionId = _sessions.Keys.FirstOrDefault() ?? "";
@@ -172,6 +221,10 @@ public sealed class LoadedModelSessionManager : IDisposable
         foreach (var session in _sessions.Values.Where(session => !session.Supervisor.IsRunning).ToArray())
         {
             _sessions.Remove(session.SessionId);
+            var exit = session.Supervisor.LastExitCode is { } code
+                ? $"Runtime process exited with code {code}."
+                : "Runtime process is no longer running.";
+            AddRecentlyStopped(session, exit, LoadedModelSessionStatus.Failed);
             session.Supervisor.Dispose();
             removed++;
         }
@@ -192,7 +245,7 @@ public sealed class LoadedModelSessionManager : IDisposable
 
             if (await isAvailable(ToSnapshot(session))) continue;
 
-            await StopAsync(session.SessionId);
+            await StopAsync(session.SessionId, "Recovered runtime endpoint was unavailable.");
             removed++;
         }
         return removed;
@@ -203,7 +256,48 @@ public sealed class LoadedModelSessionManager : IDisposable
         foreach (var session in _sessions.Values)
             session.Supervisor.Dispose();
         _sessions.Clear();
+        _recentlyStopped.Clear();
         _inactiveSupervisor.Dispose();
+    }
+
+    public IReadOnlyList<RuntimeSessionHealthTransition> ApplyEndpointHealth(
+        IEnumerable<RuntimeMetricPollResult> pollResults)
+    {
+        ArgumentNullException.ThrowIfNull(pollResults);
+        var transitions = new List<RuntimeSessionHealthTransition>();
+        foreach (var result in pollResults)
+        {
+            if (!_sessions.TryGetValue(result.Session.SessionId, out var session) || !session.Supervisor.IsRunning)
+                continue;
+
+            var previous = session.EndpointHealth;
+            if (result.EndpointResponded)
+            {
+                session.ConsecutiveEndpointFailures = 0;
+                session.EndpointHealth = RuntimeEndpointHealth.Healthy;
+                session.StatusReason = "";
+            }
+            else
+            {
+                session.ConsecutiveEndpointFailures++;
+                session.StatusReason = string.IsNullOrWhiteSpace(result.Error)
+                    ? "Runtime endpoint did not respond."
+                    : result.Error;
+                if (session.ConsecutiveEndpointFailures >= EndpointFailureThreshold)
+                    session.EndpointHealth = RuntimeEndpointHealth.Unreachable;
+            }
+
+            if (previous != session.EndpointHealth)
+                transitions.Add(new RuntimeSessionHealthTransition(
+                    session.SessionId,
+                    session.Model.Id,
+                    session.Model.Name,
+                    previous,
+                    session.EndpointHealth,
+                    session.StatusReason));
+        }
+
+        return transitions;
     }
 
     public static string SessionIdFor(string modelId)
@@ -215,13 +309,17 @@ public sealed class LoadedModelSessionManager : IDisposable
     private LoadedModelSessionSnapshot ToSnapshot(LoadedModelSession session)
     {
         var state = session.Supervisor.State;
-        var status = state switch
-        {
-            LlamaRuntimeState.Loading => LoadedModelSessionStatus.Loading,
-            LlamaRuntimeState.Loaded => LoadedModelSessionStatus.Running,
-            LlamaRuntimeState.Failed => LoadedModelSessionStatus.Failed,
-            _ => LoadedModelSessionStatus.Stopped
-        };
+        var status = session.IsStopping
+            ? LoadedModelSessionStatus.Stopping
+            : session.EndpointHealth == RuntimeEndpointHealth.Unreachable && session.Supervisor.IsRunning
+                ? LoadedModelSessionStatus.Unreachable
+                : state switch
+                {
+                    LlamaRuntimeState.Loading => LoadedModelSessionStatus.Loading,
+                    LlamaRuntimeState.Loaded => LoadedModelSessionStatus.Running,
+                    LlamaRuntimeState.Failed => LoadedModelSessionStatus.Failed,
+                    _ => LoadedModelSessionStatus.Stopped
+                };
         return new LoadedModelSessionSnapshot(
             session.SessionId,
             session.Model.Id,
@@ -238,7 +336,37 @@ public sealed class LoadedModelSessionManager : IDisposable
             status,
             session.Supervisor.IsRunning,
             string.Equals(session.SessionId, SelectedSessionId, StringComparison.OrdinalIgnoreCase),
-            ModelSizeBytes(session.Model.ModelPath));
+            ModelSizeBytes(session.Model.ModelPath),
+            session.LaunchProfileId,
+            session.LaunchProfileName,
+            session.EndpointHealth,
+            session.ConsecutiveEndpointFailures,
+            session.StatusReason);
+    }
+
+    private void AddRecentlyStopped(
+        LoadedModelSession session,
+        string reason,
+        LoadedModelSessionStatus status = LoadedModelSessionStatus.Stopped)
+    {
+        var snapshot = ToSnapshot(session) with
+        {
+            Status = status,
+            IsRunning = false,
+            IsSelected = false,
+            EndpointHealth = RuntimeEndpointHealth.Unreachable,
+            StatusReason = reason,
+            StoppedAt = DateTimeOffset.UtcNow
+        };
+        _recentlyStopped.RemoveAll(item => string.Equals(item.SessionId, session.SessionId, StringComparison.OrdinalIgnoreCase));
+        _recentlyStopped.Add(snapshot);
+        PruneRecentStopped();
+    }
+
+    private void PruneRecentStopped()
+    {
+        var cutoff = DateTimeOffset.UtcNow - RecentStoppedLifetime;
+        _recentlyStopped.RemoveAll(snapshot => snapshot.StoppedAt is null || snapshot.StoppedAt < cutoff);
     }
 
     private static long ModelSizeBytes(string path)
@@ -247,3 +375,11 @@ public sealed class LoadedModelSessionManager : IDisposable
         catch { return 0; }
     }
 }
+
+public sealed record RuntimeSessionHealthTransition(
+    string SessionId,
+    string ModelId,
+    string ModelName,
+    RuntimeEndpointHealth Previous,
+    RuntimeEndpointHealth Current,
+    string Reason);

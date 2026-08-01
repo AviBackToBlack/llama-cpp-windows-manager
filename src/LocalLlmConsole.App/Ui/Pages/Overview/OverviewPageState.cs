@@ -8,9 +8,9 @@ public sealed class OverviewPageState
 {
     public WpfComboBox? ModelCombo { get; private set; }
 
-    public WpfButton? LoadButton { get; private set; }
+    public WpfComboBox? LaunchProfileCombo { get; private set; }
 
-    public WpfButton? UnloadButton { get; private set; }
+    public WpfButton? LoadButton { get; private set; }
 
     public DataGrid? LoadedSessionsGrid { get; private set; }
 
@@ -23,8 +23,8 @@ public sealed class OverviewPageState
         ArgumentNullException.ThrowIfNull(controls);
 
         ModelCombo = controls.ModelCombo;
+        LaunchProfileCombo = controls.LaunchProfileCombo;
         LoadButton = controls.LoadButton;
-        UnloadButton = controls.UnloadButton;
         LoadedSessionsGrid = controls.LoadedSessionsGrid;
     }
 
@@ -43,6 +43,19 @@ public sealed class OverviewPageState
         if (ModelCombo?.SelectedValue is string selectedId)
             return modelChoices.FirstOrDefault(item => string.Equals(item.Id, selectedId, StringComparison.OrdinalIgnoreCase));
         return null;
+    }
+
+    public string SelectedLaunchProfileId => LaunchProfileCombo?.SelectedValue?.ToString() ?? "";
+
+    public string SelectedLaunchProfileName
+        => (LaunchProfileCombo?.SelectedItem as OverviewLaunchProfileChoice)?.Name ?? "";
+
+    public void SelectLaunchProfile(string? profileId)
+    {
+        if (LaunchProfileCombo is null) return;
+        LaunchProfileCombo.SelectedValue = profileId ?? "";
+        if (LaunchProfileCombo.SelectedIndex < 0 && LaunchProfileCombo.Items.Count > 0)
+            LaunchProfileCombo.SelectedIndex = 0;
     }
 
     public void SelectModelChoice(string? selectedId, IReadOnlyList<ModelRecord> modelChoices)
@@ -67,12 +80,14 @@ public sealed class OverviewPageState
             ModelCombo.SelectedValue = modelId;
     }
 
-    public void SetModelActionsEnabled(bool hasSelection, bool selectedModelLoaded)
+    public void SetModelActionsEnabled(bool hasSelection, bool hasProfileSelection, bool selectedModelLoaded)
     {
         if (LoadButton is not null)
-            LoadButton.IsEnabled = hasSelection && !selectedModelLoaded;
-        if (UnloadButton is not null)
-            UnloadButton.IsEnabled = selectedModelLoaded;
+        {
+            var canLoad = hasSelection && hasProfileSelection && !selectedModelLoaded;
+            LoadButton.IsEnabled = canLoad;
+            LoadButton.Visibility = canLoad ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        }
     }
 
     public void RestoreLoadedSessionSelection(string sessionId, IReadOnlyList<UiRow> sessionRows)

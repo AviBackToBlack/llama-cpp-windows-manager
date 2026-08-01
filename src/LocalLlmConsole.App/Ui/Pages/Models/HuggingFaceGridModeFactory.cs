@@ -36,7 +36,7 @@ public static class HuggingFaceGridModeFactory
             (Loc.T("HfSearch.Col.Size"), "C4", .8),
             (Loc.T("HfSearch.Col.Downloads"), "C5", .8),
             (Loc.T("HfSearch.Col.Signals"), "C6", 1.4));
-        PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("HfSearch.Col.Actions"), "C7", "B1", request.Actions.DownloadSearchRow, .8, tooltipBinding: "T1");
+        PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("HfSearch.Col.Actions"), "C7", "B1", request.Actions.DownloadSearchRow, .8, tooltipBinding: "T1", visualRole: VisualRole.Primary);
         PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("HfSearch.Col.Card"), "C8", "B2", request.Actions.OpenModelCardRow, .6, tooltipBinding: "T2");
         PageSectionFactory.ApplyGridTextMargin(request.Grid, new Thickness(6, 0, 6, 0));
         request.ConfigureSearchColumnSizing(request.Grid);
@@ -58,10 +58,10 @@ public static class HuggingFaceGridModeFactory
             (Loc.T("DownloadHistory.Col.Size"), "C4", .8),
             (Loc.T("DownloadHistory.Col.Updated"), "C5", 1),
             (Loc.T("DownloadHistory.Col.Destination"), "C6", 2.4));
-        PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("DownloadHistory.Action.Start"), "C7", "B1", request.Actions.ResumeDownloadRow, .7, tooltipBinding: "T1");
+        PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("DownloadHistory.Action.Start"), "C7", "B1", request.Actions.ResumeDownloadRow, .7, tooltipBinding: "T1", visualRole: VisualRole.Primary);
         PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("DownloadHistory.Action.Pause"), "C8", "B2", request.Actions.PauseDownloadRow, .7, tooltipBinding: "T2");
-        PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("DownloadHistory.Action.Stop"), "C9", "B3", request.Actions.StopDownloadRow, .7, tooltipBinding: "T3");
-        PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("Common.DeleteButton"), "C10", "B4", request.Actions.DeleteDownloadRow, .7, tooltipBinding: "T4");
+        PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("DownloadHistory.Action.Stop"), "C9", "B3", request.Actions.StopDownloadRow, .7, tooltipBinding: "T3", visualRole: VisualRole.Danger);
+        PageSectionFactory.AddButtonColumn(request.Grid, Loc.T("Common.DeleteButton"), "C10", "B4", request.Actions.DeleteDownloadRow, .7, tooltipBinding: "T4", visualRole: VisualRole.Danger);
         PageSectionFactory.ApplyGridTextMargin(request.Grid, new Thickness(6, 0, 6, 0));
         request.ConfigureDownloadHistoryColumnSizing(request.Grid);
         request.Grid.SelectedItem = null;

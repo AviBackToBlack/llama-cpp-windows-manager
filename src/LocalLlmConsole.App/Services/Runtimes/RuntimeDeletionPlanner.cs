@@ -21,6 +21,7 @@ public sealed record RuntimeDeletionPlan(
 }
 
 public sealed record RuntimeProfileReassignment(
+    string ProfileId,
     string ModelId,
     string ModelName,
     string OldRuntimeId,
@@ -66,7 +67,7 @@ public sealed record RuntimeBuildPresetDeletionPlan(
 
 public sealed partial class RuntimeDeletionPlanner
 {
-    private sealed record RuntimeProfileReference(ModelRecord Model, ModelLaunchSettings Profile);
+    private sealed record RuntimeProfileReference(ModelRecord Model, NamedModelLaunchProfile Profile);
 
     private readonly StateStore _stateStore;
     private readonly ModelLaunchProfileService _launchProfiles;
@@ -91,14 +92,17 @@ public sealed partial class RuntimeDeletionPlanner
         var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var model in await _stateStore.ListModelsAsync())
         {
-            var profile = await _launchProfiles.ReadAsync(model);
-            if (string.IsNullOrWhiteSpace(profile?.RuntimeId)) continue;
-            if (!map.TryGetValue(profile.RuntimeId, out var models))
+            foreach (var profile in await _launchProfiles.ListNamedAsync(model))
             {
-                models = [];
-                map[profile.RuntimeId] = models;
+                if (string.IsNullOrWhiteSpace(profile.Settings.RuntimeId)) continue;
+                if (!map.TryGetValue(profile.Settings.RuntimeId, out var models))
+                {
+                    models = [];
+                    map[profile.Settings.RuntimeId] = models;
+                }
+                if (!models.Contains(model.Name, StringComparer.OrdinalIgnoreCase))
+                    models.Add(model.Name);
             }
-            models.Add(model.Name);
         }
 
         foreach (var models in map.Values)
@@ -131,6 +135,7 @@ public sealed partial class RuntimeDeletionPlanner
             reassignments = profileReferences
                 .OrderBy(reference => reference.Model.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(reference => new RuntimeProfileReassignment(
+                    reference.Profile.Id,
                     reference.Model.Id,
                     reference.Model.Name,
                     runtime.Id,
@@ -175,10 +180,11 @@ public sealed partial class RuntimeDeletionPlanner
         var references = new List<RuntimeProfileReference>();
         foreach (var model in await _stateStore.ListModelsAsync())
         {
-            var profile = await _launchProfiles.ReadAsync(model);
-            if (profile is null) continue;
-            if (string.Equals(profile.RuntimeId, runtimeId, StringComparison.OrdinalIgnoreCase))
-                references.Add(new RuntimeProfileReference(model, profile));
+            foreach (var profile in await _launchProfiles.ListNamedAsync(model))
+            {
+                if (string.Equals(profile.Settings.RuntimeId, runtimeId, StringComparison.OrdinalIgnoreCase))
+                    references.Add(new RuntimeProfileReference(model, profile));
+            }
         }
 
         return references;

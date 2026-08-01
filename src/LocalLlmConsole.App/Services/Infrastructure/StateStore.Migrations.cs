@@ -6,7 +6,88 @@ public sealed partial class StateStore
 
     private static readonly SchemaMigration[] SchemaMigrations =
     [
-        new(1, "baseline-v1", "")
+        new(1, "baseline-v1", ""),
+        new(2, "named-model-launch-profiles", """
+CREATE TABLE IF NOT EXISTS model_launch_profiles (
+  id TEXT PRIMARY KEY,
+  model_id TEXT NOT NULL,
+  name TEXT NOT NULL COLLATE NOCASE,
+  settings_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY(model_id) REFERENCES models(id) ON DELETE CASCADE,
+  UNIQUE(model_id, name)
+);
+WITH alias_profiles AS (
+  SELECT
+    alias.id AS profile_id,
+    COALESCE(
+      NULLIF(CASE WHEN json_valid(alias.metadata_json) THEN json_extract(alias.metadata_json, '$.sourceModelId') END, ''),
+      (SELECT base.id
+       FROM models base
+       WHERE base.id <> alias.id
+         AND base.model_path = alias.model_path COLLATE NOCASE
+         AND NOT (base.ownership = 'RegistryOnly'
+                  AND json_valid(base.metadata_json)
+                  AND json_extract(base.metadata_json, '$.recordKind') = 'launchAlias')
+       ORDER BY CASE base.ownership WHEN 'AppOwned' THEN 0 WHEN 'External' THEN 1 ELSE 2 END
+       LIMIT 1)
+    ) AS source_model_id,
+    alias.name AS profile_name,
+    settings.settings_json AS settings_json,
+    settings.updated_at AS updated_at
+  FROM models alias
+  JOIN model_launch_settings settings ON settings.model_id = alias.id
+  WHERE alias.ownership = 'RegistryOnly'
+    AND json_valid(alias.metadata_json)
+    AND json_extract(alias.metadata_json, '$.recordKind') = 'launchAlias'
+)
+INSERT OR IGNORE INTO model_launch_profiles (id, model_id, name, settings_json, updated_at)
+SELECT profile_id, source_model_id, profile_name, settings_json, updated_at
+FROM alias_profiles
+WHERE source_model_id IS NOT NULL
+  AND EXISTS (SELECT 1 FROM models source WHERE source.id = alias_profiles.source_model_id);
+DELETE FROM models
+WHERE ownership = 'RegistryOnly'
+  AND json_valid(metadata_json)
+  AND json_extract(metadata_json, '$.recordKind') = 'launchAlias';
+"""),
+        new(3, "real-default-model-launch-profiles", """
+ALTER TABLE model_launch_profiles ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0;
+UPDATE model_launch_profiles
+SET is_default = 1
+WHERE name = 'Default' COLLATE NOCASE;
+UPDATE model_launch_profiles
+SET settings_json = (
+      SELECT saved.settings_json
+      FROM model_launch_settings saved
+      WHERE saved.model_id = model_launch_profiles.model_id),
+    updated_at = (
+      SELECT saved.updated_at
+      FROM model_launch_settings saved
+      WHERE saved.model_id = model_launch_profiles.model_id),
+    is_default = 1
+WHERE name = 'Default' COLLATE NOCASE
+  AND EXISTS (
+      SELECT 1 FROM model_launch_settings saved
+      WHERE saved.model_id = model_launch_profiles.model_id);
+INSERT OR IGNORE INTO model_launch_profiles
+  (id, model_id, name, settings_json, updated_at, is_default)
+SELECT 'default:' || models.id,
+       models.id,
+       'Default',
+       saved.settings_json,
+       saved.updated_at,
+       1
+FROM models
+JOIN model_launch_settings saved ON saved.model_id = models.id
+WHERE NOT EXISTS (
+  SELECT 1 FROM model_launch_profiles profile
+  WHERE profile.model_id = models.id AND profile.is_default = 1);
+DELETE FROM model_launch_settings;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_model_launch_profiles_default
+ON model_launch_profiles(model_id)
+WHERE is_default = 1;
+""")
     ];
 
     private async Task ApplyMigrationsUnlockedAsync()

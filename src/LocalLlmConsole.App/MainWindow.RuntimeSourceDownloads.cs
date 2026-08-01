@@ -41,7 +41,7 @@ public partial class MainWindow
 
     private RuntimeSourceApplicationActions RuntimeSourceApplicationActions()
         => new(
-            RunAsync,
+            RunResponsiveAsync,
             RefreshJobsAsync,
             RefreshRuntimesAsync,
             RefreshOverviewAsync,

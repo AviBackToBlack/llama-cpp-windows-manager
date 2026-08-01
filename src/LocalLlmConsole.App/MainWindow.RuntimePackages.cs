@@ -18,14 +18,14 @@ public partial class MainWindow
     {
         var packageApplication = RuntimeServices.RuntimePackageApplication;
         if (packageApplication is null) return;
-        await packageApplication.InstallAsync(preset, _settings, _runtimeCatalogState, MaxLogBytes(), RuntimePackageActions());
+        await packageApplication.InstallAsync(preset, _settings, _runtimeCatalogState, MaxLogBytes(), RuntimePackageActions(responsive: true));
     }
 
     private async Task CheckRuntimePackageUpdateAsync(RuntimePackagePreset preset, RuntimePackagePresetRow? row)
     {
         var packageApplication = RuntimeServices.RuntimePackageApplication;
         if (packageApplication is null) return;
-        await packageApplication.CheckUpdateAsync(preset, row, _settings, _runtimeCatalogState, MaxLogBytes(), RuntimePackageActions());
+        await packageApplication.CheckUpdateAsync(preset, row, _settings, _runtimeCatalogState, MaxLogBytes(), RuntimePackageActions(responsive: true));
     }
 
     private async Task DeleteRuntimePackageBuildsAsync(RuntimePackagePreset preset)
@@ -35,9 +35,9 @@ public partial class MainWindow
         await packageApplication.DeleteBuildsAsync(preset, _settings, _runtimeCatalogState, RuntimePackageActions());
     }
 
-    private RuntimePackageApplicationActions RuntimePackageActions()
+    private RuntimePackageApplicationActions RuntimePackageActions(bool responsive = false)
         => new(
-            RunAsync,
+            responsive ? RunResponsiveAsync : RunAsync,
             RefreshRuntimesAsync,
             RefreshOverviewAsync,
             RefreshJobsAsync,

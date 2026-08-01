@@ -114,7 +114,9 @@ public sealed class RuntimeSessionRecoveryService
             session.ProcessMarker,
             session.SessionId,
             session.StartedAt,
-            session.ProcessId);
+            session.ProcessId,
+            session.LaunchProfileId,
+            session.LaunchProfileName);
         if (session.IsSelected)
             _sessions.SelectSession(snapshot.SessionId);
         attached.Add(new RuntimeSessionRecoveryAttachment(snapshot, model, state, session.IsSelected));

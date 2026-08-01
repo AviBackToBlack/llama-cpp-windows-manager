@@ -39,6 +39,7 @@ public sealed class RuntimeCatalogViewService
         var rows = new List<RuntimeCatalogRow>();
         foreach (var runtime in runtimes)
         {
+            var availability = RuntimeAvailabilityService.Inspect(runtime);
             modelsByRuntime.TryGetValue(runtime.Id, out var modelNames);
             modelNames ??= [];
             var isActiveRuntime = activeRuntimeIds.Contains(runtime.Id);
@@ -47,13 +48,17 @@ public sealed class RuntimeCatalogViewService
                 Kind = RuntimeCatalogRowKind.Runtime,
                 Name = runtime.Name,
                 Backend = runtime.Backend.ToString(),
-                State = $"Built {runtime.Mode}",
+                State = availability.IsAvailable ? $"Built {runtime.Mode}" : "Missing executable",
                 Location = runtime.ExecutablePath,
-                Details = modelNames.Count == 0
+                Details = !availability.IsAvailable
+                    ? $"{availability.Reason} Repair or reinstall this runtime before loading a model."
+                    : modelNames.Count == 0
                     ? "No saved model launch settings use this runtime."
                     : "Models using this runtime:" + Environment.NewLine + string.Join(Environment.NewLine, modelNames.Select(model => $"- {model}")),
                 CanBuild = false,
-                BuildToolTip = "This source has already been built.",
+                BuildToolTip = availability.IsAvailable
+                    ? "This source has already been built."
+                    : "The built runtime executable is missing. Rebuild or reinstall it.",
                 CanDelete = !isActiveRuntime,
                 DeleteToolTip = RuntimeDeleteToolTip(isActiveRuntime, modelNames),
                 Runtime = runtime
@@ -161,7 +166,8 @@ public sealed class RuntimeCatalogViewService
 
     public static bool HasBuiltRuntimeForSource(RuntimeSourceEntry source, IReadOnlyList<RuntimeRecord> runtimes)
         => !string.IsNullOrWhiteSpace(source.Commit)
-            && runtimes.Any(runtime => string.Equals(RuntimeMetadataService.ManagedPresetId(runtime), source.PresetId, StringComparison.OrdinalIgnoreCase)
+            && runtimes.Any(runtime => RuntimeAvailabilityService.IsAvailable(runtime)
+                && string.Equals(RuntimeMetadataService.ManagedPresetId(runtime), source.PresetId, StringComparison.OrdinalIgnoreCase)
                 && RuntimeMetadataService.CommitsMatch(RuntimeMetadataService.Commit(runtime), source.Commit));
 
 }

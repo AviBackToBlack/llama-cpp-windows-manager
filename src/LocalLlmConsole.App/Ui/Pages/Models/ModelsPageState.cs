@@ -28,6 +28,18 @@ public sealed class ModelsPageState
                 ? variantRow.Model
                 : null;
 
+    public ModelGridRow? SelectedModelRow =>
+        ModelsGrid?.SelectedItem as ModelGridRow
+        ?? ModelVariantsGrid?.SelectedItem as ModelGridRow;
+
+    public NamedModelLaunchProfile? SelectedLaunchProfile =>
+        ModelVariantsGrid?.SelectedItem is ModelGridRow { LaunchProfile: { } profile } row
+        && (SelectedModel is null || string.Equals(row.Model.Id, SelectedModel.Id, StringComparison.OrdinalIgnoreCase))
+            ? profile
+            : null;
+
+    public string SelectedLaunchProfileId => SelectedLaunchProfile?.Id ?? "";
+
     public UiRow? SelectedHuggingFaceRow => HuggingFaceGrid?.SelectedItem as UiRow;
 
     public UiRow? SelectedDownloadHistoryRow => DownloadHistoryGrid?.SelectedItem as UiRow;
@@ -54,47 +66,40 @@ public sealed class ModelsPageState
     {
         if (selectedGrid?.SelectedItem is not ModelGridRow)
             return false;
-
-        if (otherGrid is not null)
-            otherGrid.SelectedItem = null;
         return true;
     }
 
-    public void SelectModelAfterRefresh(string? selectedId, IReadOnlyList<ModelGridRow> modelRows, IReadOnlyList<ModelGridRow> variantRows)
+    public void SelectDefaultLaunchProfile(IReadOnlyList<ModelGridRow> profileRows)
+    {
+        ArgumentNullException.ThrowIfNull(profileRows);
+        if (ModelVariantsGrid is null) return;
+        ModelVariantsGrid.SelectedItem = profileRows.FirstOrDefault(row => row.LaunchProfile?.IsDefault == true)
+            ?? profileRows.FirstOrDefault();
+    }
+
+    public void SelectModelAfterRefresh(
+        string? selectedId,
+        string? selectedProfileId,
+        IReadOnlyList<ModelGridRow> modelRows,
+        IReadOnlyList<ModelGridRow> variantRows)
     {
         ArgumentNullException.ThrowIfNull(modelRows);
         ArgumentNullException.ThrowIfNull(variantRows);
         if (ModelsGrid is null) return;
 
-        if (!string.IsNullOrWhiteSpace(selectedId))
-        {
-            var modelRow = modelRows.FirstOrDefault(row => string.Equals(row.Model.Id, selectedId, StringComparison.OrdinalIgnoreCase));
-            var variantRow = variantRows.FirstOrDefault(row => string.Equals(row.Model.Id, selectedId, StringComparison.OrdinalIgnoreCase));
-            if (modelRow is not null)
-            {
-                ModelsGrid.SelectedItem = modelRow;
-                if (ModelVariantsGrid is not null) ModelVariantsGrid.SelectedItem = null;
-                return;
-            }
+        var requestedProfile = variantRows.FirstOrDefault(row => string.Equals(
+            row.LaunchProfile?.Id,
+            selectedProfileId,
+            StringComparison.OrdinalIgnoreCase));
+        var modelId = requestedProfile?.Model.Id ?? selectedId;
+        var modelRow = modelRows.FirstOrDefault(row => string.Equals(row.Model.Id, modelId, StringComparison.OrdinalIgnoreCase))
+            ?? modelRows.FirstOrDefault();
+        ModelsGrid.SelectedItem = modelRow;
 
-            if (variantRow is not null && ModelVariantsGrid is not null)
-            {
-                ModelVariantsGrid.SelectedItem = variantRow;
-                ModelsGrid.SelectedItem = null;
-                return;
-            }
-        }
-
-        if (modelRows.Count > 0)
-        {
-            ModelsGrid.SelectedItem = modelRows[0];
-            if (ModelVariantsGrid is not null) ModelVariantsGrid.SelectedItem = null;
-        }
-        else if (ModelVariantsGrid is not null && variantRows.Count > 0)
-        {
-            ModelVariantsGrid.SelectedItem = variantRows[0];
-            ModelsGrid.SelectedItem = null;
-        }
+        if (ModelVariantsGrid is null) return;
+        ModelVariantsGrid.SelectedItem = requestedProfile
+            ?? variantRows.FirstOrDefault(row => row.LaunchProfile?.IsDefault == true)
+            ?? variantRows.FirstOrDefault();
     }
 
     public void RefreshHuggingFaceGrid()

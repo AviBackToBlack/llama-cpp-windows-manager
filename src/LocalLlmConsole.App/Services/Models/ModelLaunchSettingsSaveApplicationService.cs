@@ -2,6 +2,7 @@ namespace LocalLlmConsole.Services;
 
 public sealed record ModelLaunchProfileSaveApplicationRequest(
     string ModelId,
+    string ProfileId,
     ModelLaunchSettingsSaveResult Result);
 
 public enum ModelLaunchProfileSaveApplicationOutcome
@@ -16,17 +17,18 @@ public enum LaunchDefaultsSaveApplicationOutcome
 }
 
 public sealed record ModelLaunchProfileSaveActions(
-    Action<string, ModelLaunchSettings> MarkSaved,
+    Action<string, string, ModelLaunchSettings> MarkSaved,
     Action UpdateLaunchSaveButtonState,
     Action<string> SetStatus);
 
 public sealed record ModelLaunchProfileSaveSelectedActions(
     Func<string, Func<Task>, Task> RunBusyAsync,
-    Func<string, bool> IsEditorLoadedForModel,
+    Func<string, string, bool> IsEditorLoadedForModel,
+    Func<string> SelectedProfileId,
     Func<Task> RenderSelectedModelLaunchSettingsAsync,
     Func<AppSettings> ReadLaunchSettings,
     Func<AppSettings> CurrentSettings,
-    Func<ModelRecord, AppSettings, Task<ModelLaunchSettingsSaveResult>> SaveProfileAsync,
+    Func<ModelRecord, AppSettings, string, Task<ModelLaunchSettingsSaveResult>> SaveProfileAsync,
     Func<AppSettings, Task> SyncOpenCodeLocalProviderAsync,
     ModelLaunchProfileSaveActions ResultActions);
 
@@ -58,13 +60,14 @@ public sealed class ModelLaunchSettingsSaveApplicationService
 
         await actions.RunBusyAsync("Saving model launch profile...", async () =>
         {
-            if (!actions.IsEditorLoadedForModel(model.Id))
+            var profileId = actions.SelectedProfileId();
+            if (!actions.IsEditorLoadedForModel(model.Id, profileId))
                 await actions.RenderSelectedModelLaunchSettingsAsync();
 
             var launchSettings = actions.ReadLaunchSettings();
-            var result = await actions.SaveProfileAsync(model, launchSettings);
+            var result = await actions.SaveProfileAsync(model, launchSettings, profileId);
             ApplyProfileSave(
-                new ModelLaunchProfileSaveApplicationRequest(model.Id, result),
+                new ModelLaunchProfileSaveApplicationRequest(model.Id, profileId, result),
                 actions.ResultActions);
             var currentSettings = actions.CurrentSettings();
             if (currentSettings.AutoSaveOpenCodeOnLaunchSettingsSave)
@@ -81,7 +84,7 @@ public sealed class ModelLaunchSettingsSaveApplicationService
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(actions);
 
-        actions.MarkSaved(request.ModelId, request.Result.SavedSettings);
+        actions.MarkSaved(request.ModelId, request.ProfileId, request.Result.SavedSettings);
         actions.UpdateLaunchSaveButtonState();
         actions.SetStatus(request.Result.StatusMessage);
     }
@@ -119,6 +122,7 @@ public sealed class ModelLaunchSettingsSaveApplicationService
         ArgumentNullException.ThrowIfNull(actions);
         ArgumentNullException.ThrowIfNull(actions.RunBusyAsync);
         ArgumentNullException.ThrowIfNull(actions.IsEditorLoadedForModel);
+        ArgumentNullException.ThrowIfNull(actions.SelectedProfileId);
         ArgumentNullException.ThrowIfNull(actions.RenderSelectedModelLaunchSettingsAsync);
         ArgumentNullException.ThrowIfNull(actions.ReadLaunchSettings);
         ArgumentNullException.ThrowIfNull(actions.CurrentSettings);

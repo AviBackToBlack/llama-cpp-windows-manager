@@ -146,16 +146,29 @@ Vision/projector companions are detected when the filename contains one of:
 Use these with the Vision head setting or embedded/model-bundled vision.
 
 Speculative draft and MTP companions are detected when the filename starts with
-`mtp-`, `draft-`, or `spec-`, or contains `-mtp-head`, `mtp-head`, `-draft-`,
-or `-spec-`. Underscores and dots are treated like hyphens for matching. Names
-that only say `assistant` are not auto-detected, so prefer names such as
+`mtp-`, `draft-`, or `spec-`, or contains `-mtp-head`, `mtp-head`, `dspark`,
+`dflash`, `-draft-`, or `-spec-`. Underscores and dots are treated like hyphens
+for matching. Names that only say `assistant` are not auto-detected, so prefer names such as
 `mtp-gemma-4-31b-it-qat-q4_0-assistant.gguf` for upstream `draft-mtp`.
 
 For official upstream `llama.cpp` draft modes, set **Spec type** to a
-`draft-*` value such as `draft-mtp` and use **Draft model** or auto-detect. For
-compatible Atomic MTP forks that accept `--mtp-head`, use **Spec type** =
+`draft-*` value such as `draft-mtp`, `draft-dflash`, or `draft-dspark` and use
+**Draft model** or auto-detect. DSpark block-7 checkpoints should use
+**Draft max** = `7`. For compatible Atomic MTP forks that accept `--mtp-head`, use **Spec type** =
 `atomic-mtp` and **MTP head** instead. MTP assistant GGUFs are separate from
 Vision head / `--mmproj` projectors.
+
+Per-model launch settings also expose **GPU mode**:
+
+- `auto` keeps llama.cpp's default GPU behavior.
+- `single` uses one GPU; optionally set **GPU devices** to an ID such as `CUDA1`.
+- `layer` and `row` split work across every available GPU or the comma-separated
+  devices you select, such as `CUDA0,CUDA1,CUDA2`.
+- `tensor` enables llama.cpp's experimental tensor-parallel mode.
+
+Use **GPU split** for optional proportions matching the selected devices, such
+as `1,1` for an even two-GPU split or `3,1` for a 75/25 split. Leave devices and
+split empty to let llama.cpp use all available GPUs and choose the proportions.
 
 Advanced launch settings include **Server > Custom params** for raw
 `llama-server` flags that do not yet have a first-class app field. These values
@@ -185,7 +198,7 @@ End users should receive a release artifact, not the source tree.
 Preferred artifact:
 
 ```text
-dist\installer\LlamaCppWindowsManager-Setup-1.1.7-win-x64.exe
+dist\installer\LlamaCppWindowsManager-Setup-2.0.0-win-x64.exe
 ```
 
 Portable artifacts:
@@ -195,8 +208,9 @@ dist\LlamaCppWindowsManager-win-x64.zip
 dist\LlamaCppWindowsManager-win-x64\LlamaCppWindowsManager.exe
 ```
 
-The portable zip also includes a legacy `LlamaCppConsole.exe` alias so users on
-older portable builds can update cleanly into the renamed app.
+The portable zip contains only the canonical `LlamaCppWindowsManager.exe` executable.
+When updating an older renamed portable copy, the updater migrates to the canonical
+filename and removes the obsolete executable after the running process exits.
 
 Fresh installer defaults:
 
@@ -262,8 +276,9 @@ Run the local release gate:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1
 ```
 
-That wrapper builds the app, runs the release-hardening tests, verifies
-formatting, checks diff whitespace, and audits vulnerable packages. Include
+That wrapper builds the app, runs the release-hardening tests, rejects skipped
+tests, enforces targeted service/model coverage, verifies formatting, checks
+diff whitespace, and audits vulnerable packages. Include
 packaging smoke checks on a release machine with:
 
 ```powershell
@@ -292,9 +307,9 @@ staging an update.
 Add `-RequireCleanTree` to publish, installer, or release-gate commands when
 packaging artifacts that must come from a clean Git worktree.
 
-For v1.1.2 and newer, publish the `LlamaCppWindowsManager-win-x64.zip` archive
-and its `.sha256` file. The zip contains both the renamed executable and the
-legacy updater alias.
+For v2.0 and newer, publish the `LlamaCppWindowsManager-win-x64.zip` archive
+and its `.sha256` file. The zip contains only the canonical
+`LlamaCppWindowsManager.exe` executable.
 
 Launch a published local build:
 

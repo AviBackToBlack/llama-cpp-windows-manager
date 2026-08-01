@@ -15,6 +15,10 @@ public sealed partial class AppServiceFactory
 
     public string LogRoot => Path.Combine(_workspaceRoot, "logs");
 
+    public RuntimeLaunchOptionDiscoveryService CreateRuntimeLaunchOptionDiscoveryService(IProcessRunner processRunner)
+        => new(processRunner, new RuntimeLaunchOptionDiagnosticsService(
+            Path.Combine(_workspaceRoot, "diagnostics", "runtime-options")));
+
     public MainWindowInfrastructureServices CreateMainWindowInfrastructureServices()
     {
         var processRunner = CreateProcessRunner();

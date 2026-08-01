@@ -88,15 +88,15 @@ public sealed class ModelRuntimeLaunchPreparationService
         AppSettings launchSettings,
         CancellationToken cancellationToken)
     {
-        var hasRunningSessions = _runtimeSessions.Sessions.HasRunningSessions;
-        var memory = _runtimeLaunchAdmission.RequiresMemoryProbe(hasRunningSessions, request.Runtime)
+        var hasRunningGpuSessions = _runtimeSessions.Sessions.HasRunningGpuSessions;
+        var memory = _runtimeLaunchAdmission.RequiresMemoryProbe(hasRunningGpuSessions, request.Runtime)
             ? await ReadMemoryAsync(request, cancellationToken)
             : null;
         return _runtimeLaunchAdmission.Assess(
             request.Runtime,
             request.Model,
             launchSettings,
-            hasRunningSessions,
+            hasRunningGpuSessions,
             memory);
     }
 

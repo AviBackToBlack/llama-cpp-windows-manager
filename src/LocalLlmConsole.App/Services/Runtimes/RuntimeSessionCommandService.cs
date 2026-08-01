@@ -31,8 +31,10 @@ public sealed class RuntimeSessionCommandService
     public Task<LoadedModelSessionSnapshot> StartModelAsync(
         RuntimeRecord runtime,
         ModelRecord model,
-        AppSettings launchSettings)
-        => _runtimeSessions.StartAsync(runtime, model, launchSettings);
+        AppSettings launchSettings,
+        string launchProfileId = "",
+        string launchProfileName = "")
+        => _runtimeSessions.StartAsync(runtime, model, launchSettings, launchProfileId, launchProfileName);
 
     public Task<RuntimeSessionStopResult> StopSelectedAsync()
         => _runtimeSessions.StopSelectedAsync();

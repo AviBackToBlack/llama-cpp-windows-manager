@@ -15,6 +15,7 @@ public sealed class ModelGridRow
     public bool CanOpenFolder { get; init; } = true;
     public bool CanDelete { get; init; } = true;
     public required ModelRecord Model { get; init; }
+    public NamedModelLaunchProfile? LaunchProfile { get; init; }
 }
 
 public enum RuntimeCatalogRowKind

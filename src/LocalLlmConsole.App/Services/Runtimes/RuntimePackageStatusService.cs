@@ -3,6 +3,7 @@ namespace LocalLlmConsole.Services;
 public sealed record RuntimePackageInventory(
     IReadOnlyList<RuntimeRecord> Installed,
     IReadOnlyList<RuntimeRecord> SourceBuilds,
+    IReadOnlyList<RuntimeRecord> Unavailable,
     string LocalTag,
     string LocalAssets,
     string SourceCommit,
@@ -25,12 +26,19 @@ public sealed class RuntimePackageStatusService
         IReadOnlyList<RuntimeRecord> runtimes,
         IReadOnlyDictionary<string, RuntimePackageUpdateState> updateStates)
     {
-        var installed = RuntimePackageInventoryPresenter.InstalledPackages(runtimes, preset);
-        var sourceBuilds = RuntimePackageInventoryPresenter.MatchingSourceBuilds(runtimes, preset);
+        var packageMatches = RuntimePackageInventoryPresenter.InstalledPackages(runtimes, preset);
+        var sourceMatches = RuntimePackageInventoryPresenter.MatchingSourceBuilds(runtimes, preset);
+        var installed = packageMatches.Where(RuntimeAvailabilityService.IsAvailable).ToArray();
+        var sourceBuilds = sourceMatches.Where(RuntimeAvailabilityService.IsAvailable).ToArray();
+        var unavailable = packageMatches.Concat(sourceMatches)
+            .Where(runtime => !RuntimeAvailabilityService.IsAvailable(runtime))
+            .DistinctBy(runtime => runtime.Id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         var localIdentity = RuntimePackageInventoryPresenter.LocalIdentity(installed, sourceBuilds);
         return new RuntimePackageInventory(
             installed,
             sourceBuilds,
+            unavailable,
             RuntimePackageInventoryPresenter.LatestInstalledTag(installed),
             RuntimePackageInventoryPresenter.LatestInstalledAssetSummary(installed),
             RuntimePackageInventoryPresenter.LatestSourceCommit(sourceBuilds),
@@ -88,29 +96,38 @@ public sealed class RuntimePackageStatusService
         RuntimePackagePreset preset,
         RuntimePackageInventory inventory)
     {
-        var canInstall = RuntimePackageInventoryPresenter.CanInstallPackage(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState);
+        var repairRequired = inventory.Unavailable.Count > 0;
+        var canInstall = repairRequired || RuntimePackageInventoryPresenter.CanInstallPackage(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState);
         var runtimeLabel = RuntimePackageSourceCatalog.PackageRuntimeLabel(preset);
         var sourceLabel = RuntimePackageSourceCatalog.PackageSourceLabel(preset);
         return new RuntimePackagePresetRow
         {
             Label = preset.Label,
             Backend = RuntimePackageSourceCatalog.BackendLabel(preset),
-            LocalStatus = RuntimePackageInventoryPresenter.LocalStatusLabel(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState),
-            LatestRelease = RuntimePackageInventoryPresenter.LatestLocalLabel(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState),
+            LocalStatus = repairRequired
+                ? inventory.Unavailable.Count == 1 ? "Repair required" : $"{inventory.Unavailable.Count} missing runtimes"
+                : RuntimePackageInventoryPresenter.LocalStatusLabel(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState),
+            LatestRelease = repairRequired
+                ? "Registered runtime files are missing"
+                : RuntimePackageInventoryPresenter.LatestLocalLabel(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState),
             Assets = inventory.CheckedState?.AssetSummary ?? RuntimePackageSourceCatalog.ReleasePageUrlFor(preset),
-            InstallAction = RuntimePackageInventoryPresenter.InstallButtonLabel(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState),
+            InstallAction = repairRequired
+                ? "Repair"
+                : RuntimePackageInventoryPresenter.InstallButtonLabel(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState),
             CheckAction = "Check",
             DeleteAction = "Delete All",
-            InstallToolTip = canInstall
-                ? $"Install or update this {runtimeLabel}."
+            InstallToolTip = repairRequired
+                ? $"Reinstall this {runtimeLabel} because its registered executable is missing."
+                : canInstall
+                    ? $"Install or update this {runtimeLabel}."
                 : $"This {runtimeLabel} is already installed.",
             CheckToolTip = $"Check the {sourceLabel} latest release for this runtime package.",
-            DeleteToolTip = inventory.Installed.Count + inventory.SourceBuilds.Count > 0
+            DeleteToolTip = inventory.Installed.Count + inventory.SourceBuilds.Count + inventory.Unavailable.Count > 0
                 ? $"Delete all local installs for this {runtimeLabel}."
                 : $"No local installs exist for this {runtimeLabel}.",
             CanInstall = canInstall,
             CanCheck = true,
-            CanDelete = inventory.Installed.Count + inventory.SourceBuilds.Count > 0,
+            CanDelete = inventory.Installed.Count + inventory.SourceBuilds.Count + inventory.Unavailable.Count > 0,
             Preset = preset
         };
     }
@@ -145,7 +162,22 @@ public sealed class RuntimePackageStatusService
         RuntimePackageUpdateState state,
         string message,
         bool hasUpdate)
-        => new(
+    {
+        if (inventory.Unavailable.Count > 0)
+        {
+            return new RuntimePackageCheckResult(
+                state,
+                message,
+                "Repair required",
+                state.IsAvailable
+                    ? $"Latest {RuntimePackageInventoryPresenter.DisplayTag(state.LatestTag)} available; registered files are missing"
+                    : "Registered runtime files are missing",
+                state.AssetSummary,
+                "Repair",
+                true);
+        }
+
+        return new RuntimePackageCheckResult(
             state,
             message,
             hasUpdate ? "Update available" : RuntimePackageInventoryPresenter.LocalStatusLabel(inventory.Installed, inventory.SourceBuilds, state),
@@ -153,6 +185,7 @@ public sealed class RuntimePackageStatusService
             state.AssetSummary,
             RuntimePackageInventoryPresenter.InstallButtonLabel(inventory.Installed, inventory.SourceBuilds, state),
             RuntimePackageInventoryPresenter.CanInstallPackage(inventory.Installed, inventory.SourceBuilds, state));
+    }
 
     private static string CheckMessage(
         RuntimePackageInventory inventory,
@@ -160,7 +193,9 @@ public sealed class RuntimePackageStatusService
         RuntimePackageSelection selection,
         bool hasUpdate,
         bool hasAssetChange)
-        => inventory.Installed.Count == 0 && inventory.SourceBuilds.Count == 0
+        => inventory.Unavailable.Count > 0
+            ? $"{inventory.Unavailable.Count} registered runtime installation(s) have missing files. Latest available release is {selection.ReleaseTag}. Use Repair to reinstall the {RuntimePackageSourceCatalog.PackageRuntimeLabel(selection.Preset)}."
+            : inventory.Installed.Count == 0 && inventory.SourceBuilds.Count == 0
             ? $"Latest available release is {selection.ReleaseTag}. Use Install to download the {RuntimePackageSourceCatalog.PackageRuntimeLabel(selection.Preset)}."
             : inventory.Installed.Count == 0
                 ? hasUpdate

@@ -55,6 +55,65 @@ public static partial class LaunchSettingsPanelFactory
         button.ToolTip = TooltipText(VisionProjectorSelection.Tooltip(value));
     }
 
+    private static Grid DraftModelPicker(WpfTextBox textBox, Func<Task> chooseAsync, out WpfButton button)
+    {
+        var grid = new Grid();
+        textBox.Visibility = Visibility.Collapsed;
+        textBox.Width = 0;
+        textBox.MinWidth = 0;
+        textBox.IsTabStop = false;
+        grid.Children.Add(textBox);
+
+        WpfButton? pickerButton = null;
+        pickerButton = DropDownPickerButton(DraftModelButtonText(textBox.Text), () => OpenPickerMenu(pickerButton));
+        var finalButton = pickerButton;
+        finalButton.MinWidth = 156;
+        finalButton.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+        finalButton.HorizontalContentAlignment = System.Windows.HorizontalAlignment.Left;
+        finalButton.ContextMenu = DraftModelMenu(textBox, chooseAsync);
+        UpdateDraftModelButton(finalButton, textBox.Text);
+        textBox.TextChanged += (_, _) => UpdateDraftModelButton(finalButton, textBox.Text);
+        button = finalButton;
+        grid.Children.Add(finalButton);
+        return grid;
+    }
+
+    private static ContextMenu DraftModelMenu(WpfTextBox textBox, Func<Task> chooseAsync)
+    {
+        var menu = PickerContextMenu();
+        var auto = new MenuItem { Header = Loc.T("Picker.Draft.AutoDetect") };
+        auto.Click += (_, _) => textBox.Text = "";
+        var choose = new MenuItem { Header = Loc.T("Picker.ChooseGgufFile") };
+        choose.Click += async (_, _) => await chooseAsync();
+
+        menu.Items.Add(auto);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(choose);
+        return menu;
+    }
+
+    private static void UpdateDraftModelButton(WpfButton button, string value)
+    {
+        button.Content = DraftModelButtonText(value);
+        button.ToolTip = TooltipText(DraftModelTooltip(value));
+    }
+
+    private static string DraftModelButtonText(string value)
+    {
+        var trimmed = (value ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) return Loc.T("Picker.Draft.DefaultText");
+        var fileName = Path.GetFileName(trimmed);
+        return string.IsNullOrWhiteSpace(fileName) ? Loc.T("Picker.Draft.SelectedText") : fileName;
+    }
+
+    private static string DraftModelTooltip(string value)
+    {
+        var trimmed = (value ?? "").Trim();
+        return string.IsNullOrWhiteSpace(trimmed)
+            ? Loc.T("Tooltip.DraftModelDefault")
+            : $"{Loc.T("Tooltip.DraftModelPath")} {trimmed}{Environment.NewLine}{Loc.T("Tooltip.DraftModelClickChange")}";
+    }
+
     private static Grid MtpHeadPicker(WpfTextBox textBox, Func<Task> chooseAsync, out WpfButton button)
     {
         var grid = new Grid();
@@ -118,7 +177,10 @@ public static partial class LaunchSettingsPanelFactory
     {
         var button = Button(text, click);
         button.Style = (Style)WpfApplication.Current.Resources["DropDownPickerButton"];
-        return button;
+        button.Height = 28;
+        button.MinHeight = 28;
+        button.Margin = new Thickness(0);
+        return CrispCompactControl(button);
     }
 
     private static Task OpenPickerMenu(WpfButton? button)

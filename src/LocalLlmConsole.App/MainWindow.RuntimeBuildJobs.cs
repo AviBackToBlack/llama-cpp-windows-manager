@@ -63,7 +63,7 @@ public partial class MainWindow
 
     private RuntimeBuildApplicationActions RuntimeBuildApplicationActions()
         => new(
-            RunAsync,
+            RunResponsiveAsync,
             RefreshJobsAsync,
             RefreshRuntimesAsync,
             RefreshOverviewAsync,

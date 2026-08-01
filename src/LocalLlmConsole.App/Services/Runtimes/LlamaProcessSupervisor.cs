@@ -1,4 +1,3 @@
-
 namespace LocalLlmConsole.Services;
 
 public enum LlamaRuntimeState
@@ -59,6 +58,7 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
 
     public Task StartAsync(RuntimeRecord runtime, ModelRecord model, AppSettings settings, string logRoot)
     {
+        RuntimeAvailabilityService.EnsureAvailable(runtime);
         Stop();
         Directory.CreateDirectory(logRoot);
         LogPath = Path.Combine(logRoot, $"llama-server-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
@@ -96,78 +96,25 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
         var launchHost = allowDirectLanAccess
             ? string.IsNullOrWhiteSpace(settings.Host) ? "0.0.0.0" : settings.Host
             : "127.0.0.1";
+        var customArgs = CustomLaunchParameterParser.Parse(settings.CustomParameters);
+        ValidateCustomArgs(customArgs);
         var extraArgs = new List<string>();
         if (settings.EnableMetrics)
             extraArgs.Add("--metrics");
-        extraArgs.AddRange(CustomLaunchParameterParser.Parse(settings.CustomParameters));
-        ValidateCustomArgs(extraArgs, settings);
+        extraArgs.AddRange(customArgs);
 
-        var request = new RuntimeLaunchRequest
-        {
-            Mode = runtime.Mode,
-            Backend = runtime.Backend,
-            ExecutablePath = executable,
-            ModelPath = modelPath,
-            WslDistro = runtime.Mode == RuntimeMode.Wsl ? settings.WslDistro : "",
-            Host = launchHost,
-            AllowNetworkAccess = allowDirectLanAccess,
-            ApiKey = settings.RequireApiKeyAuth ? settings.ModelApiKey : "",
-            RequireApiKeyAuth = settings.RequireApiKeyAuth,
-            Port = settings.Port,
-            ContextSize = settings.ContextSize,
-            GpuLayers = settings.GpuLayers,
-            ParallelSlots = settings.ParallelSlots,
-            BatchSize = settings.BatchSize,
-            MicroBatchSize = settings.MicroBatchSize,
-            Threads = settings.Threads,
-            FlashAttention = settings.FlashAttention,
-            CacheTypeK = settings.CacheTypeK,
-            CacheTypeV = settings.CacheTypeV,
-            KvOffload = settings.KvOffload,
-            KvUnified = settings.KvUnified,
-            PromptCacheMode = settings.PromptCacheMode,
-            PromptCacheRamMb = settings.PromptCacheRamMb,
-            ContextCheckpointsMode = settings.ContextCheckpointsMode,
-            ContextCheckpointCount = settings.ContextCheckpointCount,
-            ContextCheckpointEveryNTokens = settings.ContextCheckpointEveryNTokens,
-            ContinuousBatching = settings.ContinuousBatching,
-            ReasoningMode = settings.ReasoningMode,
-            ReasoningFormat = settings.ReasoningFormat,
-            ReasoningBudget = settings.ReasoningBudget,
-            VisionMode = settings.VisionMode,
-            VisionProjectorPath = visionProjectorPath,
-            VisionProjectorEmbedded = embeddedVisionProjector,
-            VisionImageMinTokens = settings.VisionImageMinTokens,
-            VisionImageMaxTokens = settings.VisionImageMaxTokens,
-            JinjaMode = settings.JinjaMode,
-            MmapMode = settings.MmapMode,
-            MlockMode = settings.MlockMode,
-            Temperature = settings.Temperature,
-            TopK = settings.TopK,
-            TopP = settings.TopP,
-            MinP = settings.MinP,
-            MaxTokens = settings.MaxTokens,
-            Seed = settings.Seed,
-            RepeatLastN = settings.RepeatLastN,
-            RepeatPenalty = settings.RepeatPenalty,
-            PresencePenalty = settings.PresencePenalty,
-            FrequencyPenalty = settings.FrequencyPenalty,
-            RopeScaling = settings.RopeScaling,
-            RopeScale = settings.RopeScale,
-            RopeFreqBase = settings.RopeFreqBase,
-            RopeFreqScale = settings.RopeFreqScale,
-            SpeculativeType = settings.SpeculativeType,
-            SpecDraftModelPath = launchDraftModelPath,
-            MtpHeadPath = launchMtpHeadPath,
-            SpecDraftGpuLayers = settings.SpecDraftGpuLayers,
-            SpecDraftMinTokens = settings.SpecDraftMinTokens,
-            SpecDraftMaxTokens = settings.SpecDraftMaxTokens,
-            SpecDraftPSplit = settings.SpecDraftPSplit,
-            SpecDraftPMin = settings.SpecDraftPMin,
-            SpecDraftCacheTypeK = settings.SpecDraftCacheTypeK,
-            SpecDraftCacheTypeV = settings.SpecDraftCacheTypeV,
-            ExtraArgs = extraArgs
-        };
+        var request = RuntimeLaunchRequestFactory.Create(settings, new RuntimeLaunchRequestContext(
+            runtime.Mode,
+            runtime.Backend,
+            executable,
+            modelPath,
+            launchHost,
+            allowDirectLanAccess,
+            visionProjectorPath ?? "",
+            embeddedVisionProjector,
+            launchDraftModelPath ?? "",
+            launchMtpHeadPath ?? "",
+            extraArgs));
         _lastApiKey = settings.ModelApiKey ?? "";
         var args = RuntimeAdapter.BuildArgs(request);
         var psi = runtime.Mode == RuntimeMode.Wsl
@@ -266,33 +213,12 @@ public sealed partial class LlamaProcessSupervisor : IDisposable
             TrySetLoadedFromLoading();
     }
 
-    private static readonly HashSet<string> _disallowedCustomArgs = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "--host", "--port", "--api-key"
-    };
-
-    private static void ValidateCustomArgs(IReadOnlyList<string> extraArgs, AppSettings settings)
-    {
-        foreach (var arg in extraArgs)
-        {
-            foreach (var disallowed in _disallowedCustomArgs)
-            {
-                if (string.Equals(arg, disallowed, StringComparison.OrdinalIgnoreCase)
-                    || arg.StartsWith(disallowed + "=", StringComparison.OrdinalIgnoreCase)
-                    || arg.StartsWith(disallowed + " ", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException(
-                        $"Custom parameter '{arg}' is not allowed because it would override a security-critical setting " +
-                        $"({disallowed}). Remove it from launch settings and use the app's built-in controls instead.");
-                }
-            }
-        }
-    }
+    private static void ValidateCustomArgs(IReadOnlyList<string> extraArgs)
+        => RuntimeLaunchOptionPolicy.ValidateCustomArguments(extraArgs);
 
     private bool TrySetLoadedFromLoading()
         => Interlocked.CompareExchange(
             ref _state,
             (int)LlamaRuntimeState.Loaded,
             (int)LlamaRuntimeState.Loading) == (int)LlamaRuntimeState.Loading;
-
 }

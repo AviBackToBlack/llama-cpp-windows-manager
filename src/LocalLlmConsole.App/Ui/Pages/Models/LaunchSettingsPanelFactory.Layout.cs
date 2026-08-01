@@ -11,7 +11,7 @@ public static partial class LaunchSettingsPanelFactory
 {
     private static Grid LaunchSettingsGrid()
     {
-        var grid = new Grid { Margin = new Thickness(0, 0, 0, 2) };
+        var grid = new Grid { Margin = new Thickness(0) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(98) });
         grid.ColumnDefinitions.Add(new ColumnDefinition());
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
@@ -27,15 +27,15 @@ public static partial class LaunchSettingsPanelFactory
         var header = new DockPanel
         {
             LastChildFill = true,
-            Margin = new Thickness(0, 0, 0, 6)
+            Margin = new Thickness(0, 0, 0, 4)
         };
         header.Children.Add(new Border
         {
             Width = 3,
-            Height = 16,
+            Height = 17,
             Background = (WpfBrush)WpfApplication.Current.Resources["AccentStrong"],
             CornerRadius = new CornerRadius(2),
-            Margin = new Thickness(0, 1, 7, 0),
+            Margin = new Thickness(0, 1, 6, 0),
             VerticalAlignment = VerticalAlignment.Center
         });
         header.Children.Add(new TextBlock
@@ -53,18 +53,18 @@ public static partial class LaunchSettingsPanelFactory
         {
             Height = 1,
             Background = (WpfBrush)WpfApplication.Current.Resources["PanelBorder"],
-            Margin = new Thickness(0, 0, 0, 7)
+            Margin = new Thickness(0, 0, 0, 5)
         });
         section.Children.Add(grid);
 
         return new Border
         {
-            Background = (WpfBrush)WpfApplication.Current.Resources["PanelBack"],
-            BorderBrush = (WpfBrush)WpfApplication.Current.Resources["PanelBorder"],
+            Background = (WpfBrush)WpfApplication.Current.Resources["SurfaceRaised"],
+            BorderBrush = (WpfBrush)WpfApplication.Current.Resources["PanelBorderStrong"],
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(8, 7, 8, 7),
-            Margin = new Thickness(0, 0, 0, 8),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(8, 6, 8, 6),
+            Margin = new Thickness(0, 0, 0, 6),
             Child = section
         };
     }
@@ -75,6 +75,11 @@ public static partial class LaunchSettingsPanelFactory
     private static WpfButton Button(string text, Func<Task> click)
     {
         var button = new WpfButton { Content = text };
+        if (string.Equals(text, Loc.T("Launch.SaveForModelButton"), StringComparison.Ordinal)
+            || string.Equals(text, Loc.T("Launch.SaveAsNewButton"), StringComparison.Ordinal))
+            VisualRole.SetButtonRole(button, VisualRole.Primary);
+        else if (string.Equals(text, Loc.T("Launch.ResetDefaultsButton"), StringComparison.Ordinal))
+            VisualRole.SetButtonRole(button, VisualRole.Danger);
         button.ToolTip = TooltipText(ButtonToolTip(text));
         ToolTipService.SetShowOnDisabled(button, true);
         button.Click += async (_, _) => await click();
@@ -132,17 +137,18 @@ public static partial class LaunchSettingsPanelFactory
             var labelText = new TextBlock
             {
                 Text = label,
-                Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
-                FontSize = 11,
+                Foreground = (WpfBrush)WpfApplication.Current.Resources["TextSoft"],
+                FontSize = 11.5,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 7, 2)
+                Margin = new Thickness(0, 0, 7, 1)
             };
             Grid.SetRow(labelText, row);
             Grid.SetColumn(labelText, rightSide ? 3 : 0);
             grid.Children.Add(labelText);
-            control.MinHeight = Math.Max(control.MinHeight, 29);
+            control.Height = 28;
+            control.MinHeight = 28;
             control.MinWidth = Math.Max(control.MinWidth, 72);
-            control.Margin = new Thickness(0, 0, 4, 2);
+            control.Margin = new Thickness(0, 0, 4, 1);
             control.VerticalAlignment = VerticalAlignment.Center;
             Grid.SetRow(control, row);
             Grid.SetColumn(control, rightSide ? 4 : 1);

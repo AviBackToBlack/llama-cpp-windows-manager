@@ -65,10 +65,10 @@ public sealed class HelpNavigationApplicationService
                 "Help: search Hugging Face, then click Download on the selected model row."),
             "launch-settings" => Models(
                 HelpNavigationFocusTarget.ModelsGrid,
-                "Help: select a model, tune launch settings, then click Save For Model."),
+                "Help: select a model, tune launch settings, enter a profile name, then click Save New Profile."),
             "overview-load" => Overview(
                 HelpNavigationFocusTarget.ModelCombo,
-                "Help: choose a model from the top dropdown, then click Load."),
+                "Help: choose a model and launch profile, then click Load. Running models can be unloaded from their session row."),
             "settings" => Settings(
                 "Help: Settings stores app preferences, network behavior, secrets, gateway options, and log limits."),
             "gateway-settings" => Settings(

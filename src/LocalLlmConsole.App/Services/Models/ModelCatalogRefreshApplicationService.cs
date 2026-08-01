@@ -1,11 +1,12 @@
 namespace LocalLlmConsole.Services;
 
 public sealed record ModelCatalogRefreshApplicationActions(
-    Func<ModelRecord, Task<ModelLaunchSettings?>> ReadLaunchProfileAsync);
+    Func<IReadOnlyList<ModelRecord>, Task<IReadOnlyList<NamedModelLaunchProfile>>> EnsureDefaultProfilesAsync);
 
 public sealed record ModelCatalogRefreshApplicationResult(
     IReadOnlyList<ModelRecord> Models,
-    IReadOnlyDictionary<string, ModelLaunchSettings> LaunchProfiles)
+    IReadOnlyDictionary<string, ModelLaunchSettings> LaunchProfiles,
+    IReadOnlyList<NamedModelLaunchProfile> NamedLaunchProfiles)
 {
     public ModelLaunchSettings? LaunchProfileFor(ModelRecord model)
         => LaunchProfiles.TryGetValue(model.Id, out var profile) ? profile : null;
@@ -30,21 +31,21 @@ public sealed class ModelCatalogRefreshApplicationService
 
         await _catalog.CleanupModelRecordsAsync();
         var models = await _stateStore.ListModelsAsync();
+        var defaults = await actions.EnsureDefaultProfilesAsync(models);
         var profiles = new Dictionary<string, ModelLaunchSettings>(StringComparer.OrdinalIgnoreCase);
-        foreach (var model in models)
+        foreach (var profile in defaults)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var profile = await actions.ReadLaunchProfileAsync(model);
-            if (profile is not null)
-                profiles[model.Id] = profile;
+            profiles[profile.ModelId] = profile.Settings;
         }
 
-        return new ModelCatalogRefreshApplicationResult(models, profiles);
+        var namedProfiles = await _stateStore.ListNamedModelLaunchProfilesAsync();
+        return new ModelCatalogRefreshApplicationResult(models, profiles, namedProfiles);
     }
 
     private static void Validate(ModelCatalogRefreshApplicationActions actions)
     {
         ArgumentNullException.ThrowIfNull(actions);
-        ArgumentNullException.ThrowIfNull(actions.ReadLaunchProfileAsync);
+        ArgumentNullException.ThrowIfNull(actions.EnsureDefaultProfilesAsync);
     }
 }

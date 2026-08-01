@@ -4,15 +4,17 @@ public sealed record RuntimeMetricSummaryPresentation(
     string Tokens,
     string MtpTokens,
     string Slots,
-    string Settings,
-    DateTimeOffset? LastKnownCapturedAt)
+    string KvCache,
+    DateTimeOffset? LastKnownCapturedAt,
+    RuntimeMetricGraphSample GraphSample)
 {
     public static RuntimeMetricSummaryPresentation NoRuntime { get; } = new(
         "No runtime",
         "Inactive",
-        "Active 0 | Queued 0\nBusy/decode 0.0",
-        "Context No runtime\nKV cache No runtime",
-        LastKnownCapturedAt: null);
+        "Active 0/0 | Queued 0\nBusy/decode 0.0",
+        "Used Unknown\nCapacity Unknown",
+        LastKnownCapturedAt: null,
+        new RuntimeMetricGraphSample("", null, null, null, null, null));
 }
 
 public sealed record RuntimeDashboardMetricsApplicationRequest(
@@ -112,8 +114,9 @@ public sealed class RuntimeDashboardMetricsApplicationService
             summary.Tokens,
             summary.MtpTokens,
             summary.Slots,
-            summary.Settings,
-            summary.UsedLastKnown ? summary.LastKnownCapturedAt : null);
+            summary.KvCache,
+            summary.UsedLastKnown ? summary.LastKnownCapturedAt : null,
+            summary.GraphSample);
     }
 
     private static void Validate(RuntimeDashboardMetricsApplicationActions actions)

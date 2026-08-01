@@ -13,13 +13,51 @@ public sealed class RuntimeRegistryService
     {
         Directory.CreateDirectory(runtimeRoot);
         var candidates = await Task.Run(() => CandidateRuntimeFolders(runtimeRoot).Take(1000).ToArray());
+        var registered = await _store.ListRuntimesAsync();
         var count = 0;
         foreach (var candidate in candidates)
         {
-            await RegisterFolderAsync(candidate.Folder, candidate.ExecutablePath);
+            var repaired = registered
+                .Where(runtime => !RuntimeAvailabilityService.IsAvailable(runtime))
+                .Where(runtime => SameFolder(RuntimeMetadataService.Folder(runtime), candidate.Folder))
+                .ToArray();
+            if (repaired.Length > 0)
+            {
+                foreach (var runtime in repaired)
+                {
+                    var updated = runtime with
+                    {
+                        ExecutablePath = candidate.ExecutablePath,
+                        Mode = candidate.ExecutablePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                            ? RuntimeMode.Native
+                            : RuntimeMode.Wsl,
+                        UpdatedAt = DateTimeOffset.UtcNow
+                    };
+                    await _store.UpsertRuntimeAsync(updated);
+                }
+            }
+            else
+            {
+                await RegisterFolderAsync(candidate.Folder, candidate.ExecutablePath);
+            }
             count++;
         }
         return count;
+    }
+
+    private static bool SameFolder(string left, string right)
+    {
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task<RuntimeRecord> RegisterFolderAsync(string folder)

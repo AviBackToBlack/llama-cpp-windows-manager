@@ -747,12 +747,13 @@ public sealed partial class ReleaseHardeningTests
         var root = CreateTempRoot();
         var preset = RuntimePackageSourceCatalog.PresetRows().Single(candidate => candidate.Id == "official-prebuilt-windows-cuda");
         var runtimeFolder = Path.Combine(root, "official-prebuilt-windows-cuda-b9354");
+        var runtimeExecutable = CreateRuntimeExecutable(runtimeFolder);
         var runtime = new RuntimeRecord(
             "runtime-1",
             "Official llama.cpp CUDA Windows",
             RuntimeMode.Native,
             RuntimeBackend.Cuda,
-            Path.Combine(runtimeFolder, "llama-server.exe"),
+            runtimeExecutable,
             System.Text.Json.JsonSerializer.Serialize(new
             {
                 folder = runtimeFolder,
@@ -787,12 +788,13 @@ public sealed partial class ReleaseHardeningTests
         var root = CreateTempRoot();
         var preset = RuntimePackageSourceCatalog.PresetRows().Single(candidate => candidate.Id == "official-prebuilt-windows-cuda");
         var runtimeFolder = Path.Combine(root, "official-prebuilt-windows-cuda-b9354");
+        var runtimeExecutable = CreateRuntimeExecutable(runtimeFolder);
         var runtime = new RuntimeRecord(
             "runtime-1",
             "Official llama.cpp CUDA Windows",
             RuntimeMode.Native,
             RuntimeBackend.Cuda,
-            Path.Combine(runtimeFolder, "llama-server.exe"),
+            runtimeExecutable,
             System.Text.Json.JsonSerializer.Serialize(new
             {
                 folder = runtimeFolder,
@@ -826,6 +828,43 @@ public sealed partial class ReleaseHardeningTests
         Assert.False(unavailable.State.IsAvailable);
         Assert.Equal("Not published", unavailable.LocalStatus);
         Assert.False(unavailable.CanInstall);
+    }
+
+    [Fact]
+    public void RuntimePackageStatusMarksRegisteredMissingExecutablesForRepair()
+    {
+        var root = CreateTempRoot();
+        var preset = RuntimePackageSourceCatalog.PresetRows().Single(candidate => candidate.Id == "official-prebuilt-windows-cpu");
+        var runtimeFolder = Path.Combine(root, "official-prebuilt-windows-cpu-b10107");
+        var missingRuntime = new RuntimeRecord(
+            "runtime-cpu",
+            "Official llama.cpp CPU Windows",
+            RuntimeMode.Native,
+            RuntimeBackend.Cpu,
+            Path.Combine(runtimeFolder, "llama-server.exe"),
+            System.Text.Json.JsonSerializer.Serialize(new
+            {
+                folder = runtimeFolder,
+                runtimeMetadata = new
+                {
+                    managedPackageId = preset.Id,
+                    managedPresetId = preset.Id,
+                    releaseTag = "b10107"
+                }
+            }),
+            DateTimeOffset.UtcNow);
+        var service = new RuntimePackageStatusService();
+
+        var inventory = service.BuildInventory(preset, [missingRuntime], new Dictionary<string, RuntimePackageUpdateState>());
+        var row = service.CreateRow(preset, inventory);
+
+        Assert.Empty(inventory.Installed);
+        Assert.Equal([missingRuntime], inventory.Unavailable);
+        Assert.Equal("Repair required", row.LocalStatus);
+        Assert.Equal("Repair", row.InstallAction);
+        Assert.True(row.CanInstall);
+        Assert.True(row.CanDelete);
+        Assert.Contains("missing", row.LatestRelease, StringComparison.OrdinalIgnoreCase);
     }
 
 

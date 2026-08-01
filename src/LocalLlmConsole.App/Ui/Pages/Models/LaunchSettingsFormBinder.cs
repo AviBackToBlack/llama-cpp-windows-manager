@@ -9,67 +9,87 @@ namespace LocalLlmConsole;
 
 public sealed class LaunchSettingsFormControls
 {
-    public WpfTextBox? LaunchPortBox { get; init; }
-    public WpfTextBox? ContextSizeBox { get; init; }
-    public WpfTextBox? GpuLayersBox { get; init; }
-    public WpfTextBox? ParallelSlotsBox { get; init; }
-    public WpfTextBox? BatchSizeBox { get; init; }
-    public WpfTextBox? MicroBatchSizeBox { get; init; }
-    public WpfTextBox? ThreadsBox { get; init; }
-    public WpfTextBox? ReasoningBudgetBox { get; init; }
-    public WpfTextBox? VisionProjectorPathBox { get; init; }
-    public WpfButton? VisionProjectorButton { get; init; }
-    public WpfTextBox? VisionImageMinTokensBox { get; init; }
-    public WpfTextBox? VisionImageMaxTokensBox { get; init; }
-    public WpfTextBox? TemperatureBox { get; init; }
-    public WpfTextBox? TopKBox { get; init; }
-    public WpfTextBox? TopPBox { get; init; }
-    public WpfTextBox? MinPBox { get; init; }
-    public WpfTextBox? MaxTokensBox { get; init; }
-    public WpfTextBox? SeedBox { get; init; }
-    public WpfTextBox? RepeatLastNBox { get; init; }
-    public WpfTextBox? RepeatPenaltyBox { get; init; }
-    public WpfTextBox? PresencePenaltyBox { get; init; }
-    public WpfTextBox? FrequencyPenaltyBox { get; init; }
-    public WpfTextBox? RopeScaleBox { get; init; }
-    public WpfTextBox? RopeFreqBaseBox { get; init; }
-    public WpfTextBox? RopeFreqScaleBox { get; init; }
-    public WpfTextBox? SpecDraftModelPathBox { get; init; }
-    public WpfTextBox? MtpHeadPathBox { get; init; }
-    public WpfButton? MtpHeadButton { get; init; }
-    public WpfTextBox? SpecDraftGpuLayersBox { get; init; }
-    public WpfTextBox? SpecDraftMinTokensBox { get; init; }
-    public WpfTextBox? SpecDraftMaxTokensBox { get; init; }
-    public WpfTextBox? SpecDraftPSplitBox { get; init; }
-    public WpfTextBox? SpecDraftPMinBox { get; init; }
-    public WpfTextBox? CustomParametersBox { get; init; }
+    private readonly IReadOnlyDictionary<string, FrameworkElement> _editors;
 
-    public WpfComboBox? MetricsCombo { get; init; }
-    public WpfComboBox? ReasoningCombo { get; init; }
-    public WpfComboBox? ReasoningFormatCombo { get; init; }
-    public WpfComboBox? VisionCombo { get; init; }
-    public WpfComboBox? FlashAttentionCombo { get; init; }
-    public WpfComboBox? CacheTypeKCombo { get; init; }
-    public WpfComboBox? CacheTypeVCombo { get; init; }
-    public WpfComboBox? KvOffloadCombo { get; init; }
-    public WpfComboBox? KvUnifiedCombo { get; init; }
-    public WpfComboBox? PromptCacheCombo { get; init; }
-    public WpfTextBox? PromptCacheRamMbBox { get; init; }
-    public WpfComboBox? ContextCheckpointsCombo { get; init; }
-    public WpfTextBox? ContextCheckpointCountBox { get; init; }
-    public WpfTextBox? ContextCheckpointEveryNTokensBox { get; init; }
-    public WpfComboBox? ContinuousBatchingCombo { get; init; }
-    public WpfComboBox? JinjaCombo { get; init; }
-    public WpfComboBox? MmapCombo { get; init; }
-    public WpfComboBox? MlockCombo { get; init; }
-    public WpfComboBox? RopeScalingCombo { get; init; }
-    public WpfComboBox? SpeculativeTypeCombo { get; init; }
-    public WpfComboBox? SpecDraftCacheTypeKCombo { get; init; }
-    public WpfComboBox? SpecDraftCacheTypeVCombo { get; init; }
+    public LaunchSettingsFormControls(
+        IReadOnlyDictionary<string, FrameworkElement>? editors = null,
+        LaunchRuntimeOptionsPanel? runtimeOptions = null)
+    {
+        _editors = editors ?? new Dictionary<string, FrameworkElement>(StringComparer.Ordinal);
+        RuntimeOptions = runtimeOptions;
+    }
+
+    public LaunchRuntimeOptionsPanel? RuntimeOptions { get; }
+
+    public WpfTextBox? LaunchPortBox => Text(nameof(AppSettings.Port));
+    public WpfTextBox? ContextSizeBox => Text(nameof(AppSettings.ContextSize));
+    public WpfTextBox? GpuLayersBox => Text(nameof(AppSettings.GpuLayers));
+    public WpfTextBox? GpuDevicesBox => Text(nameof(AppSettings.GpuDevices));
+    public WpfTextBox? GpuSplitBox => Text(nameof(AppSettings.GpuSplit));
+    public WpfTextBox? ParallelSlotsBox => Text(nameof(AppSettings.ParallelSlots));
+    public WpfTextBox? BatchSizeBox => Text(nameof(AppSettings.BatchSize));
+    public WpfTextBox? MicroBatchSizeBox => Text(nameof(AppSettings.MicroBatchSize));
+    public WpfTextBox? ThreadsBox => Text(nameof(AppSettings.Threads));
+    public WpfTextBox? ReasoningBudgetBox => Text(nameof(AppSettings.ReasoningBudget));
+    public WpfTextBox? VisionProjectorPathBox => Text(nameof(AppSettings.VisionProjectorPath));
+    public WpfButton? VisionProjectorButton => Button(nameof(AppSettings.VisionProjectorPath));
+    public WpfTextBox? VisionImageMinTokensBox => Text(nameof(AppSettings.VisionImageMinTokens));
+    public WpfTextBox? VisionImageMaxTokensBox => Text(nameof(AppSettings.VisionImageMaxTokens));
+    public WpfTextBox? TemperatureBox => Text(nameof(AppSettings.Temperature));
+    public WpfTextBox? TopKBox => Text(nameof(AppSettings.TopK));
+    public WpfTextBox? TopPBox => Text(nameof(AppSettings.TopP));
+    public WpfTextBox? MinPBox => Text(nameof(AppSettings.MinP));
+    public WpfTextBox? MaxTokensBox => Text(nameof(AppSettings.MaxTokens));
+    public WpfTextBox? SeedBox => Text(nameof(AppSettings.Seed));
+    public WpfTextBox? RepeatLastNBox => Text(nameof(AppSettings.RepeatLastN));
+    public WpfTextBox? RepeatPenaltyBox => Text(nameof(AppSettings.RepeatPenalty));
+    public WpfTextBox? PresencePenaltyBox => Text(nameof(AppSettings.PresencePenalty));
+    public WpfTextBox? FrequencyPenaltyBox => Text(nameof(AppSettings.FrequencyPenalty));
+    public WpfTextBox? RopeScaleBox => Text(nameof(AppSettings.RopeScale));
+    public WpfTextBox? RopeFreqBaseBox => Text(nameof(AppSettings.RopeFreqBase));
+    public WpfTextBox? RopeFreqScaleBox => Text(nameof(AppSettings.RopeFreqScale));
+    public WpfTextBox? SpecDraftModelPathBox => Text(nameof(AppSettings.SpecDraftModelPath));
+    public WpfButton? SpecDraftModelButton => Button(nameof(AppSettings.SpecDraftModelPath));
+    public WpfTextBox? MtpHeadPathBox => Text(nameof(AppSettings.MtpHeadPath));
+    public WpfButton? MtpHeadButton => Button(nameof(AppSettings.MtpHeadPath));
+    public WpfTextBox? SpecDraftGpuLayersBox => Text(nameof(AppSettings.SpecDraftGpuLayers));
+    public WpfTextBox? SpecDraftMinTokensBox => Text(nameof(AppSettings.SpecDraftMinTokens));
+    public WpfTextBox? SpecDraftMaxTokensBox => Text(nameof(AppSettings.SpecDraftMaxTokens));
+    public WpfTextBox? SpecDraftPSplitBox => Text(nameof(AppSettings.SpecDraftPSplit));
+    public WpfTextBox? SpecDraftPMinBox => Text(nameof(AppSettings.SpecDraftPMin));
+    public WpfTextBox? CustomParametersBox => Text(nameof(AppSettings.CustomParameters));
+
+    public WpfComboBox? MetricsCombo => Combo(nameof(AppSettings.EnableMetrics));
+    public WpfComboBox? GpuModeCombo => Combo(nameof(AppSettings.GpuMode));
+    public WpfComboBox? ReasoningCombo => Combo(nameof(AppSettings.ReasoningMode));
+    public WpfComboBox? ReasoningFormatCombo => Combo(nameof(AppSettings.ReasoningFormat));
+    public WpfComboBox? VisionCombo => Combo(nameof(AppSettings.VisionMode));
+    public WpfComboBox? FlashAttentionCombo => Combo(nameof(AppSettings.FlashAttention));
+    public WpfComboBox? CacheTypeKCombo => Combo(nameof(AppSettings.CacheTypeK));
+    public WpfComboBox? CacheTypeVCombo => Combo(nameof(AppSettings.CacheTypeV));
+    public WpfComboBox? KvOffloadCombo => Combo(nameof(AppSettings.KvOffload));
+    public WpfComboBox? KvUnifiedCombo => Combo(nameof(AppSettings.KvUnified));
+    public WpfComboBox? PromptCacheCombo => Combo(nameof(AppSettings.PromptCacheMode));
+    public WpfTextBox? PromptCacheRamMbBox => Text(nameof(AppSettings.PromptCacheRamMb));
+    public WpfComboBox? ContextCheckpointsCombo => Combo(nameof(AppSettings.ContextCheckpointsMode));
+    public WpfTextBox? ContextCheckpointCountBox => Text(nameof(AppSettings.ContextCheckpointCount));
+    public WpfTextBox? ContextCheckpointEveryNTokensBox => Text(nameof(AppSettings.ContextCheckpointEveryNTokens));
+    public WpfComboBox? ContinuousBatchingCombo => Combo(nameof(AppSettings.ContinuousBatching));
+    public WpfComboBox? JinjaCombo => Combo(nameof(AppSettings.JinjaMode));
+    public WpfComboBox? MmapCombo => Combo(nameof(AppSettings.MmapMode));
+    public WpfComboBox? MlockCombo => Combo(nameof(AppSettings.MlockMode));
+    public WpfComboBox? RopeScalingCombo => Combo(nameof(AppSettings.RopeScaling));
+    public WpfComboBox? SpeculativeTypeCombo => Combo(nameof(AppSettings.SpeculativeType));
+    public WpfComboBox? SpecDraftCacheTypeKCombo => Combo(nameof(AppSettings.SpecDraftCacheTypeK));
+    public WpfComboBox? SpecDraftCacheTypeVCombo => Combo(nameof(AppSettings.SpecDraftCacheTypeV));
+
+    private WpfTextBox? Text(string id) => _editors.GetValueOrDefault(id) as WpfTextBox;
+    private WpfComboBox? Combo(string id) => _editors.GetValueOrDefault(id) as WpfComboBox;
+    private WpfButton? Button(string id) => _editors.GetValueOrDefault(id + ".button") as WpfButton;
 
     public IEnumerable<WpfTextBox?> TextBoxes =>
     [
-        LaunchPortBox, ContextSizeBox, GpuLayersBox, ParallelSlotsBox, BatchSizeBox, MicroBatchSizeBox,
+        LaunchPortBox, ContextSizeBox, GpuLayersBox, GpuDevicesBox, GpuSplitBox, ParallelSlotsBox, BatchSizeBox, MicroBatchSizeBox,
         ThreadsBox, ReasoningBudgetBox, VisionProjectorPathBox, VisionImageMinTokensBox, VisionImageMaxTokensBox,
         TemperatureBox, TopKBox, TopPBox, MinPBox, MaxTokensBox, SeedBox, RepeatLastNBox,
         RepeatPenaltyBox, PresencePenaltyBox, FrequencyPenaltyBox, RopeScaleBox, RopeFreqBaseBox,
@@ -80,7 +100,7 @@ public sealed class LaunchSettingsFormControls
 
     public IEnumerable<WpfComboBox?> ComboBoxes =>
     [
-        MetricsCombo, ReasoningCombo, ReasoningFormatCombo, VisionCombo, FlashAttentionCombo,
+        MetricsCombo, GpuModeCombo, ReasoningCombo, ReasoningFormatCombo, VisionCombo, FlashAttentionCombo,
         CacheTypeKCombo, CacheTypeVCombo, KvOffloadCombo, KvUnifiedCombo, PromptCacheCombo,
         ContextCheckpointsCombo, ContinuousBatchingCombo, JinjaCombo, MmapCombo, MlockCombo, RopeScalingCombo, SpeculativeTypeCombo,
         SpecDraftCacheTypeKCombo, SpecDraftCacheTypeVCombo
@@ -96,6 +116,9 @@ public static class LaunchSettingsFormBinder
             Port = ReadInt(controls.LaunchPortBox, "Port", min: 1, max: 65535),
             ContextSize = ReadContextSize(controls.ContextSizeBox),
             GpuLayers = ReadInt(controls.GpuLayersBox, "GPU layers", min: 0),
+            GpuMode = ComboValue(controls.GpuModeCombo),
+            GpuDevices = controls.GpuDevicesBox?.Text.Trim() ?? "",
+            GpuSplit = controls.GpuSplitBox?.Text.Trim() ?? "",
             ParallelSlots = ReadInt(controls.ParallelSlotsBox, "Parallel slots", min: 1),
             BatchSize = ReadInt(controls.BatchSizeBox, "Batch size", min: 1),
             MicroBatchSize = ReadInt(controls.MicroBatchSizeBox, "Micro batch size", min: 1),
@@ -146,7 +169,9 @@ public static class LaunchSettingsFormBinder
             SpecDraftPMin = ReadDouble(controls.SpecDraftPMinBox, "Draft min probability", min: -1, max: 1),
             SpecDraftCacheTypeK = ComboValue(controls.SpecDraftCacheTypeKCombo),
             SpecDraftCacheTypeV = ComboValue(controls.SpecDraftCacheTypeVCombo),
-            CustomParameters = controls.CustomParametersBox?.Text.Trim() ?? ""
+            CustomParameters = controls.RuntimeOptions?.BuildCustomParameters()
+                ?? controls.CustomParametersBox?.Text.Trim()
+                ?? ""
         };
 
         ValidateCrossFieldRules(next);
@@ -158,6 +183,8 @@ public static class LaunchSettingsFormBinder
         SetText(controls.LaunchPortBox, settings.Port);
         SetText(controls.ContextSizeBox, settings.ContextSize);
         SetText(controls.GpuLayersBox, settings.GpuLayers);
+        SetText(controls.GpuDevicesBox, settings.GpuDevices);
+        SetText(controls.GpuSplitBox, settings.GpuSplit);
         SetText(controls.ParallelSlotsBox, settings.ParallelSlots);
         SetText(controls.BatchSizeBox, settings.BatchSize);
         SetText(controls.MicroBatchSizeBox, settings.MicroBatchSize);
@@ -187,7 +214,9 @@ public static class LaunchSettingsFormBinder
         SetText(controls.SpecDraftPSplitBox, settings.SpecDraftPSplit);
         SetText(controls.SpecDraftPMinBox, settings.SpecDraftPMin);
         SetText(controls.CustomParametersBox, settings.CustomParameters);
+        controls.RuntimeOptions?.ImportRawParameters(notify: false);
         SetCombo(controls.MetricsCombo, settings.EnableMetrics ? "on" : "off");
+        SetCombo(controls.GpuModeCombo, LocalLlmConsole.Services.LaunchSettingMetadataService.NormalizeGpuMode(settings.GpuMode));
         SetCombo(controls.ReasoningCombo, settings.ReasoningMode);
         SetCombo(controls.ReasoningFormatCombo, settings.ReasoningFormat);
         SetCombo(controls.VisionCombo, settings.VisionMode);
@@ -221,6 +250,9 @@ public static class LaunchSettingsFormBinder
 
         foreach (var combo in controls.ComboBoxes.Where(combo => combo is not null))
             combo!.SelectionChanged += (_, _) => changed();
+
+        if (controls.RuntimeOptions is not null)
+            controls.RuntimeOptions.Changed += changed;
     }
 
     public static void ValidateCrossFieldRules(AppSettings next)
@@ -239,6 +271,12 @@ public static class LaunchSettingsFormBinder
             throw new InvalidOperationException("Draft min tokens cannot be larger than draft max tokens.");
         if (next.VisionImageMaxTokens > 0 && next.VisionImageMinTokens > next.VisionImageMaxTokens)
             throw new InvalidOperationException("Image min tokens cannot be larger than image max tokens.");
+        var gpuErrors = LocalLlmConsole.Services.LaunchSettingMetadataService.ValidateGpuSettings(
+            next.GpuMode,
+            next.GpuDevices,
+            next.GpuSplit);
+        if (gpuErrors.Count > 0)
+            throw new InvalidOperationException(string.Join(" ", gpuErrors));
         _ = LocalLlmConsole.Services.CustomLaunchParameterParser.Parse(next.CustomParameters);
     }
 

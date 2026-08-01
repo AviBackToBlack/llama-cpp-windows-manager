@@ -2,7 +2,16 @@ using System.Collections.ObjectModel;
 
 namespace LocalLlmConsole.ViewModels;
 
-public sealed record RuntimeChoice(string Id, string Label, RuntimeBackend Backend);
+public sealed record RuntimeChoice(
+    string Id,
+    string Label,
+    RuntimeBackend Backend,
+    RuntimeMode Mode = RuntimeMode.Native,
+    string ExecutablePath = "",
+    string Name = "")
+{
+    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? Label : Name;
+}
 
 public sealed class LaunchSettingsViewModel
 {
@@ -23,9 +32,10 @@ public sealed class LaunchSettingsViewModel
             RuntimeChoices.Insert(0, new RuntimeChoice(
                 state.MissingRuntimeId,
                 $"Missing runtime ({state.MissingRuntimeId})",
-                RuntimeBackend.Cpu));
+                RuntimeBackend.Cpu,
+                Name: $"Missing runtime ({state.MissingRuntimeId})"));
     }
 
     private static RuntimeChoice ChoiceFor(RuntimeRecord runtime)
-        => new(runtime.Id, $"{runtime.Name} ({runtime.Mode}, {runtime.Backend})", runtime.Backend);
+        => new(runtime.Id, $"{runtime.Name} ({runtime.Mode}, {runtime.Backend})", runtime.Backend, runtime.Mode, runtime.ExecutablePath, runtime.Name);
 }

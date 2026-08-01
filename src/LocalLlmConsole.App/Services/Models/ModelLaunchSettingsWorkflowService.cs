@@ -5,11 +5,14 @@ public sealed record ModelLaunchSettingsViewState(
     ModelLaunchSettings? SavedProfile,
     bool HasSavedProfile,
     string RuntimeId,
-    AppSettings LaunchSettings);
+    AppSettings LaunchSettings,
+    string ProfileId = "",
+    string ProfileName = "");
 
 public sealed record ModelLaunchSettingsSaveResult(
     ModelLaunchSettings SavedSettings,
-    string StatusMessage);
+    string StatusMessage,
+    string ProfileId = "");
 
 public sealed record LaunchDefaultsSaveResult(
     AppSettings Settings,
@@ -27,23 +30,31 @@ public sealed class ModelLaunchSettingsWorkflowService
     public async Task<ModelLaunchSettingsViewState> BuildAsync(
         ModelRecord model,
         AppSettings defaults,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string profileId = "")
     {
         ArgumentNullException.ThrowIfNull(model);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var profile = await _profiles.ReadAsync(model);
+        var profile = await _profiles.ReadAsync(model, profileId);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var effective = profile ?? await _profiles.DraftAsync(model, defaults);
+        var effective = profile ?? await _profiles.DraftAsync(model, defaults, profileId);
         cancellationToken.ThrowIfCancellationRequested();
+
+        var profileName = "";
+        if (!string.IsNullOrWhiteSpace(profileId))
+            profileName = (await _profiles.ListNamedAsync(model)).FirstOrDefault(item =>
+                string.Equals(item.Id, profileId, StringComparison.OrdinalIgnoreCase))?.Name ?? "";
 
         return new ModelLaunchSettingsViewState(
             model.Id,
             profile,
             profile is not null,
             effective.RuntimeId,
-            effective.ApplyTo(defaults));
+            effective.ApplyTo(defaults),
+            profileId,
+            profileName);
     }
 
     public async Task<ModelLaunchSettings?> EnsureAsync(
@@ -59,11 +70,22 @@ public sealed class ModelLaunchSettingsWorkflowService
         ModelRecord model,
         AppSettings launchSettings,
         string runtimeId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string profileId = "")
     {
         cancellationToken.ThrowIfCancellationRequested();
         var saved = ModelLaunchSettings.FromAppSettings(launchSettings, runtimeId);
-        await _profiles.SaveAsync(model, saved);
+        if (string.IsNullOrWhiteSpace(profileId))
+        {
+            await _profiles.SaveAsync(model, saved);
+        }
+        else
+        {
+            var profile = (await _profiles.ListNamedAsync(model)).FirstOrDefault(item =>
+                string.Equals(item.Id, profileId, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException("The selected launch profile no longer exists.");
+            await _profiles.SaveNamedAsync(profile with { Settings = saved, UpdatedAt = DateTimeOffset.UtcNow });
+        }
         cancellationToken.ThrowIfCancellationRequested();
         return saved;
     }
@@ -72,12 +94,18 @@ public sealed class ModelLaunchSettingsWorkflowService
         ModelRecord model,
         AppSettings launchSettings,
         string runtimeId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string profileId = "")
     {
-        var saved = await SaveForModelAsync(model, launchSettings, runtimeId, cancellationToken);
+        var saved = await SaveForModelAsync(model, launchSettings, runtimeId, cancellationToken, profileId);
+        var profileName = string.IsNullOrWhiteSpace(profileId)
+            ? "default profile"
+            : (await _profiles.ListNamedAsync(model)).FirstOrDefault(item =>
+                string.Equals(item.Id, profileId, StringComparison.OrdinalIgnoreCase))?.Name ?? "launch profile";
         return new ModelLaunchSettingsSaveResult(
             saved,
-            $"Launch profile saved for {model.Name}.");
+            $"Saved {profileName} for {model.Name}.",
+            profileId);
     }
 
     public static AppSettings ApplyLaunchDefaults(AppSettings currentSettings, AppSettings launchDefaults)

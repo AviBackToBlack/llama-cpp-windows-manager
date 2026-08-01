@@ -91,7 +91,7 @@ public static class ModelsPageFactory
             (Loc.T("Models.Col.Quant"), nameof(ModelGridRow.Quant), .6),
             (Loc.T("Models.Col.Size"), nameof(ModelGridRow.Size), .65));
         PageSectionFactory.AddButtonColumn(modelsGrid, Loc.T("Models.ActionBtn.OpenFolder"), nameof(ModelGridRow.OpenFolderAction), nameof(ModelGridRow.CanOpenFolder), request.Actions.OpenModelFolderRowClick, .85, tooltipBinding: nameof(ModelGridRow.OpenFolderToolTip));
-        PageSectionFactory.AddButtonColumn(modelsGrid, Loc.T("Models.ActionBtn.Delete"), nameof(ModelGridRow.DeleteAction), nameof(ModelGridRow.CanDelete), request.Actions.DeleteModelRowClick, .65, tooltipBinding: nameof(ModelGridRow.DeleteToolTip));
+        PageSectionFactory.AddButtonColumn(modelsGrid, Loc.T("Models.ActionBtn.Delete"), nameof(ModelGridRow.DeleteAction), nameof(ModelGridRow.CanDelete), request.Actions.DeleteModelRowClick, .65, tooltipBinding: nameof(ModelGridRow.DeleteToolTip), visualRole: VisualRole.Danger);
         request.Actions.ConfigureModelGridColumnSizing(modelsGrid);
         modelsGrid.ItemsSource = request.ViewModel.Models.Rows;
 
@@ -100,7 +100,7 @@ public static class ModelsPageFactory
             (Loc.T("Models.Col.BaseModel"), nameof(ModelGridRow.BaseModel), 1.35),
             (Loc.T("Models.Col.Port"), nameof(ModelGridRow.Port), .45));
         PageSectionFactory.AddButtonColumn(modelVariantsGrid, Loc.T("Models.ActionBtn.OpenFolder"), nameof(ModelGridRow.OpenFolderAction), nameof(ModelGridRow.CanOpenFolder), request.Actions.OpenModelFolderRowClick, .75, tooltipBinding: nameof(ModelGridRow.OpenFolderToolTip));
-        PageSectionFactory.AddButtonColumn(modelVariantsGrid, Loc.T("Models.ActionBtn.Remove"), nameof(ModelGridRow.DeleteAction), nameof(ModelGridRow.CanDelete), request.Actions.DeleteModelRowClick, .68, tooltipBinding: nameof(ModelGridRow.DeleteToolTip));
+        PageSectionFactory.AddButtonColumn(modelVariantsGrid, Loc.T("Models.ActionBtn.Remove"), nameof(ModelGridRow.DeleteAction), nameof(ModelGridRow.CanDelete), request.Actions.DeleteModelRowClick, .68, tooltipBinding: nameof(ModelGridRow.DeleteToolTip), visualRole: VisualRole.Danger);
         modelVariantsGrid.ItemsSource = request.ViewModel.Models.VariantRows;
 
         modelsGrid.SelectionChanged += (_, _) => request.Actions.SelectModelGridRow(modelsGrid, modelVariantsGrid);
@@ -122,7 +122,9 @@ public static class ModelsPageFactory
         var hfBar = Bar();
         var hfQueryBox = new WpfTextBox { Width = 280, ToolTip = Loc.T("Tooltip.HfSearchBox") };
         hfBar.Children.Add(hfQueryBox);
-        hfBar.Children.Add(Button(Loc.T("Models.ActionBtn.SearchHf"), request.Actions.SearchHuggingFaceAsync));
+        var searchButton = Button(Loc.T("Models.ActionBtn.SearchHf"), request.Actions.SearchHuggingFaceAsync);
+        VisualRole.SetButtonRole(searchButton, VisualRole.Primary);
+        hfBar.Children.Add(searchButton);
         hfBar.Children.Add(Button(Loc.T("Models.ActionBtn.History"), request.Actions.ShowDownloadHistoryAsync));
         hf.Children.Add(hfBar);
         var hfGrid = new DataGrid();

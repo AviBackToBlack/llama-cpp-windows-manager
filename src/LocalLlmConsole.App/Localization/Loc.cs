@@ -22,10 +22,10 @@ public static class Loc
             return fb;
         }
 #if DEBUG
-        return $"???{key}???";
-#else
-        return key;
+        if (ShowMissingKeys)
+            return $"???{key}???";
 #endif
+        return key;
     }
 
     /// <summary>Lookup with String.Format placeholders. {0}, {1}, etc.</summary>

@@ -10,7 +10,7 @@ public sealed class RuntimeDashboardPageState
 
     public Grid? GpuMetric { get; private set; }
 
-    public Grid? RequestsMetric { get; private set; }
+    public Grid? KvCacheMetric { get; private set; }
 
     public Grid? TokensMetric { get; private set; }
 
@@ -19,6 +19,12 @@ public sealed class RuntimeDashboardPageState
     public Grid? MtpTokensMetric { get; private set; }
 
     public Grid? SlotsMetric { get; private set; }
+
+    public MetricSparkline? TokensGraph { get; private set; }
+
+    public MetricSparkline? MtpTokensGraph { get; private set; }
+
+    public MetricSparkline? KvCacheGraph { get; private set; }
 
     public WpfTextBox? RuntimeLogBox { get; private set; }
 
@@ -32,11 +38,14 @@ public sealed class RuntimeDashboardPageState
 
         ModelMetric = controls.RuntimeDashboardModel;
         GpuMetric = controls.RuntimeDashboardGpu;
-        RequestsMetric = controls.RuntimeDashboardRequests;
+        KvCacheMetric = controls.RuntimeDashboardKvCache;
         TokensMetric = controls.RuntimeDashboardTokens;
         TokensLastKnown = controls.RuntimeDashboardTokensLastKnown;
         MtpTokensMetric = controls.RuntimeDashboardMtpTokens;
         SlotsMetric = controls.RuntimeDashboardSlots;
+        TokensGraph = controls.RuntimeDashboardTokensGraph;
+        MtpTokensGraph = controls.RuntimeDashboardMtpTokensGraph;
+        KvCacheGraph = controls.RuntimeDashboardKvCacheGraph;
         RuntimeLogBox = controls.RuntimeLogBox;
         RuntimeMetricsGrid = controls.RuntimeMetricsGrid;
         ModelProgress = null;

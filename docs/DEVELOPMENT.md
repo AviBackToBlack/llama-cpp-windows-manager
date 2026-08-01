@@ -16,11 +16,16 @@ That wrapper runs the same gate as the individual commands below:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-app.ps1 -Restore
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-app.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-coverage.ps1
 dotnet format LocalLlmConsole.sln --verify-no-changes --no-restore --verbosity minimal
 git diff --check
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-vulnerabilities.ps1
 ```
+
+The coverage gate collects instrumented Debug binaries (public Release binaries intentionally omit PDBs), rejects skipped tests, and requires at least 80% service line
+coverage and 95% model/view-model line coverage. WPF composition is additionally
+exercised on an STA thread because global coverage is distorted by generated
+markup and code-behind.
 
 To include packaging on a machine with publish/installer prerequisites, run:
 

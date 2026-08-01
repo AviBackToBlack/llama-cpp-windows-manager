@@ -1356,7 +1356,7 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
         Assert.Contains("CreateLifetimeMetricsApplicationService(stateStore)", source, StringComparison.Ordinal);
         Assert.Contains("CreateModelLookupApplicationService(stateStore)", source, StringComparison.Ordinal);
         Assert.Contains("CreateModelLaunchProfileService(stateStore, request.Sessions)", source, StringComparison.Ordinal);
-        Assert.Contains("CreateModelLaunchVariantWorkflowService(catalog, launchProfiles)", source, StringComparison.Ordinal);
+        Assert.Contains("CreateModelLaunchVariantWorkflowService(launchProfiles)", source, StringComparison.Ordinal);
         Assert.Contains("CreateModelLaunchSettingsWorkflowService(launchProfiles)", source, StringComparison.Ordinal);
         Assert.Contains("CreateModelCapabilityCacheService()", source, StringComparison.Ordinal);
         Assert.Contains("CreateRuntimeDeletionPlanner(stateStore, launchProfiles, request.Sessions)", source, StringComparison.Ordinal);

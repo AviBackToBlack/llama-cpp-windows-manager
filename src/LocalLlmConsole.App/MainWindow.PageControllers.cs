@@ -42,8 +42,9 @@ public partial class MainWindow
             _coreServices.HuggingFaceServices.HuggingFaceModelCards,
             new ModelsPageRowActionControllerActions(
                 ModelFromRowButton,
+                ModelRowFromButton,
                 ModelFolderActions,
-                DeleteModelAsync,
+                DeleteModelRowAsync,
                 StartHuggingFaceDownloadAsync,
                 HuggingFaceModelCardActions,
                 RunEventAsync));
@@ -162,10 +163,12 @@ public partial class MainWindow
         => new(
             new OverviewPageActionControllerActions(
                 SelectOverviewModelSessionAsync,
+                SelectOverviewLaunchProfileAsync,
                 UpdateOverviewModelActions,
                 LoadOverviewSelectedModelAsync,
-                UnloadOverviewSelectedModelAsync,
                 SelectLoadedSessionRowAsync,
+                LoadedSessionIdFromRowButton,
+                UnloadLoadedSessionAsync,
                 RunEventAsync));
 
     private WslPageActionController CreateWslPageActionController()

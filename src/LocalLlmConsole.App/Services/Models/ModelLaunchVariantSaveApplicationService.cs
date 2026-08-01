@@ -13,7 +13,7 @@ public enum ModelLaunchVariantSaveApplicationOutcome
 
 public sealed record ModelLaunchVariantSaveActions(
     Func<Task> RefreshModelsAsync,
-    Action<string> SelectModelAfterRefresh,
+    Action<string> SelectLaunchProfileAfterRefresh,
     Func<Task> RenderSelectedModelLaunchSettingsAsync,
     Func<Task> RefreshOverviewModelSelectorAsync,
     Func<AppSettings, Task> SyncOpenCodeLocalProviderAsync,
@@ -40,12 +40,12 @@ public sealed class ModelLaunchVariantSaveApplicationService
 
         if (source is null)
         {
-            actions.ResultActions.SetStatus("Select a model before saving a new model variant.");
+            actions.ResultActions.SetStatus("Select a model before saving a named launch profile.");
             return ModelLaunchVariantSaveApplicationOutcome.NoModelSelected;
         }
 
         var saved = false;
-        await actions.RunBusyAsync("Saving model variant...", async () =>
+        await actions.RunBusyAsync("Saving named launch profile...", async () =>
         {
             if (!actions.IsEditorLoadedForModel(source.Id))
                 await actions.RenderSelectedModelLaunchSettingsAsync();
@@ -75,14 +75,14 @@ public sealed class ModelLaunchVariantSaveApplicationService
         ArgumentNullException.ThrowIfNull(actions);
 
         var result = request.Result ?? throw new ArgumentNullException(nameof(request.Result));
-        if (!result.Success || result.Alias is null)
+        if (!result.Success || result.Profile is null)
         {
             actions.SetStatus(result.StatusMessage);
             return false;
         }
 
         await actions.RefreshModelsAsync();
-        actions.SelectModelAfterRefresh(result.Alias.Id);
+        actions.SelectLaunchProfileAfterRefresh(result.Profile.Id);
         await actions.RenderSelectedModelLaunchSettingsAsync();
         await actions.RefreshOverviewModelSelectorAsync();
         if (request.Settings.AutoSaveOpenCodeOnLaunchSettingsSave)
@@ -107,7 +107,7 @@ public sealed class ModelLaunchVariantSaveApplicationService
     {
         ArgumentNullException.ThrowIfNull(actions);
         ArgumentNullException.ThrowIfNull(actions.RefreshModelsAsync);
-        ArgumentNullException.ThrowIfNull(actions.SelectModelAfterRefresh);
+        ArgumentNullException.ThrowIfNull(actions.SelectLaunchProfileAfterRefresh);
         ArgumentNullException.ThrowIfNull(actions.RenderSelectedModelLaunchSettingsAsync);
         ArgumentNullException.ThrowIfNull(actions.RefreshOverviewModelSelectorAsync);
         ArgumentNullException.ThrowIfNull(actions.SyncOpenCodeLocalProviderAsync);

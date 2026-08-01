@@ -17,7 +17,12 @@ public sealed record AppUpdateInfo(
     string ChecksumAssetUrl = "",
     string ExpectedSha256 = "");
 
-public sealed record AppUpdateInstallPlan(string ScriptPath, string SourceExe, string TargetExe, string NoticePath);
+public sealed record AppUpdateInstallPlan(
+    string ScriptPath,
+    string SourceExe,
+    string TargetExe,
+    string NoticePath,
+    string ObsoleteExe = "");
 
 public sealed record InstalledUpdateNotice(string Version, string ReleaseName, string ReleaseNotes, DateTimeOffset InstalledAt);
 
@@ -25,7 +30,7 @@ public sealed class AppUpdateService
 {
     public const string RepositoryUrl = "https://github.com/alekk89/llama-cpp-windows-manager";
     public const string PortableExeName = "LlamaCppWindowsManager.exe";
-    public const string LegacyPortableExeName = "LlamaCppConsole.exe";
+    private const string ObsoletePortableExeName = "LlamaCppConsole.exe";
 
     private const string UserAgent = "llama-cpp-windows-manager-updater";
     private readonly HttpClient _http;
@@ -78,9 +83,13 @@ public sealed class AppUpdateService
         if (!hasInlineChecksum && string.IsNullOrWhiteSpace(update.ChecksumAssetUrl))
             throw new InvalidOperationException("The latest GitHub release asset is missing a SHA-256 companion file. Refusing to stage an unverifiable update.");
 
-        var targetExe = string.IsNullOrWhiteSpace(currentExecutablePath)
+        var requestedTargetExe = string.IsNullOrWhiteSpace(currentExecutablePath)
             ? Path.Combine(AppContext.BaseDirectory, PortableExeName)
             : Path.GetFullPath(currentExecutablePath);
+        var obsoleteExe = Path.GetFileName(requestedTargetExe).Equals(ObsoletePortableExeName, StringComparison.OrdinalIgnoreCase)
+            ? requestedTargetExe
+            : "";
+        var targetExe = requestedTargetExe;
         if (!AppUpdateReleaseParser.IsPortableExeName(Path.GetFileName(targetExe)))
             targetExe = Path.Combine(Path.GetDirectoryName(targetExe) ?? AppContext.BaseDirectory, PortableExeName);
 
@@ -106,7 +115,7 @@ public sealed class AppUpdateService
         Directory.CreateDirectory(Path.GetDirectoryName(noticePath)!);
         var scriptPath = Path.Combine(stageRoot, "Install-LlamaCppWindowsManagerUpdate.ps1");
         await File.WriteAllTextAsync(scriptPath, UpdaterScript(), new UTF8Encoding(false), cancellationToken);
-        return new AppUpdateInstallPlan(scriptPath, stagedExe, targetExe, noticePath);
+        return new AppUpdateInstallPlan(scriptPath, stagedExe, targetExe, noticePath, obsoleteExe);
     }
 
     public void StartInstaller(AppUpdateInstallPlan plan, int currentProcessId)
@@ -124,6 +133,7 @@ public sealed class AppUpdateService
             "-ParentPid", currentProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture),
             "-SourceExe", plan.SourceExe,
             "-TargetExe", plan.TargetExe,
+            "-ObsoleteExe", plan.ObsoleteExe,
             "-NoticeSource", Path.Combine(Path.GetDirectoryName(plan.ScriptPath) ?? "", "installed-update.json"),
             "-NoticeTarget", plan.NoticePath,
             "-WorkingDirectory", Path.GetDirectoryName(plan.TargetExe) ?? AppContext.BaseDirectory
@@ -186,8 +196,7 @@ public sealed class AppUpdateService
         Directory.CreateDirectory(extractRoot);
         ArchiveSafetyService.ValidateZipArchiveEntries(assetPath, extractRoot);
         ZipFile.ExtractToDirectory(assetPath, extractRoot);
-        var stagedExe = new[] { PortableExeName, LegacyPortableExeName }
-            .SelectMany(name => Directory.EnumerateFiles(extractRoot, name, SearchOption.AllDirectories))
+        var stagedExe = Directory.EnumerateFiles(extractRoot, PortableExeName, SearchOption.AllDirectories)
             .FirstOrDefault()
             ?? throw new InvalidOperationException($"The update archive does not contain {PortableExeName}.");
         ValidateStagedExe(stagedExe);
@@ -253,6 +262,7 @@ param(
   [int] $ParentPid,
   [string] $SourceExe,
   [string] $TargetExe,
+  [string] $ObsoleteExe,
   [string] $NoticeSource,
   [string] $NoticeTarget,
   [string] $WorkingDirectory
@@ -261,6 +271,11 @@ $ErrorActionPreference = "Stop"
 try { Wait-Process -Id $ParentPid -Timeout 90 } catch {}
 Start-Sleep -Milliseconds 500
 Copy-Item -LiteralPath $SourceExe -Destination $TargetExe -Force
+if ($ObsoleteExe -and
+    -not [string]::Equals($ObsoleteExe, $TargetExe, [System.StringComparison]::OrdinalIgnoreCase) -and
+    (Test-Path -LiteralPath $ObsoleteExe)) {
+  Remove-Item -LiteralPath $ObsoleteExe -Force
+}
 if (Test-Path -LiteralPath $NoticeSource) {
   New-Item -ItemType Directory -Path (Split-Path -Parent $NoticeTarget) -Force | Out-Null
   Copy-Item -LiteralPath $NoticeSource -Destination $NoticeTarget -Force

@@ -36,8 +36,13 @@ public sealed class RuntimeSessionCoordinator
             throw new InvalidOperationException($"Port {launchSettings.Port} is reserved for the auto-load gateway. Choose a different model port.");
     }
 
-    public async Task<LoadedModelSessionSnapshot> StartAsync(RuntimeRecord runtime, ModelRecord model, AppSettings launchSettings)
-        => await _sessions.StartAsync(runtime, model, launchSettings, _logRoot);
+    public async Task<LoadedModelSessionSnapshot> StartAsync(
+        RuntimeRecord runtime,
+        ModelRecord model,
+        AppSettings launchSettings,
+        string launchProfileId = "",
+        string launchProfileName = "")
+        => await _sessions.StartAsync(runtime, model, launchSettings, _logRoot, launchProfileId, launchProfileName);
 
     public async Task<RuntimeSessionStopResult> StopSelectedAsync()
     {

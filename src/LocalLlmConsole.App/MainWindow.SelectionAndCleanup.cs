@@ -16,6 +16,8 @@ public partial class MainWindow
 {
     private ModelRecord? SelectedModel()
         => _modelsPage.SelectedModel;
+    private string SelectedModelLaunchProfileId()
+        => _modelsPage.SelectedLaunchProfileId;
     private RuntimeRecord? SelectedRuntime() => _runtimesPage.SelectedRuntime;
 
     private static ModelRecord? ModelFromRow(ModelGridRow row) => row.Model;
@@ -36,12 +38,21 @@ public partial class MainWindow
         return ModelFromRow(row);
     }
 
+    private static ModelGridRow? ModelRowFromButton(object sender)
+        => (sender as FrameworkElement)?.Tag as ModelGridRow;
+
     private void SelectModelGridRow(DataGrid? selectedGrid, DataGrid? otherGrid)
     {
         if (!_modelsPage.TrySelectModelGridRow(selectedGrid, otherGrid)) return;
 
         using var selection = _coreServices.Ui.SelectionReentrancy.TryBeginModelGridSelection();
         if (selection is null) return;
+
+        if (selectedGrid?.SelectedItem is ModelGridRow { LaunchProfile: null } row)
+        {
+            _viewModel.Models.ShowLaunchProfilesForModel(row.Model.Id);
+            _modelsPage.SelectDefaultLaunchProfile(_viewModel.Models.VariantRows);
+        }
 
         ScheduleSelectedModelLaunchSettingsRefresh();
     }

@@ -13,7 +13,7 @@ public static partial class LaunchSettingsPanelFactory
 {
     private static Grid RuntimeAndPortRow(WpfComboBox runtimeCombo, WpfTextBox launchPortBox)
     {
-        var runtimeGrid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+        var runtimeGrid = new Grid { Margin = new Thickness(0, 0, 0, 3) };
         runtimeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(98) });
         runtimeGrid.ColumnDefinitions.Add(new ColumnDefinition());
         runtimeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -21,8 +21,8 @@ public static partial class LaunchSettingsPanelFactory
         runtimeGrid.Children.Add(new TextBlock
         {
             Text = Loc.T("Launch.RuntimeLabel"),
-            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
-            FontSize = 11,
+            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextSoft"],
+            FontSize = 11.5,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 2)
         });
@@ -32,8 +32,8 @@ public static partial class LaunchSettingsPanelFactory
         var portLabel = new TextBlock
         {
             Text = Loc.T("Launch.PortLabel"),
-            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
-            FontSize = 11,
+            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextSoft"],
+            FontSize = 11.5,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(8, 0, 7, 2),
             ToolTip = Loc.T("Tooltip.LaunchPort")
@@ -47,16 +47,18 @@ public static partial class LaunchSettingsPanelFactory
 
     private static WpfComboBox RuntimeCombo(LaunchSettingsPanelRequest request)
     {
-        var combo = new WpfComboBox
+        var combo = CrispCompactControl(new WpfComboBox
         {
             ItemsSource = request.RuntimeChoices,
-            DisplayMemberPath = nameof(RuntimeChoice.Label),
+            ItemTemplate = RuntimeNameTemplate(),
             SelectedValuePath = nameof(RuntimeChoice.Id),
-            MinHeight = 29,
-            Margin = new Thickness(0, 0, 4, 2),
+            Height = 28,
+            MinHeight = 28,
+            Margin = new Thickness(0, 0, 4, 1),
+            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
             ToolTip = Loc.T("Tooltip.RuntimeCombo")
-        };
+        });
         combo.SelectionChanged += (_, _) => request.RuntimeSelectionChanged();
         return combo;
     }
@@ -66,23 +68,14 @@ public static partial class LaunchSettingsPanelFactory
         out WpfTextBox searchBox,
         out WpfButton advancedButton)
     {
-        const double toolbarControlHeight = 30;
-        var grid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        const double toolbarControlHeight = 28;
+        var grid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
         grid.ColumnDefinitions.Add(new ColumnDefinition());
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        searchBox = new WpfTextBox
-        {
-            Height = toolbarControlHeight,
-            MinHeight = toolbarControlHeight,
-            MinWidth = 150,
-            Margin = new Thickness(0, 0, 6, 0),
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-            ToolTip = Loc.T("Tooltip.LaunchSettingsSearch")
-        };
-        searchBox.TextChanged += (_, _) => request.LaunchSettingsSearchChanged();
-        Grid.SetColumn(searchBox, 0);
-        grid.Children.Add(searchBox);
+        var searchHost = LaunchSettingsSearchHost(request.LaunchSettingsSearchChanged, out searchBox);
+        Grid.SetColumn(searchHost, 0);
+        grid.Children.Add(searchHost);
 
         var showAdvanced = request.ShowAdvancedLaunchSettings;
         var toggleButton = new WpfButton
@@ -134,19 +127,23 @@ public static partial class LaunchSettingsPanelFactory
         saveAsNewGrid.Children.Add(new TextBlock
         {
             Text = Loc.T("Launch.SaveAsNewLabel"),
-            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
-            FontSize = 11,
+            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextSoft"],
+            FontSize = 11.5,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 2),
             ToolTip = Loc.T("Tooltip.SaveAsNewLabel")
         });
-        nameBox = new WpfTextBox
+        nameBox = CrispCompactControl(new WpfTextBox
         {
-            MinHeight = 29,
+            Height = 28,
+            MinHeight = 28,
             Margin = new Thickness(0, 0, 6, 2),
+            Padding = new Thickness(8, 2, 8, 2),
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
             ToolTip = Loc.T("Tooltip.SaveAsNewNameBox")
-        };
+        });
         nameBox.TextChanged += (_, _) => request.SaveAsNewNameChanged();
         Grid.SetColumn(nameBox, 1);
         saveAsNewGrid.Children.Add(nameBox);
@@ -162,24 +159,32 @@ public static partial class LaunchSettingsPanelFactory
 
     private static WpfTextBox LaunchTextBox(double value) => LaunchTextBox(value.ToString("0.###", CultureInfo.InvariantCulture));
 
-    private static WpfTextBox LaunchTextBox(string value) => new()
+    private static WpfTextBox LaunchTextBox(string value) => CrispCompactControl(new WpfTextBox
     {
         Text = value,
-        MinHeight = 29,
+        Height = 28,
+        MinHeight = 28,
         MinWidth = 72,
-        Margin = new Thickness(0, 0, 4, 2),
+        Margin = new Thickness(0, 0, 4, 1),
+        Padding = new Thickness(8, 2, 8, 2),
+        VerticalContentAlignment = VerticalAlignment.Center,
+        Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
         HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch
-    };
+    });
 
     private static WpfComboBox LaunchCombo(params string[] values) => LaunchCombo((IEnumerable<string>)values);
 
-    private static WpfComboBox LaunchCombo(IEnumerable<string> values) => new()
+    private static WpfComboBox LaunchCombo(IEnumerable<string> values) => CrispCompactControl(new WpfComboBox
     {
         ItemsSource = values.ToArray(),
         SelectedIndex = 0,
-        MinHeight = 27,
+        Height = 28,
+        MinHeight = 28,
         MinWidth = 76,
-        Margin = new Thickness(0, 0, 6, 4),
+        Margin = new Thickness(0, 0, 4, 1),
+        Padding = new Thickness(8, 2, 8, 2),
+        VerticalContentAlignment = VerticalAlignment.Center,
+        Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
         HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch
-    };
+    });
 }

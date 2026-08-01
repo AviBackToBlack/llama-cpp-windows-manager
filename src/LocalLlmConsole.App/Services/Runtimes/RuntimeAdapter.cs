@@ -44,6 +44,10 @@ public static class RuntimeAdapter
             errors.Add("GPU layers cannot be negative.");
         if (request.GpuLayers > 10_000)
             errors.Add("GPU layers is too large.");
+        errors.AddRange(LaunchSettingMetadataService.ValidateGpuSettings(
+            request.GpuMode,
+            request.GpuDevices,
+            request.GpuSplit));
         if (request.ParallelSlots < 1)
             errors.Add("Parallel slots must be at least 1.");
         if (request.ParallelSlots > 128)
@@ -206,7 +210,18 @@ public static class RuntimeAdapter
         // API key is passed via LLAMA_API_KEY environment variable (not CLI arg)
         // to avoid exposure in process command lines visible to Task Manager / WMI.
         if (request.Backend is RuntimeBackend.Cuda or RuntimeBackend.Vulkan or RuntimeBackend.Metal or RuntimeBackend.Sycl)
+        {
             args.AddRange(["--n-gpu-layers", request.GpuLayers.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
+            var gpuMode = LaunchSettingMetadataService.NormalizeGpuMode(request.GpuMode);
+            var gpuDevices = LaunchSettingMetadataService.NormalizeGpuCsv(request.GpuDevices);
+            var gpuSplit = LaunchSettingMetadataService.NormalizeGpuCsv(request.GpuSplit);
+            if (gpuMode != AppSettings.DefaultGpuMode)
+                args.AddRange(["--split-mode", LaunchSettingMetadataService.LlamaSplitModeArgument(gpuMode)]);
+            if (gpuDevices.Length > 0)
+                args.AddRange(["--device", gpuDevices]);
+            if (gpuSplit.Length > 0)
+                args.AddRange(["--tensor-split", gpuSplit]);
+        }
         args.AddRange([
             "--parallel", request.ParallelSlots.ToString(System.Globalization.CultureInfo.InvariantCulture),
             "--batch-size", request.BatchSize.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -318,7 +333,7 @@ public static class RuntimeAdapter
     }
 
     private static readonly string[] CacheTypes = ["f16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "f32", "bf16"];
-    private static readonly string[] SpeculativeTypes = ["none", "atomic-mtp", "draft-mtp", "draft-simple", "draft-eagle3", "ngram-simple", "ngram-map-k", "ngram-map-k4v", "ngram-mod", "ngram-cache"];
+    private static readonly string[] SpeculativeTypes = ["none", "atomic-mtp", "draft-mtp", "draft-simple", "draft-eagle3", "draft-dflash", "draft-dspark", "ngram-simple", "ngram-map-k", "ngram-map-k4v", "ngram-mod", "ngram-cache"];
 
     private static bool IsOneOf(string value, params string[] allowed)
         => allowed.Contains(value, StringComparer.OrdinalIgnoreCase);

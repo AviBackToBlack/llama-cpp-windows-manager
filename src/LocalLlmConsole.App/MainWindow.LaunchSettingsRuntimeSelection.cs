@@ -59,6 +59,55 @@ public partial class MainWindow
         return "";
     }
 
+    private void ScheduleRuntimeLaunchOptionDiscovery()
+    {
+        _runtimeLaunchOptionDiscoveryCancellation?.Cancel();
+        _runtimeLaunchOptionDiscoveryCancellation?.Dispose();
+        _runtimeLaunchOptionDiscoveryCancellation = new CancellationTokenSource();
+        var token = _runtimeLaunchOptionDiscoveryCancellation.Token;
+        RunBackground(() => RefreshRuntimeLaunchOptionsAsync(token), "Runtime launch-setting discovery failed");
+    }
+
+    private async Task RefreshRuntimeLaunchOptionsAsync(CancellationToken cancellationToken)
+    {
+        var panel = _launchSettingsPanel.FormControls.RuntimeOptions;
+        var runtime = _launchSettingsPanel.RuntimeCombo?.SelectedItem as RuntimeChoice;
+        if (panel is null || runtime is null) return;
+        var runtimeId = runtime.Id;
+        panel.SetLoading();
+        try
+        {
+            var options = await _runtimeLaunchOptionDiscovery.DiscoverAsync(runtime, _settings.WslDistro, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!string.Equals(runtimeId, SelectedLaunchRuntimeId(), StringComparison.OrdinalIgnoreCase)) return;
+            panel.SetOptions(options);
+            UpdateRuntimeCommandPreview();
+        }
+        catch (Exception ex) when (ex is OperationCanceledException && cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            panel.SetError(ex.Message);
+            UpdateRuntimeCommandPreview();
+        }
+    }
+
+    private void UpdateRuntimeCommandPreview()
+    {
+        var panel = _launchSettingsPanel.FormControls.RuntimeOptions;
+        if (panel is null) return;
+        try
+        {
+            var settings = LaunchSettingsFormBinder.Read(_settings, _launchSettingsPanel.FormControls);
+            panel.UpdatePreview(RuntimeLaunchRequestFactory.Preview(settings, _launchSettingsPanel.RuntimeCombo?.SelectedItem as RuntimeChoice));
+        }
+        catch (Exception ex)
+        {
+            panel.UpdatePreview($"Preview unavailable: {ex.Message}");
+        }
+    }
+
     private bool IsModelLoaded(ModelRecord? model)
         => model is not null && _sessions.SessionForModel(model.Id) is { IsRunning: true };
 

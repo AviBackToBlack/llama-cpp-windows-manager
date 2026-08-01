@@ -69,6 +69,40 @@ public sealed partial class ReleaseHardeningTests
 
 
     [Fact]
+    public async Task LlamaProcessSupervisorRejectsRegisteredRuntimeWithMissingExecutableBeforeLaunch()
+    {
+        using var supervisor = CreateTestLlamaSupervisor();
+        var root = CreateTempRoot();
+        var runtime = new RuntimeRecord(
+            "missing-runtime",
+            "Missing CPU runtime",
+            RuntimeMode.Native,
+            RuntimeBackend.Cpu,
+            Path.Combine(root, "missing", "llama-server.exe"),
+            "{}",
+            DateTimeOffset.UtcNow);
+        var model = new ModelRecord(
+            "model-1",
+            "Model",
+            Path.Combine(root, "model.gguf"),
+            OwnershipKind.External,
+            "{}",
+            DateTimeOffset.UtcNow);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => supervisor.StartAsync(
+            runtime,
+            model,
+            AppSettings.CreateDefault(root),
+            Path.Combine(root, "logs")));
+
+        Assert.Contains("registered llama-server executable is missing", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Repair or reinstall", error.Message, StringComparison.Ordinal);
+        Assert.False(supervisor.IsRunning);
+        Assert.False(Directory.Exists(Path.Combine(root, "logs")));
+    }
+
+
+    [Fact]
     public void LlamaProcessSupervisorUsesWslRuntimeStopServiceForRecoveredWslSessions()
     {
         var supervisorSource = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "LlamaProcessSupervisor.cs"));
@@ -390,6 +424,77 @@ public sealed partial class ReleaseHardeningTests
     }
 
     [Fact]
+    public void RuntimeAdapterBuildsSingleAndMultiGpuSelectionArgs()
+    {
+        var autoArgs = RuntimeAdapter.BuildArgs(ValidLaunchRequest() with
+        {
+            Backend = RuntimeBackend.Cuda,
+            GpuLayers = 999
+        });
+        Assert.DoesNotContain("--split-mode", autoArgs);
+        Assert.DoesNotContain("--device", autoArgs);
+        Assert.DoesNotContain("--tensor-split", autoArgs);
+
+        var singleArgs = RuntimeAdapter.BuildArgs(ValidLaunchRequest() with
+        {
+            Backend = RuntimeBackend.Cuda,
+            GpuLayers = 999,
+            GpuMode = "single",
+            GpuDevices = "CUDA1"
+        });
+        Assert.Equal("none", singleArgs[singleArgs.ToList().IndexOf("--split-mode") + 1]);
+        Assert.Equal("CUDA1", singleArgs[singleArgs.ToList().IndexOf("--device") + 1]);
+
+        var layerArgs = RuntimeAdapter.BuildArgs(ValidLaunchRequest() with
+        {
+            Backend = RuntimeBackend.Cuda,
+            GpuLayers = 999,
+            GpuMode = "layer",
+            GpuDevices = " CUDA0, CUDA1, CUDA2 ",
+            GpuSplit = " 2, 1, 1 "
+        });
+        Assert.Equal("layer", layerArgs[layerArgs.ToList().IndexOf("--split-mode") + 1]);
+        Assert.Equal("CUDA0,CUDA1,CUDA2", layerArgs[layerArgs.ToList().IndexOf("--device") + 1]);
+        Assert.Equal("2,1,1", layerArgs[layerArgs.ToList().IndexOf("--tensor-split") + 1]);
+
+        var tensorArgs = RuntimeAdapter.BuildArgs(ValidLaunchRequest() with
+        {
+            Backend = RuntimeBackend.Cuda,
+            GpuLayers = 999,
+            GpuMode = "tensor",
+            GpuDevices = "CUDA0,CUDA1",
+            GpuSplit = "1,1"
+        });
+        Assert.Equal("tensor", tensorArgs[tensorArgs.ToList().IndexOf("--split-mode") + 1]);
+        Assert.Equal("1,1", tensorArgs[tensorArgs.ToList().IndexOf("--tensor-split") + 1]);
+    }
+
+    [Fact]
+    public void RuntimeAdapterValidatesGpuSelectionSettings()
+    {
+        Assert.False(RuntimeAdapter.Validate(ValidLaunchRequest() with
+        {
+            GpuMode = "single",
+            GpuDevices = "CUDA0,CUDA1"
+        }).Ok);
+        Assert.False(RuntimeAdapter.Validate(ValidLaunchRequest() with
+        {
+            GpuMode = "layer",
+            GpuDevices = "CUDA0,CUDA1",
+            GpuSplit = "1"
+        }).Ok);
+        Assert.False(RuntimeAdapter.Validate(ValidLaunchRequest() with
+        {
+            GpuMode = "tensor",
+            GpuSplit = "0,0"
+        }).Ok);
+        Assert.False(RuntimeAdapter.Validate(ValidLaunchRequest() with
+        {
+            GpuMode = "unsupported"
+        }).Ok);
+    }
+
+    [Fact]
     public void CustomLaunchParameterParserPreservesQuotedWindowsPathsAndEscapes()
     {
         var args = CustomLaunchParameterParser.Parse("""--n-cpu-moe 999 --device-draft CUDA1 --model-draft "D:\Models\draft model.gguf" --flag\ with\ spaces 'single quoted value'""");
@@ -585,6 +690,31 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("--rope-freq-base", args);
         Assert.Contains("--rope-freq-scale", args);
 
+        var dflashArgs = RuntimeAdapter.BuildArgs(request with
+        {
+            SpeculativeType = "draft-dflash",
+            SpecDraftModelPath = "qwen-dflash-head.gguf",
+            SpecDraftMaxTokens = 15
+        });
+        Assert.Contains("draft-dflash", dflashArgs);
+        Assert.Contains("qwen-dflash-head.gguf", dflashArgs);
+        Assert.Contains("--spec-draft-n-max", dflashArgs);
+        Assert.True(RuntimeAdapter.Validate(request with { SpeculativeType = "draft-dflash" }).Ok);
+        Assert.Contains("draft-dflash", LaunchSettingMetadataService.SpeculativeTypeOptions);
+
+        var dsparkArgs = RuntimeAdapter.BuildArgs(request with
+        {
+            SpeculativeType = "draft-dspark",
+            SpecDraftModelPath = "qwen-dspark-head.gguf",
+            SpecDraftMaxTokens = 7
+        });
+        Assert.Contains("draft-dspark", dsparkArgs);
+        Assert.Contains("qwen-dspark-head.gguf", dsparkArgs);
+        Assert.Contains("--spec-draft-n-max", dsparkArgs);
+        Assert.Contains("7", dsparkArgs);
+        Assert.True(RuntimeAdapter.Validate(request with { SpeculativeType = "draft-dspark" }).Ok);
+        Assert.Contains("draft-dspark", LaunchSettingMetadataService.SpeculativeTypeOptions);
+
         var mtpArgs = RuntimeAdapter.BuildArgs(ValidLaunchRequest() with
         {
             SpeculativeType = "atomic-mtp",
@@ -631,6 +761,40 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(RuntimeMode.Native, runtime.Mode);
         Assert.Equal(RuntimeBackend.Cpu, runtime.Backend);
         Assert.Equal(Path.Combine(runtimeRoot, "llama-server.exe"), runtime.ExecutablePath);
+    }
+
+
+    [Fact]
+    public async Task RuntimeRegistryScanRepairsExecutableMovedInsideItsRecordedFolderWithoutDuplicatingRegistration()
+    {
+        var root = CreateTempRoot();
+        var runtimeRoot = Path.Combine(root, "runtimes");
+        var runtimeFolder = Path.Combine(runtimeRoot, "official-cpu");
+        var binFolder = Path.Combine(runtimeFolder, "bin");
+        Directory.CreateDirectory(binFolder);
+        var movedExecutable = Path.Combine(binFolder, "llama-server.exe");
+        await File.WriteAllTextAsync(movedExecutable, "fake exe", TestContext.Current.CancellationToken);
+        await using var store = new StateStore(Path.Combine(root, "state", "local-llm-console.db"));
+        await store.InitializeAsync();
+        var stale = new RuntimeRecord(
+            "custom-runtime-id",
+            "My official CPU runtime",
+            RuntimeMode.Native,
+            RuntimeBackend.Cpu,
+            Path.Combine(runtimeFolder, "llama-server.exe"),
+            System.Text.Json.JsonSerializer.Serialize(new { folder = runtimeFolder }),
+            DateTimeOffset.UtcNow.AddDays(-1));
+        await store.UpsertRuntimeAsync(stale);
+
+        var count = await new RuntimeRegistryService(store).ScanAsync(runtimeRoot);
+        var repaired = Assert.Single(await store.ListRuntimesAsync());
+
+        Assert.Equal(1, count);
+        Assert.Equal(stale.Id, repaired.Id);
+        Assert.Equal(stale.Name, repaired.Name);
+        Assert.Equal(movedExecutable, repaired.ExecutablePath);
+        Assert.True(RuntimeAvailabilityService.IsAvailable(repaired));
+        Assert.True(repaired.UpdatedAt > stale.UpdatedAt);
     }
 
 

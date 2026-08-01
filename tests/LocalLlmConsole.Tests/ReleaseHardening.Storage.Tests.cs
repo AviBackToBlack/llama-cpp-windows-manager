@@ -116,6 +116,64 @@ public sealed partial class ReleaseHardeningTests
 
 
     [Fact]
+    public async Task StateStoreMigratesLegacyModelAliasesIntoNamedLaunchProfiles()
+    {
+        var root = CreateTempRoot();
+        var databasePath = Path.Combine(root, "state", "local-llm-console.db");
+        var now = DateTimeOffset.UtcNow;
+        var baseModel = new ModelRecord("model-qwen", "Qwen", Path.Combine(root, "qwen.gguf"), OwnershipKind.External, "{}", now);
+        var alias = new ModelRecord(
+            "variant-qwen-32k",
+            "Qwen 32K",
+            baseModel.ModelPath,
+            OwnershipKind.RegistryOnly,
+            ModelAliasService.CreateMetadata(baseModel, [baseModel]),
+            now);
+        var settings = ModelLaunchSettings.FromAppSettings(AppSettings.CreateDefault(root) with
+        {
+            Port = 8097,
+            ContextSize = 32768
+        }, "runtime-cuda");
+
+        await using (var store = new StateStore(databasePath))
+        {
+            await store.InitializeAsync();
+            await store.UpsertModelAsync(baseModel);
+            await store.UpsertModelAsync(alias);
+        }
+
+        await using (var connection = new SqliteConnection($"Data Source={databasePath}"))
+        {
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+DELETE FROM model_launch_profiles;
+INSERT INTO model_launch_settings (model_id, settings_json, updated_at)
+VALUES ($model_id, $settings_json, $updated_at);
+DELETE FROM migrations WHERE id = 2;
+""";
+            command.Parameters.AddWithValue("$model_id", alias.Id);
+            command.Parameters.AddWithValue("$settings_json", System.Text.Json.JsonSerializer.Serialize(settings));
+            command.Parameters.AddWithValue("$updated_at", now.ToString("O"));
+            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var migrated = new StateStore(databasePath);
+        await migrated.InitializeAsync();
+        var models = await migrated.ListModelsAsync();
+        var profile = Assert.Single(await migrated.ListNamedModelLaunchProfilesAsync(baseModel.Id));
+
+        Assert.Single(models);
+        Assert.Equal(baseModel.Id, models[0].Id);
+        Assert.Equal(alias.Id, profile.Id);
+        Assert.Equal(alias.Name, profile.Name);
+        Assert.Equal(8097, profile.Settings.Port);
+        Assert.Equal(32768, profile.Settings.ContextSize);
+        Assert.Equal("runtime-cuda", profile.Settings.RuntimeId);
+    }
+
+
+    [Fact]
     public void StateStoreQuarantinesCorruptDatabaseFiles()
     {
         var root = CreateTempRoot();
@@ -176,7 +234,10 @@ public sealed partial class ReleaseHardeningTests
             ContextCheckpointCount = 48,
             ContextCheckpointEveryNTokens = 512,
             CudaPackagePreference = "compatibility",
-            CustomParameters = "--n-cpu-moe 999"
+            CustomParameters = "--n-cpu-moe 999",
+            GpuMode = "tensor",
+            GpuDevices = "CUDA0,CUDA1",
+            GpuSplit = "1,1"
         };
 
         await store.SaveAppSettingsAsync(settings);
@@ -191,6 +252,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(512, loaded.ContextCheckpointEveryNTokens);
         Assert.Equal("compatibility", loaded.CudaPackagePreference);
         Assert.Equal("--n-cpu-moe 999", loaded.CustomParameters);
+        Assert.Equal("tensor", loaded.GpuMode);
+        Assert.Equal("CUDA0,CUDA1", loaded.GpuDevices);
+        Assert.Equal("1,1", loaded.GpuSplit);
     }
 
     [Fact]
@@ -368,7 +432,10 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
             MicroBatchSize = 256,
             VisionImageMinTokens = 256,
             VisionImageMaxTokens = 1024,
-            CustomParameters = "--device-draft CUDA1"
+            CustomParameters = "--device-draft CUDA1",
+            GpuMode = "layer",
+            GpuDevices = "CUDA0,CUDA1",
+            GpuSplit = "3,1"
         }));
 
         var loaded = await store.GetModelLaunchSettingsAsync("model-1");
@@ -384,6 +451,9 @@ ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = ex
         Assert.Equal(256, loaded.VisionImageMinTokens);
         Assert.Equal(1024, loaded.VisionImageMaxTokens);
         Assert.Equal("--device-draft CUDA1", loaded.CustomParameters);
+        Assert.Equal("layer", loaded.GpuMode);
+        Assert.Equal("CUDA0,CUDA1", loaded.GpuDevices);
+        Assert.Equal("3,1", loaded.GpuSplit);
     }
 
 
@@ -447,6 +517,14 @@ VALUES ($model_id, $settings_json, $updated_at);
         Assert.Equal(256, migrated.MicroBatchSize);
         Assert.Equal(0, migrated.VisionImageMinTokens);
         Assert.Equal(0, migrated.VisionImageMaxTokens);
+        var defaultProfile = Assert.Single(await store.ListNamedModelLaunchProfilesAsync("model-1"));
+        Assert.True(defaultProfile.IsDefault);
+        Assert.Equal("Default", defaultProfile.Name);
+        await using var verify = new SqliteConnection($"Data Source={databasePath}");
+        await verify.OpenAsync(TestContext.Current.CancellationToken);
+        await using var countLegacy = verify.CreateCommand();
+        countLegacy.CommandText = "SELECT COUNT(*) FROM model_launch_settings WHERE model_id = 'model-1';";
+        Assert.Equal(0L, (long)(await countLegacy.ExecuteScalarAsync(TestContext.Current.CancellationToken))!);
     }
 
 
@@ -581,6 +659,27 @@ VALUES ($model_id, $settings_json, $updated_at);
             if (Directory.Exists(external))
                 Directory.Delete(external, recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task StateStorePersistsStructuredRuntimeLifecycleHistory()
+    {
+        var root = CreateTempRoot();
+        await using var store = new StateStore(Path.Combine(root, "state", "local-llm-console.db"));
+        await store.InitializeAsync();
+
+        await store.AppendHistoryAsync(
+            "runtime-lifecycle",
+            "endpoint-health: Model A",
+            new { action = "endpoint-health", sessionId = "session-a", current = "Unreachable" },
+            TestContext.Current.CancellationToken);
+
+        var item = Assert.Single(await store.ListHistoryAsync(
+            "runtime-lifecycle",
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal("endpoint-health: Model A", item.Message);
+        Assert.Contains("session-a", item.DataJson, StringComparison.Ordinal);
+        Assert.Contains("Unreachable", item.DataJson, StringComparison.Ordinal);
     }
 
 }

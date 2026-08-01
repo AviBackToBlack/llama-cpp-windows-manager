@@ -75,7 +75,17 @@ public partial class MainWindow
                 _sessions.SessionForModel(model.Id)),
                 new GatewayRuntimeLoadApplicationActions(
                 async (loadedModel, _) => await StopModelRuntimeAsync(loadedModel),
-                async (runtime, runtimeModel, launchSettings, _) => await StartModelRuntimeAsync(runtime, runtimeModel, launchSettings, interactivePrompts: false),
+                async (runtime, runtimeModel, launchSettings, _) =>
+                {
+                    var profile = await EnsureDefaultModelLaunchProfileAsync(runtimeModel);
+                    await StartModelRuntimeAsync(
+                        runtime,
+                        runtimeModel,
+                        launchSettings,
+                        interactivePrompts: false,
+                        launchProfileId: profile.Id,
+                        launchProfileName: profile.Name);
+                },
                 async (launchSettings, token) => await _coreServices.Runtime.RuntimeEndpointProbe.IsAliveAsync(launchSettings, token),
                 async (runtimeModel, launchSettings, _) => await MarkGatewayModelReadyAsync(runtimeModel, launchSettings),
                 StartGatewayActivity,

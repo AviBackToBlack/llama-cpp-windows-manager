@@ -9,6 +9,20 @@ namespace LocalLlmConsole.Tests;
 public sealed partial class ReleaseHardeningTests
 {
     [Fact]
+    public void CurrentActionIsPinnedBelowHelpInItsOwnSidebarRow()
+    {
+        var xaml = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.xaml"));
+        var helpIndex = xaml.IndexOf("x:Name=\"HelpNavButton\"", StringComparison.Ordinal);
+        var currentActionIndex = xaml.IndexOf("x:Name=\"CurrentStatusLabel\"", StringComparison.Ordinal);
+
+        Assert.True(helpIndex >= 0);
+        Assert.True(currentActionIndex >= 0);
+        Assert.True(currentActionIndex < helpIndex);
+        Assert.Contains("<Border Grid.Row=\"3\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("<StackPanel Grid.Row=\"2\">", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SettingsPageDoesNotExposeCacheFolder()
     {
         var source = ReadMainWindowSources();
@@ -43,10 +57,10 @@ public sealed partial class ReleaseHardeningTests
         var project = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "LocalLlmConsole.App.csproj"));
         var iconPath = FindRepositoryFile("src", "LocalLlmConsole.App", "Assets", "AppIcon.ico");
 
-        Assert.Contains("Title=\"llama.cpp Windows Manager v1.1.7\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"v1.1.7\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Title=\"llama.cpp Windows Manager v2.0.0\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"v2.0.0\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("AppVersionLabel = \"v1.1.7\"", source, StringComparison.Ordinal);
+        Assert.Contains("AppVersionLabel = \"v2.0.0\"", source, StringComparison.Ordinal);
         Assert.Contains("<AssemblyName>LlamaCppWindowsManager</AssemblyName>", project, StringComparison.Ordinal);
         Assert.Contains("<ApplicationIcon>Assets\\AppIcon.ico</ApplicationIcon>", project, StringComparison.Ordinal);
         Assert.True(new FileInfo(iconPath).Length > 1024);
@@ -332,15 +346,20 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("MetricShouldRenderNeutralStatus", metricFactory, StringComparison.Ordinal);
         Assert.Contains("TryAddStatusNameMetricLine", metricFactory, StringComparison.Ordinal);
         Assert.Contains("MetricStatusNameBlock", metricFactory, StringComparison.Ordinal);
-        Assert.Contains("var valueRows = new Grid { MinHeight = 34, Tag = string.IsNullOrEmpty(labelKey)", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("MetricCardHeight = 104", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("ClipToBounds = true", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("TextWrapping = TextWrapping.NoWrap", metricFactory, StringComparison.Ordinal);
+        Assert.Contains("TextTrimming = TextTrimming.CharacterEllipsis", metricFactory, StringComparison.Ordinal);
         Assert.Contains("MetricLabelColumnWidth(label)", metricFactory, StringComparison.Ordinal);
         Assert.Contains("=> string.Equals(label, Loc.T(\"Overview.Metric.ModelStatus\"), StringComparison.Ordinal)", metricFactory, StringComparison.Ordinal);
         Assert.Contains("header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto })", metricFactory, StringComparison.Ordinal);
         Assert.Contains("MetricCardFactory.SetMetricText(target, value, emphasizeLoadedStatus)", source, StringComparison.Ordinal);
         Assert.Contains("gpu = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.Hardware\"), 0, 1)", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("tokens = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.Tokens\"), 1, 0, out tokensLastKnown)", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("mtpTokens = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.MtpTokens\"), 1, 1)", overviewFactory, StringComparison.Ordinal);
-        Assert.Contains("slots = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.Slots\"), 1, 2)", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("slots = MetricCardFactory.AddMetric(runtimeDashboard, Loc.T(\"Overview.Metric.Slots\"), 0, 2)", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("tokens = MetricCardFactory.AddMetricGraph(runtimeDashboard, Loc.T(\"Overview.Metric.Tokens\"), 1, 0", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("Loc.T(\"Overview.Metric.MtpTokens\")", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("Loc.T(\"Overview.Metric.KvCache\")", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("public sealed class MetricSparkline", File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Common", "MetricSparkline.cs")), StringComparison.Ordinal);
         Assert.DoesNotContain("\"Tokens (Live)\"", overviewFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("\"Tokens (Total)\"", overviewFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("\"Runtime build\", 0, 1", overviewFactory, StringComparison.Ordinal);
@@ -349,6 +368,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("SetMetricText(_runtimeDashboardPage.TokensMetric, summary.Tokens)", source, StringComparison.Ordinal);
         Assert.Contains("SetMetricText(_runtimeDashboardPage.MtpTokensMetric, summary.MtpTokens)", source, StringComparison.Ordinal);
         Assert.Contains("SetMetricText(_runtimeDashboardPage.SlotsMetric, summary.Slots)", source, StringComparison.Ordinal);
+        Assert.Contains("_runtimeDashboardPage.TokensGraph?.Push(", source, StringComparison.Ordinal);
+        Assert.Contains("_runtimeDashboardPage.MtpTokensGraph?.Push(", source, StringComparison.Ordinal);
+        Assert.Contains("_runtimeDashboardPage.KvCacheGraph?.Push(", source, StringComparison.Ordinal);
         Assert.Contains("_sessions.SelectedSnapshot()?.LogPath", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_runtimeDashboardTotalTokensLastKnown", source, StringComparison.Ordinal);
         Assert.Contains("string.Equals(label, \"Overview.Metric.ModelStatus\", StringComparison.Ordinal)", metricFactory, StringComparison.Ordinal);
@@ -361,12 +383,23 @@ public sealed partial class ReleaseHardeningTests
         Assert.DoesNotContain("text.StartsWith(\"Loading \", StringComparison.OrdinalIgnoreCase)", metricFactory, StringComparison.Ordinal);
         Assert.Contains("MetricValueFont", metricFactory, StringComparison.Ordinal);
         Assert.Contains("Typography.SetNumeralAlignment(valueRun, FontNumeralAlignment.Tabular)", metricFactory, StringComparison.Ordinal);
-        Assert.Contains("(\"AppBack\", \"#E5ECF3\")", source, StringComparison.Ordinal);
+        Assert.Contains("(\"AppBack\", \"#E9EFF5\")", source, StringComparison.Ordinal);
         Assert.Contains("(\"PanelBack\", \"#FFFFFF\")", source, StringComparison.Ordinal);
-        Assert.Contains("(\"PanelBorder\", \"#B7C4D2\")", source, StringComparison.Ordinal);
-        Assert.Contains("(\"PanelBorderStrong\", \"#8799AC\")", source, StringComparison.Ordinal);
-        Assert.Contains("(\"GridRowAlt\", \"#EDF4FA\")", source, StringComparison.Ordinal);
-        Assert.Contains("(\"Accent\", \"#126F5B\")", source, StringComparison.Ordinal);
+        Assert.Contains("(\"PanelBorder\", \"#C7D3DF\")", source, StringComparison.Ordinal);
+        Assert.Contains("(\"PanelBorderStrong\", \"#91A5B8\")", source, StringComparison.Ordinal);
+        Assert.Contains("(\"GridRowAlt\", \"#F2F7FB\")", source, StringComparison.Ordinal);
+        Assert.Contains("(\"Accent\", \"#087A64\")", source, StringComparison.Ordinal);
+    }
+
+
+    [Fact]
+    public void ActiveNavigationUsesOneWholeButtonHighlightWithoutASecondMarker()
+    {
+        var appXaml = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "App.xaml"));
+
+        Assert.Contains("<Trigger Property=\"Tag\" Value=\"Active\">", appXaml, StringComparison.Ordinal);
+        Assert.Contains("TargetName=\"Chrome\" Property=\"Background\" Value=\"{DynamicResource AccentSoft}\"", appXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ActiveMarker", appXaml, StringComparison.Ordinal);
     }
 
 
@@ -415,6 +448,12 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("public WpfTextBox? RuntimeLogBox", runtimeDashboardState, StringComparison.Ordinal);
         Assert.Contains("Overview.SessionsCol.Model", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("Overview.MetricsCol.Metric", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("ConfigureLoadButton(loadButton)", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("button.MinHeight = 30", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("Grid.SetRow(loadButton, 1)", overviewFactory, StringComparison.Ordinal);
+        Assert.DoesNotContain("Grid.SetRowSpan(loadButton", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("request.Actions.UnloadLoadedSessionRowClick", overviewFactory, StringComparison.Ordinal);
+        Assert.DoesNotContain("unloadButton = Button", overviewFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("static readonly (string Header", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("Loc.T(\"Overview.LoadedSessionsTitle\")", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("Loc.T(\"Overview.LiveRuntimeLogTitle\")", overviewFactory, StringComparison.Ordinal);
@@ -489,7 +528,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.DoesNotContain("_modelWorkflowServices", source, StringComparison.Ordinal);
         Assert.Contains("_workflow.EnsureLoadedAsync", gatewayRuntimeApplication, StringComparison.Ordinal);
         Assert.True(normalizedOverviewFactory.IndexOf("Loc.T(\"Overview.LoadedSessionsTitle\")", StringComparison.Ordinal) < normalizedOverviewFactory.IndexOf("Loc.T(\"Overview.ModelStatusLabel\")", StringComparison.Ordinal));
-        Assert.Contains("(Loc.T(\"Overview.SessionsCol.Size\"), \"C2\"", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("(\"Profile\", \"C2\"", overviewFactory, StringComparison.Ordinal);
+        Assert.Contains("(Loc.T(\"Overview.SessionsCol.Size\"), \"C3\"", overviewFactory, StringComparison.Ordinal);
         Assert.Contains("SessionStatusLabel", overviewViewModel, StringComparison.Ordinal);
         Assert.Contains("request.Session.RuntimeName", runtimeOverviewStatus, StringComparison.Ordinal);
         Assert.Contains("Unknown runtime", runtimeOverviewStatus, StringComparison.Ordinal);
@@ -656,7 +696,7 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.Contains("ModelServices.ModelCatalogRefreshApplication", lifetime, StringComparison.Ordinal);
         Assert.Contains("modelRefresh.RefreshAsync(ModelCatalogRefreshActions())", lifetime, StringComparison.Ordinal);
-        Assert.Contains("result.LaunchProfileFor", lifetime, StringComparison.Ordinal);
+        Assert.Contains("result.NamedLaunchProfiles", lifetime, StringComparison.Ordinal);
         Assert.Contains("_catalog.CleanupModelRecordsAsync()", application, StringComparison.Ordinal);
         Assert.Contains("_stateStore.ListModelsAsync()", application, StringComparison.Ordinal);
         Assert.DoesNotContain("CleanupModelRecordsAsync", lifetime, StringComparison.Ordinal);
@@ -772,7 +812,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("private readonly SettingsPageState _settingsPage;", source, StringComparison.Ordinal);
         Assert.Contains("_settingsPage = uiState.SettingsPage", source, StringComparison.Ordinal);
         Assert.DoesNotContain("private readonly SettingsPageState _settingsPage = new();", source, StringComparison.Ordinal);
-        Assert.Contains("_settingsPage.Apply(page);", source, StringComparison.Ordinal);
+        Assert.Contains("_settingsPage.Apply(", source, StringComparison.Ordinal);
+        Assert.Contains("definitions.ToDictionary", source, StringComparison.Ordinal);
         Assert.Contains("public sealed class SettingsPageState", settingsPageState, StringComparison.Ordinal);
         Assert.Contains("public string SelectedThemeValue", settingsPageState, StringComparison.Ordinal);
         Assert.DoesNotContain("_themeCombo", source, StringComparison.Ordinal);
@@ -1033,7 +1074,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.DoesNotContain("_lifetimeMetricsGrid", source, StringComparison.Ordinal);
         Assert.Contains("IsActiveRuntimeLog", logWorkflow, StringComparison.Ordinal);
         Assert.Contains("BuildSelectedDeletionCommand", logWorkflow, StringComparison.Ordinal);
-        Assert.Contains("SolidBrush(\"#F2F5F8\")", pageSectionFactory, StringComparison.Ordinal);
+        Assert.Contains("Resources[\"TextMain\"]", pageSectionFactory, StringComparison.Ordinal);
+        Assert.Contains("StatusRunning", pageSectionFactory, StringComparison.Ordinal);
+        Assert.Contains("StatusFailed", pageSectionFactory, StringComparison.Ordinal);
         Assert.Contains("Runtimes.RuntimeJobsDesc", runtimesFactory, StringComparison.Ordinal);
         Assert.Contains("OpenRuntimeJobLogRow_Click", runtimesRowActions, StringComparison.Ordinal);
         Assert.Contains("OpenLogPath(job.LogPath)", runtimesRowActions, StringComparison.Ordinal);
@@ -1208,15 +1251,13 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(model.Id, modelsVm.Rows[0].Model.Id);
         Assert.Empty(modelsVm.VariantRows);
 
-        var alias = new ModelRecord(
-            "variant-qwen-test",
+        var profile = new NamedModelLaunchProfile(
+            "profile-qwen-test",
+            model.Id,
             "Qwen Test 32K",
-            modelPath,
-            OwnershipKind.RegistryOnly,
-            ModelAliasService.CreateMetadata(model, [model]),
+            ModelLaunchSettings.FromAppSettings(AppSettings.CreateDefault(root) with { Port = 8096 }),
             now);
-        modelsVm.ReplaceModels([model, alias], active => active.Id == alias.Id, item =>
-            item.Id == alias.Id ? ModelLaunchSettings.FromAppSettings(AppSettings.CreateDefault(root) with { Port = 8096 }) : null);
+        modelsVm.ReplaceModels([model], active => active.Id == model.Id, [profile]);
 
         Assert.Single(modelsVm.Rows);
         var variant = Assert.Single(modelsVm.VariantRows);
@@ -1224,7 +1265,39 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("Qwen Test", variant.BaseModel);
         Assert.Equal("8096", variant.Port);
         Assert.False(variant.CanDelete);
-        Assert.Equal("Remove", variant.DeleteAction);
+        Assert.Equal("", variant.DeleteAction);
+
+        var defaultProfile = profile with
+        {
+            Id = "default:model-1",
+            Name = "Default",
+            IsDefault = true,
+            UpdatedAt = now.AddMinutes(-1)
+        };
+        modelsVm.ReplaceModels([model], _ => false, [defaultProfile, profile]);
+        Assert.Equal(2, modelsVm.VariantRows.Count);
+        Assert.All(modelsVm.VariantRows, row =>
+        {
+            Assert.True(row.CanDelete);
+            Assert.Equal("Remove", row.DeleteAction);
+        });
+
+        var otherModel = new ModelRecord("model-2", "Llama Test", Path.Combine(root, "models", "llama.gguf"), OwnershipKind.External, "{}", now);
+        var otherProfile = new NamedModelLaunchProfile(
+            "profile-llama",
+            otherModel.Id,
+            "Llama Creative",
+            ModelLaunchSettings.FromAppSettings(AppSettings.CreateDefault(root) with { Port = 8097 }),
+            now);
+        modelsVm.ReplaceModels([model, otherModel], active => active.Id == model.Id, [profile, otherProfile]);
+        Assert.Equal("Qwen Test 32K", Assert.Single(modelsVm.VariantRows).Name);
+
+        modelsVm.ShowLaunchProfilesForModel(otherModel.Id);
+        Assert.Equal("Llama Creative", Assert.Single(modelsVm.VariantRows).Name);
+        Assert.Equal(otherModel.Id, modelsVm.ModelIdForLaunchProfile(otherProfile.Id));
+
+        modelsVm.ShowLaunchProfilesForModel(model.Id);
+        Assert.Equal("Qwen Test 32K", Assert.Single(modelsVm.VariantRows).Name);
 
         var overviewVm = new OverviewPageViewModel();
         overviewVm.ReplaceModels(
@@ -1236,6 +1309,10 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(2, overviewVm.ModelChoices.Count);
         Assert.Equal("Beta Test", overviewVm.ModelChoices[0].Name);
         Assert.Equal("Qwen Test", overviewVm.ModelChoices[1].Name);
+
+        overviewVm.ReplaceLaunchProfiles([profile, otherProfile with { IsDefault = true, Name = "Default" }]);
+        Assert.Equal("Default", overviewVm.LaunchProfileChoices[0].Name);
+        Assert.Equal(2, overviewVm.LaunchProfileChoices.Count);
         overviewVm.ReplaceSessions(
         [
             new LoadedModelSessionSnapshot(
@@ -1254,7 +1331,9 @@ public sealed partial class ReleaseHardeningTests
                 LoadedModelSessionStatus.Warm,
                 true,
                 false,
-                4096),
+                4096,
+                "profile-a",
+                "Fast"),
             new LoadedModelSessionSnapshot(
                 "session-b",
                 "model-b",
@@ -1271,15 +1350,18 @@ public sealed partial class ReleaseHardeningTests
                 LoadedModelSessionStatus.Running,
                 true,
                 true,
-                8192)
+                8192,
+                "profile-b",
+                "Balanced")
         ]);
 
         Assert.Equal(2, overviewVm.SessionRows.Count);
         Assert.Contains("selected", overviewVm.SessionRows[0].C1, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("8 KB", overviewVm.SessionRows[0].C2);
-        Assert.Equal("Loaded", overviewVm.SessionRows[0].C3);
-        Assert.Equal("http://127.0.0.1:8082/v1", overviewVm.SessionRows[0].C4);
-        Assert.Equal("Loaded", overviewVm.SessionRows[1].C3);
+        Assert.Equal("Balanced", overviewVm.SessionRows[0].C2);
+        Assert.Equal("8 KB", overviewVm.SessionRows[0].C3);
+        Assert.Equal("Loaded", overviewVm.SessionRows[0].C4);
+        Assert.Equal("Direct: http://127.0.0.1:8082/v1", overviewVm.SessionRows[0].C5);
+        Assert.Equal("Loaded", overviewVm.SessionRows[1].C4);
         overviewVm.ReplaceSessions(
         [
             new LoadedModelSessionSnapshot(
@@ -1301,11 +1383,16 @@ public sealed partial class ReleaseHardeningTests
                 8192)
         ], "http://127.0.0.1:8082/v1");
         Assert.Equal(2, overviewVm.SessionRows.Count);
-        Assert.Equal("Auto-load gateway", overviewVm.SessionRows[0].C1);
-        Assert.Equal("Router", overviewVm.SessionRows[0].C2);
-        Assert.Contains("Gateway: http://127.0.0.1:8082/v1", overviewVm.SessionRows[0].C4, StringComparison.Ordinal);
-        Assert.Contains("Routes by model id", overviewVm.SessionRows[0].C4, StringComparison.Ordinal);
-        Assert.Contains("Direct: http://127.0.0.1:8083/v1", overviewVm.SessionRows[1].C4, StringComparison.Ordinal);
+        Assert.Equal("Gateway (shared endpoint)", overviewVm.SessionRows[0].C1);
+        Assert.Equal("Shared router", overviewVm.SessionRows[0].C3);
+        Assert.Equal("", overviewVm.SessionRows[0].C8);
+        Assert.False(overviewVm.SessionRows[0].B1);
+        Assert.Contains("Shared: http://127.0.0.1:8082/v1", overviewVm.SessionRows[0].C5, StringComparison.Ordinal);
+        Assert.Contains("Routes by model id", overviewVm.SessionRows[0].C5, StringComparison.Ordinal);
+        Assert.Contains("Direct: http://127.0.0.1:8083/v1", overviewVm.SessionRows[1].C5, StringComparison.Ordinal);
+        Assert.Contains("Also available via gateway: http://127.0.0.1:8082/v1", overviewVm.SessionRows[1].C5, StringComparison.Ordinal);
+        Assert.Equal("Unload", overviewVm.SessionRows[1].C8);
+        Assert.True(overviewVm.SessionRows[1].B1);
 
         var unchangedRow = overviewVm.SessionRows[1];
         Assert.False(overviewVm.ReplaceSessionsIfChanged(
@@ -1349,7 +1436,7 @@ public sealed partial class ReleaseHardeningTests
                 true,
                 8192)
         ], "http://127.0.0.1:8082/v1"));
-        Assert.Equal("Loading", overviewVm.SessionRows[1].C3);
+        Assert.Equal("Loading", overviewVm.SessionRows[1].C4);
         Assert.True(overviewVm.ReplaceSessionsIfChanged(
         [
             new LoadedModelSessionSnapshot(
@@ -1370,7 +1457,7 @@ public sealed partial class ReleaseHardeningTests
                 true,
                 8192)
         ], "http://127.0.0.1:8082/v1"));
-        Assert.Equal("Loaded", overviewVm.SessionRows[1].C3);
+        Assert.Equal("Loaded", overviewVm.SessionRows[1].C4);
 
         var preset = new RuntimeBuildPreset("official-cuda", "Official CUDA", "https://example.com/llama.cpp.git", "main", true);
         var builtRuntime = new RuntimeRecord(
@@ -1381,6 +1468,7 @@ public sealed partial class ReleaseHardeningTests
             Path.Combine(root, "runtimes", "official-cuda", "bin", "llama-server"),
             """{"managedPresetId":"official-cuda","commit":"abcdef1234567890","folder":"D:\\runtime"}""",
             now);
+        CreateRuntimeExecutable(root, "runtimes", "official-cuda", "bin", "llama-server");
         var pendingSource = new RuntimeSourceEntry("official-cpu", "Official CPU", "https://example.com/llama.cpp.git", "main", false, Path.Combine(root, "source"), "fedcba9876543210", now);
         var launchSettingsVm = new LaunchSettingsViewModel();
 
@@ -1389,6 +1477,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Single(launchSettingsVm.RuntimeChoices);
         Assert.Equal("runtime-1", launchSettingsVm.RuntimeChoices[0].Id);
         Assert.Contains("llama.cpp CUDA", launchSettingsVm.RuntimeChoices[0].Label, StringComparison.Ordinal);
+        Assert.Equal("llama.cpp CUDA", launchSettingsVm.RuntimeChoices[0].DisplayName);
         Assert.Equal(RuntimeBackend.Cuda, launchSettingsVm.RuntimeChoices[0].Backend);
 
         launchSettingsVm.ApplyRuntimeSelectorState(new LaunchRuntimeSelectorState([builtRuntime], "missing-runtime", "missing-runtime"));
@@ -1396,6 +1485,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(2, launchSettingsVm.RuntimeChoices.Count);
         Assert.Equal("missing-runtime", launchSettingsVm.RuntimeChoices[0].Id);
         Assert.Equal("Missing runtime (missing-runtime)", launchSettingsVm.RuntimeChoices[0].Label);
+        Assert.Equal("Missing runtime (missing-runtime)", launchSettingsVm.RuntimeChoices[0].DisplayName);
         Assert.Equal(RuntimeBackend.Cpu, launchSettingsVm.RuntimeChoices[0].Backend);
         Assert.Equal("runtime-1", launchSettingsVm.RuntimeChoices[1].Id);
 
@@ -1457,6 +1547,7 @@ public sealed partial class ReleaseHardeningTests
                 }
             })
         };
+        CreateRuntimeExecutable(root, "runtimes", "official-prebuilt-windows-cuda-b9354", "llama-server.exe");
         var packageUpdate = new RuntimePackageUpdateState(true, "b9354", "b9355", "https://example.com/release", "llama-b9355-bin-win-cuda-12.4-x64.zip, cudart-llama-bin-win-cuda-12.4-x64.zip", now);
 
         packagesVm.ReplaceRows(runtimeCatalogView.BuildPackageRows([packagePreset], [packageRuntime], new Dictionary<string, RuntimePackageUpdateState> { [packagePreset.Id] = packageUpdate }));
@@ -1758,6 +1849,33 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("_coreServices.Ui.UiBusyState.Begin(PageHost.IsEnabled, SetPageHostEnabled, SetWaitCursor)", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Ui.UiBusyState.End(SetPageHostEnabled, SetWaitCursor)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_pageHostEnabledBeforeBusy", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LongRunningModelAndRuntimeOperationsKeepThePageInteractive()
+    {
+        var execution = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.Execution.cs"));
+        var uiState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.UiState.cs"));
+        var modelRuntime = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.ModelRuntime.cs"));
+        var runtimeBuilds = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeBuildJobs.cs"));
+        var runtimeSources = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimeSourceDownloads.cs"));
+        var runtimePackages = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "MainWindow.RuntimePackages.cs"));
+        var sourceApplication = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "RuntimeSourceApplicationService.cs"));
+
+        Assert.Contains("RunResponsiveAsync(string message, Func<Task> action)", execution, StringComparison.Ordinal);
+        Assert.Contains("ResponsiveTaskActions()", execution, StringComparison.Ordinal);
+        Assert.Contains("TryBeginResponsiveActivity", execution, StringComparison.Ordinal);
+        Assert.Contains("EndResponsiveActivity", execution, StringComparison.Ordinal);
+        Assert.Contains("private bool TryBeginResponsiveActivity", uiState, StringComparison.Ordinal);
+        Assert.DoesNotContain("SetPageHostEnabled(false)", uiState, StringComparison.Ordinal);
+        Assert.Contains("RunResponsiveAsync,", modelRuntime, StringComparison.Ordinal);
+        Assert.Contains("private RuntimeBuildApplicationActions RuntimeBuildApplicationActions()", runtimeBuilds, StringComparison.Ordinal);
+        Assert.Contains("RunResponsiveAsync,", runtimeBuilds, StringComparison.Ordinal);
+        Assert.Contains("RunResponsiveAsync,", runtimeSources, StringComparison.Ordinal);
+        Assert.Contains("RuntimePackageActions(responsive: true)", runtimePackages, StringComparison.Ordinal);
+        Assert.Contains("DeleteBuildsAsync(preset, _settings, _runtimeCatalogState, RuntimePackageActions())", runtimePackages, StringComparison.Ordinal);
+        Assert.Contains("_catalogData.LoadSourcesAsync(settings.RuntimeRoot)", sourceApplication, StringComparison.Ordinal);
+        Assert.DoesNotContain("_catalogData.Sources(settings.RuntimeRoot)", sourceApplication, StringComparison.Ordinal);
     }
 
 }

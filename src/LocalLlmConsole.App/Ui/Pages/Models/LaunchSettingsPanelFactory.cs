@@ -21,8 +21,11 @@ public sealed record LaunchSettingsPanelRequest(
     Action ResetDefaults,
     Func<Task> SaveAsNewAsync,
     Func<Task> ChooseVisionProjectorAsync,
+    Func<Task> ChooseDraftModelAsync,
     Func<Task> ChooseMtpHeadAsync,
-    Action SaveAsNewNameChanged);
+    Action SaveAsNewNameChanged,
+    Func<string, string?> ChooseAdditionalFile,
+    Func<string, string?> ChooseAdditionalDirectory);
 
 public sealed class LaunchSettingsPanelControls
 {
@@ -86,13 +89,13 @@ public static partial class LaunchSettingsPanelFactory
 
         var root = new Border
         {
-            Background = (WpfBrush)WpfApplication.Current.Resources["InputBack"],
-            BorderBrush = (WpfBrush)WpfApplication.Current.Resources["PanelBorder"],
+            Background = (WpfBrush)WpfApplication.Current.Resources["PanelBackAlt"],
+            BorderBrush = (WpfBrush)WpfApplication.Current.Resources["PanelBorderStrong"],
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
+            CornerRadius = new CornerRadius(9),
             Margin = new Thickness(0),
             MinHeight = 220,
-            Child = Scroll(panel, new Thickness(9, 8, 7, 8))
+            Child = Scroll(panel, new Thickness(8, 7, 6, 7))
         };
 
         return new LaunchSettingsPanelControls

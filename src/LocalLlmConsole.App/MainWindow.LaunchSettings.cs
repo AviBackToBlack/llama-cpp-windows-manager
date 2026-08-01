@@ -20,7 +20,12 @@ public partial class MainWindow
             action => RunBackground(action, "Launch settings refresh failed"));
 
     private void CancelLaunchSettingsRefresh()
-        => _coreServices.Ui.LaunchSettingsRefresh.Cancel();
+    {
+        _coreServices.Ui.LaunchSettingsRefresh.Cancel();
+        _runtimeLaunchOptionDiscoveryCancellation?.Cancel();
+        _runtimeLaunchOptionDiscoveryCancellation?.Dispose();
+        _runtimeLaunchOptionDiscoveryCancellation = null;
+    }
 
     private async Task RenderSelectedModelLaunchSettingsAsync(CancellationToken cancellationToken = default)
     {
@@ -31,12 +36,17 @@ public partial class MainWindow
             _settings,
             new LaunchSettingsRenderActions(
                 SelectedModel,
+                SelectedModelLaunchProfileId,
                 _coreServices.Ui.LaunchSettingsEditor.Clear,
                 UpdateSaveAsNewName,
-                async (selectedModel, defaults, token) =>
+                async (selectedModel, defaults, profileId, token) =>
                 {
                     Require(launchSettings);
-                    return await launchSettings!.BuildAsync(selectedModel, defaults, token);
+                    return await launchSettings!.BuildAsync(
+                        selectedModel,
+                        defaults,
+                        token,
+                        profileId);
                 },
                 _coreServices.Ui.LaunchSettingsEditor.Load,
                 runtimeId => RefreshRuntimeSelectorAsync(runtimeId),
@@ -48,9 +58,18 @@ public partial class MainWindow
 
     private async Task SaveLaunchSettingsForSelectedModelAsync()
     {
+        var selectedProfileId = SelectedModelLaunchProfileId();
+        if (string.IsNullOrWhiteSpace(selectedProfileId))
+        {
+            SetStatus("Select a named launch profile to update it, or enter a name and save a new profile.");
+            return;
+        }
+
         await _coreServices.Models.ModelLaunchSettingsSaveApplication.SaveSelectedProfileAsync(
             SelectedModel(),
             ModelLaunchProfileSaveSelectedActions());
+        if (!string.IsNullOrWhiteSpace(selectedProfileId))
+            await RefreshModelsAsync();
     }
 
     private async Task SaveLaunchSettingsAsNewModelAsync()
@@ -71,6 +90,7 @@ public partial class MainWindow
         => new(
             RunAsync,
             _coreServices.Ui.LaunchSettingsEditor.IsLoadedFor,
+            SelectedModelLaunchProfileId,
             () => RenderSelectedModelLaunchSettingsAsync(),
             ReadLaunchSettingsFromControls,
             () => _settings,
@@ -101,7 +121,7 @@ public partial class MainWindow
     private ModelLaunchVariantSaveSelectedActions ModelLaunchVariantSaveSelectedActions()
         => new(
             RunAsync,
-            _coreServices.Ui.LaunchSettingsEditor.IsLoadedFor,
+            modelId => _coreServices.Ui.LaunchSettingsEditor.IsLoadedFor(modelId, SelectedModelLaunchProfileId()),
             () => RenderSelectedModelLaunchSettingsAsync(),
             ReadLaunchSettingsFromControls,
             SelectedLaunchRuntimeId,
@@ -111,17 +131,24 @@ public partial class MainWindow
     private ModelLaunchVariantSaveActions ModelLaunchVariantSaveActions()
         => new(
             RefreshModelsAsync,
-            SelectModelAfterRefresh,
+            SelectLaunchProfileAfterRefresh,
             () => RenderSelectedModelLaunchSettingsAsync(),
             RefreshOverviewModelSelectorAsync,
             SyncOpenCodeLocalProviderAsync,
             SetStatus);
 
-    private async Task<ModelLaunchSettingsSaveResult> SaveModelLaunchProfileAsync(ModelRecord model, AppSettings launchSettings)
+    private async Task<ModelLaunchSettingsSaveResult> SaveModelLaunchProfileAsync(
+        ModelRecord model,
+        AppSettings launchSettings,
+        string profileId)
     {
         var workflow = ModelServices.ModelLaunchSettingsWorkflow;
         Require(workflow);
-        return await workflow!.SaveProfileAsync(model, launchSettings, SelectedLaunchRuntimeId());
+        return await workflow!.SaveProfileAsync(
+            model,
+            launchSettings,
+            SelectedLaunchRuntimeId(),
+            profileId: profileId);
     }
 
     private async Task<ModelLaunchVariantWorkflowResult> SaveModelLaunchVariantAsync(ModelLaunchVariantWorkflowRequest request)
@@ -136,7 +163,7 @@ public partial class MainWindow
         var defaults = AppSettings.CreateDefault(_workspaceRoot);
         ApplyLaunchSettingsToControls(ModelLaunchSettings.FromAppSettings(defaults).ApplyTo(_settings));
         UpdateLaunchSaveButtonState();
-        SetStatus("Launch settings reset in the form. Save For Model or Save As Default to persist them.");
+        SetStatus("Launch settings reset in the form. Save a new profile, update the selected profile, or save them as the app default to persist them.");
     }
 
     private Task ChooseVisionProjectorPathAsync()
@@ -163,6 +190,18 @@ public partial class MainWindow
         return Task.CompletedTask;
     }
 
+    private Task ChooseDraftModelPathAsync()
+    {
+        _coreServices.Models.ModelLaunchHeadSelectionApplication.ChooseDraftModel(
+            new LaunchHeadSelectionRequest(SelectedModel(), _settings.ModelsRoot),
+            LaunchHeadSelectionActions(value =>
+            {
+                if (_launchSettingsPanel.FormControls.SpecDraftModelPathBox is not null)
+                    _launchSettingsPanel.FormControls.SpecDraftModelPathBox.Text = value;
+            }));
+        return Task.CompletedTask;
+    }
+
     private LaunchHeadSelectionActions LaunchHeadSelectionActions(Action<string> applySelectedPath)
         => new(
             request => _coreServices.App.FileSystemDialogs.PickOpenFile(request, this),
@@ -178,6 +217,7 @@ public partial class MainWindow
 
         UpdateLaunchControlVisibility();
         UpdateLaunchSaveButtonState();
+        UpdateRuntimeCommandPreview();
     }
 
     private void AttachLaunchSettingsChangeHandlers()
@@ -189,6 +229,7 @@ public partial class MainWindow
                 UpdateContextSizeSuggestion();
                 UpdateLaunchControlVisibility();
                 UpdateLaunchSaveButtonState();
+                UpdateRuntimeCommandPreview();
             }
         }
 
@@ -198,15 +239,19 @@ public partial class MainWindow
     private void UpdateLaunchSaveButtonState()
     {
         var state = BuildLaunchSettingsSaveState();
-        _launchSettingsPanel.SetSaveForModelState(state.SaveForModelContent, state.CanSaveForModel);
+        var hasNamedProfile = !string.IsNullOrWhiteSpace(SelectedModelLaunchProfileId());
+        var content = string.Equals(state.SaveForModelContent, LaunchSettingsSaveStateService.SavedText, StringComparison.Ordinal)
+            ? LaunchSettingsSaveStateService.SavedText
+            : "Save Profile";
+        _launchSettingsPanel.SetSaveForModelState(content, hasNamedProfile && state.CanSaveForModel, hasNamedProfile);
         ApplySaveAsNewButtonState(state);
     }
 
     private void UpdateSaveAsNewName(ModelRecord? model)
     {
-        if (!_coreServices.Ui.LaunchSettingsEditor.TryChangeSaveAsNewSource(model)) return;
+        if (!_coreServices.Ui.LaunchSettingsEditor.TryChangeSaveAsNewSource(model, SelectedModelLaunchProfileId())) return;
 
-        _launchSettingsPanel.SetSaveAsNewModelName(model?.Name ?? "");
+        _launchSettingsPanel.SetSaveAsNewModelName("");
         UpdateSaveAsNewButtonState();
     }
 

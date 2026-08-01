@@ -59,7 +59,7 @@ public static class LogsPageFactory
         logsGrid.SelectionMode = DataGridSelectionMode.Extended;
         logsGrid.SelectionUnit = DataGridSelectionUnit.FullRow;
         PageSectionFactory.AddButtonColumn(logsGrid, Loc.T("Logs.ActionBtn.Open"), "C6", "B1", request.Actions.OpenRow, .55, tooltipBinding: "T1");
-        PageSectionFactory.AddButtonColumn(logsGrid, Loc.T("Logs.ActionBtn.Delete"), "C7", "B2", request.Actions.DeleteRow, .65, tooltipBinding: "T2");
+        PageSectionFactory.AddButtonColumn(logsGrid, Loc.T("Logs.ActionBtn.Delete"), "C7", "B2", request.Actions.DeleteRow, .65, tooltipBinding: "T2", visualRole: VisualRole.Danger);
         logsGrid.ItemsSource = request.Rows;
         logsGrid.SelectionChanged += request.Actions.SelectionChanged;
         var listFrame = PageSectionFactory.GridFrame(logsGrid);
@@ -105,8 +105,12 @@ public static class LogsPageFactory
 
         var rightActions = Bar();
         rightActions.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
-        rightActions.Children.Add(Button(Loc.T("Logs.DeleteSelectedButton"), request.Actions.DeleteSelected, request.ButtonToolTip));
-        rightActions.Children.Add(Button(Loc.T("Logs.DeleteAllButton"), request.Actions.DeleteAll, request.ButtonToolTip));
+        var deleteSelected = Button(Loc.T("Logs.DeleteSelectedButton"), request.Actions.DeleteSelected, request.ButtonToolTip);
+        var deleteAll = Button(Loc.T("Logs.DeleteAllButton"), request.Actions.DeleteAll, request.ButtonToolTip);
+        VisualRole.SetButtonRole(deleteSelected, VisualRole.Danger);
+        VisualRole.SetButtonRole(deleteAll, VisualRole.Danger);
+        rightActions.Children.Add(deleteSelected);
+        rightActions.Children.Add(deleteAll);
         Grid.SetColumn(rightActions, 2);
         toolbar.Children.Add(rightActions);
         return toolbar;

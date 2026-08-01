@@ -10,7 +10,7 @@ public sealed record ModelLaunchVariantWorkflowRequest(
 public sealed record ModelLaunchVariantWorkflowResult(
     bool Success,
     string StatusMessage,
-    ModelRecord? Alias = null,
+    NamedModelLaunchProfile? Profile = null,
     ModelLaunchSettings? SavedSettings = null)
 {
     public int Port => SavedSettings?.Port ?? 0;
@@ -18,12 +18,10 @@ public sealed record ModelLaunchVariantWorkflowResult(
 
 public sealed class ModelLaunchVariantWorkflowService
 {
-    private readonly ModelCatalogService _catalog;
     private readonly ModelLaunchProfileService _launchProfiles;
 
-    public ModelLaunchVariantWorkflowService(ModelCatalogService catalog, ModelLaunchProfileService launchProfiles)
+    public ModelLaunchVariantWorkflowService(ModelLaunchProfileService launchProfiles)
     {
-        _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _launchProfiles = launchProfiles ?? throw new ArgumentNullException(nameof(launchProfiles));
     }
 
@@ -35,43 +33,50 @@ public sealed class ModelLaunchVariantWorkflowService
 
         var requestedName = (request.RequestedName ?? "").Trim();
         if (string.IsNullOrWhiteSpace(requestedName))
-            return Failed("Enter a name for the saved model variant.");
-        if (string.Equals(requestedName, request.SourceModel.Name, StringComparison.OrdinalIgnoreCase))
-            return Failed("Change the name before saving a new model variant.");
+            return Failed("Enter a name for the launch profile.");
 
-        ModelRecord? alias = null;
+        var existing = await _launchProfiles.ListNamedAsync(request.SourceModel);
+        if (existing.Any(profile => string.Equals(profile.Name, requestedName, StringComparison.OrdinalIgnoreCase)))
+            return Failed($"A launch profile named {requestedName} already exists for {request.SourceModel.Name}.");
+
+        NamedModelLaunchProfile? profile = null;
         try
         {
-            alias = await _catalog.CreateLaunchAliasAsync(request.SourceModel, requestedName);
             cancellationToken.ThrowIfCancellationRequested();
-
-            var aliasPort = await _launchProfiles.NextAvailablePortAsync(alias.Id, request.Defaults);
+            var profileId = $"profile-{Guid.NewGuid():N}";
+            var profilePort = await _launchProfiles.NextAvailablePortAsync(request.SourceModel.Id, request.Defaults, profileId);
             cancellationToken.ThrowIfCancellationRequested();
 
             var saved = ModelLaunchSettings.FromAppSettings(
-                request.LaunchSettings with { Port = aliasPort },
+                request.LaunchSettings with { Port = profilePort },
                 request.RuntimeId);
-            await _launchProfiles.SaveAsync(alias, saved);
+            profile = new NamedModelLaunchProfile(
+                profileId,
+                request.SourceModel.Id,
+                requestedName,
+                saved,
+                DateTimeOffset.UtcNow);
+            await _launchProfiles.SaveNamedAsync(profile);
             return new ModelLaunchVariantWorkflowResult(
                 true,
-                $"Saved model variant {alias.Name} on port {aliasPort}.",
-                alias,
+                $"Saved launch profile {profile.Name} for {request.SourceModel.Name} on port {profilePort}.",
+                profile,
                 saved);
         }
-        catch (OperationCanceledException) when (alias is not null)
+        catch (OperationCanceledException) when (profile is not null)
         {
-            await TryRemoveIncompleteAliasAsync(alias, request.Defaults.ModelsRoot);
+            await TryRemoveIncompleteProfileAsync(profile);
             throw;
         }
         catch (InvalidOperationException ex)
         {
-            if (alias is not null)
-                await TryRemoveIncompleteAliasAsync(alias, request.Defaults.ModelsRoot);
+            if (profile is not null)
+                await TryRemoveIncompleteProfileAsync(profile);
             return Failed(ex.Message);
         }
-        catch (Exception) when (alias is not null)
+        catch (Exception) when (profile is not null)
         {
-            await TryRemoveIncompleteAliasAsync(alias, request.Defaults.ModelsRoot);
+            await TryRemoveIncompleteProfileAsync(profile);
             throw;
         }
     }
@@ -79,12 +84,12 @@ public sealed class ModelLaunchVariantWorkflowService
     private static ModelLaunchVariantWorkflowResult Failed(string message)
         => new(false, message);
 
-    private async Task TryRemoveIncompleteAliasAsync(ModelRecord alias, string modelsRoot)
+    private async Task TryRemoveIncompleteProfileAsync(NamedModelLaunchProfile profile)
     {
-        try { await _catalog.DeleteAsync(alias, modelsRoot); }
+        try { await _launchProfiles.DeleteNamedAsync(profile.Id); }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"Could not remove incomplete model alias {alias.Id}: {ex.Message}");
+            Trace.TraceWarning($"Could not remove incomplete launch profile {profile.Id}: {ex.Message}");
         }
     }
 }

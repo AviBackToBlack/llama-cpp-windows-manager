@@ -33,24 +33,28 @@ public sealed class RuntimeGpuSummaryApplicationService
         LoadedModelSessionSnapshot? activeSession,
         CancellationToken cancellationToken)
     {
+        var cpuTask = _gpuStatus.CpuSummaryAsync(cancellationToken);
+        if (activeSession?.Backend == RuntimeBackend.Cpu)
+            return await cpuTask;
+
+        Task<string> acceleratorTask;
         if (activeSession?.Backend == RuntimeBackend.Cuda)
-            return await FirstAvailableAsync(
+            acceleratorTask = FirstAvailableAsync(
                 [() => _gpuStatus.SummaryAsync(cancellationToken),
                     () => _gpuStatus.WindowsSummaryAsync(cancellationToken)]);
-
-        if (activeSession?.Backend == RuntimeBackend.Cpu)
-            return await _gpuStatus.CpuTemperatureAsync(cancellationToken);
-
-        if (activeSession?.Backend == RuntimeBackend.Sycl)
-            return await FirstAvailableAsync(
+        else if (activeSession?.Backend == RuntimeBackend.Sycl)
+            acceleratorTask = FirstAvailableAsync(
                 [() => _gpuStatus.WindowsSummaryAsync(cancellationToken),
                     () => activeSession.Mode == RuntimeMode.Wsl
                         ? _gpuStatus.WslIntelArcSummaryAsync(_wslExe(), activeSession.LaunchSettings.WslDistro, cancellationToken)
                         : _gpuStatus.WindowsIntelArcSummaryAsync(cancellationToken)]);
+        else
+            acceleratorTask = FirstAvailableAsync(
+                [() => _gpuStatus.WindowsSummaryAsync(cancellationToken),
+                    () => _gpuStatus.SummaryAsync(cancellationToken)]);
 
-        return await FirstAvailableAsync(
-            [() => _gpuStatus.WindowsSummaryAsync(cancellationToken),
-                () => _gpuStatus.SummaryAsync(cancellationToken)]);
+        await Task.WhenAll(cpuTask, acceleratorTask);
+        return CombinedHardwareSummary(cpuTask.Result, acceleratorTask.Result);
     }
 
     private static async Task<string> FirstAvailableAsync(IReadOnlyList<Func<Task<string>>> probes)
@@ -67,6 +71,16 @@ public sealed class RuntimeGpuSummaryApplicationService
     private static bool IsUnavailable(string summary)
         => string.IsNullOrWhiteSpace(summary)
            || string.Equals(summary.Trim(), "Unavailable", StringComparison.OrdinalIgnoreCase);
+
+    private static string CombinedHardwareSummary(string cpu, string accelerator)
+    {
+        var lines = new List<string>();
+        if (!IsUnavailable(cpu))
+            lines.AddRange(cpu.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Take(2));
+        if (!IsUnavailable(accelerator))
+            lines.AddRange(accelerator.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Take(2));
+        return lines.Count == 0 ? "Unavailable" : string.Join(Environment.NewLine, lines);
+    }
 
     private static string CacheKey(LoadedModelSessionSnapshot? activeSession)
         => activeSession is null

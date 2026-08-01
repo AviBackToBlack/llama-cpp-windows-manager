@@ -16,7 +16,17 @@ public sealed partial class ReleaseHardeningTests
         var store = new ActiveRuntimeSessionStore(root);
         var settings = AppSettings.CreateDefault(root);
         var first = new ActiveRuntimeSession("model-a", "runtime-a", settings with { Port = 8081 }, "a.log", DateTimeOffset.UtcNow, ProcessId: 11, SessionId: "session-a", IsSelected: false);
-        var second = new ActiveRuntimeSession("model-b", "runtime-b", settings with { Port = 8082 }, "b.log", DateTimeOffset.UtcNow, ProcessId: 22, SessionId: "session-b", IsSelected: true);
+        var second = new ActiveRuntimeSession(
+            "model-b",
+            "runtime-b",
+            settings with { Port = 8082 },
+            "b.log",
+            DateTimeOffset.UtcNow,
+            ProcessId: 22,
+            SessionId: "session-b",
+            IsSelected: true,
+            LaunchProfileId: "profile-b",
+            LaunchProfileName: "Balanced");
 
         await store.SaveAllAsync([first, second], TestContext.Current.CancellationToken);
         var all = await store.ReadAllAsync(TestContext.Current.CancellationToken);
@@ -25,6 +35,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(2, all.Count);
         Assert.Equal("session-b", selected?.SessionId);
         Assert.Equal(8082, selected?.LaunchSettings.Port);
+        Assert.Equal("profile-b", selected?.LaunchProfileId);
+        Assert.Equal("Balanced", selected?.LaunchProfileName);
     }
 
 
@@ -100,7 +112,17 @@ public sealed partial class ReleaseHardeningTests
         var store = new ActiveRuntimeSessionStore(root);
         var persistence = new RuntimeSessionPersistenceService(store, manager);
         manager.AttachExisting(runtime, modelA, settings with { Port = 8081 }, "a.log", LlamaRuntimeState.Loaded, "", "session-a", DateTimeOffset.UtcNow);
-        manager.AttachExisting(wslRuntime, modelB, settings with { Port = 8082 }, "b.log", LlamaRuntimeState.Loading, "marker-b", "session-b", DateTimeOffset.UtcNow);
+        manager.AttachExisting(
+            wslRuntime,
+            modelB,
+            settings with { Port = 8082 },
+            "b.log",
+            LlamaRuntimeState.Loading,
+            "marker-b",
+            "session-b",
+            DateTimeOffset.UtcNow,
+            launchProfileId: "profile-b",
+            launchProfileName: "Balanced");
         manager.SelectModel(modelB.Id);
 
         var saved = await persistence.SaveRunningAsync(TestContext.Current.CancellationToken);
@@ -115,6 +137,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("session-b", selected?.SessionId);
         Assert.Equal("runtime-wsl", selected?.RuntimeId);
         Assert.Equal("marker-b", selected?.ProcessMarker);
+        Assert.Equal("profile-b", selected?.LaunchProfileId);
+        Assert.Equal("Balanced", selected?.LaunchProfileName);
         Assert.Equal(0, cleared.SavedSessionCount);
         Assert.True(cleared.Cleared);
         Assert.Empty(await persistence.ReadAllAsync(TestContext.Current.CancellationToken));
@@ -422,6 +446,46 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(1, removed);
         Assert.False(manager.HasRunningSessions);
         Assert.Empty(manager.Snapshots());
+    }
+
+    [Fact]
+    public void LoadedModelSessionManagerRequiresRepeatedEndpointFailuresAndReportsRecovery()
+    {
+        var root = CreateTempRoot();
+        var settings = AppSettings.CreateDefault(root);
+        var runtime = new RuntimeRecord("runtime", "llama.cpp CPU", RuntimeMode.Native, RuntimeBackend.Cpu, Path.Combine(root, "llama-server.exe"), "{}", DateTimeOffset.UtcNow);
+        var model = new ModelRecord("model-a", "Model A", Path.Combine(root, "a.gguf"), OwnershipKind.External, "{}", DateTimeOffset.UtcNow);
+        using var manager = CreateLoadedModelSessionManager();
+        var snapshot = manager.AttachExisting(
+            runtime,
+            model,
+            settings,
+            "a.log",
+            LlamaRuntimeState.Loaded,
+            "",
+            "session-a",
+            DateTimeOffset.UtcNow,
+            launchProfileId: "profile-a",
+            launchProfileName: "Scientific");
+
+        RuntimeMetricPollResult FailedPoll()
+            => new(snapshot, RuntimeMetricPollerService.RuntimeKey(snapshot), [], null, "connection refused", EndpointResponded: false);
+
+        Assert.Empty(manager.ApplyEndpointHealth([FailedPoll()]));
+        Assert.Empty(manager.ApplyEndpointHealth([FailedPoll()]));
+        var unavailable = Assert.Single(manager.ApplyEndpointHealth([FailedPoll()]));
+
+        var unhealthySnapshot = Assert.Single(manager.Snapshots());
+        Assert.Equal(RuntimeEndpointHealth.Unreachable, unavailable.Current);
+        Assert.Equal(LoadedModelSessionStatus.Unreachable, unhealthySnapshot.Status);
+        Assert.Equal("Scientific", unhealthySnapshot.LaunchProfileName);
+        Assert.True(unhealthySnapshot.IsRunning);
+
+        var recovered = Assert.Single(manager.ApplyEndpointHealth([
+            new RuntimeMetricPollResult(snapshot, RuntimeMetricPollerService.RuntimeKey(snapshot), [], null, "", EndpointResponded: true)
+        ]));
+        Assert.Equal(RuntimeEndpointHealth.Healthy, recovered.Current);
+        Assert.Equal(LoadedModelSessionStatus.Running, Assert.Single(manager.Snapshots()).Status);
     }
 
 

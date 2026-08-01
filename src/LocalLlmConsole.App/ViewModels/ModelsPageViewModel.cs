@@ -4,17 +4,20 @@ namespace LocalLlmConsole.ViewModels;
 
 public sealed class ModelsPageViewModel
 {
+    private readonly List<ModelGridRow> _allVariantRows = [];
+
     public ObservableCollection<ModelGridRow> Rows { get; } = new();
     public ObservableCollection<ModelGridRow> VariantRows { get; } = new();
 
     public void ReplaceModels(
         IEnumerable<ModelRecord> models,
         Func<ModelRecord, bool> isModelActive,
-        Func<ModelRecord, ModelLaunchSettings?>? launchProfileForModel = null)
+        IEnumerable<NamedModelLaunchProfile>? namedProfiles = null)
     {
         var allModels = models.ToArray();
         Rows.Clear();
         VariantRows.Clear();
+        _allVariantRows.Clear();
         foreach (var model in allModels.Where(model => !ModelAliasService.IsLaunchAlias(model)))
         {
             Rows.Add(new ModelGridRow
@@ -30,25 +33,64 @@ public sealed class ModelsPageViewModel
             });
         }
 
-        foreach (var model in allModels.Where(ModelAliasService.IsLaunchAlias))
+        var physicalModels = allModels.Where(model => !ModelAliasService.IsLaunchAlias(model)).ToArray();
+        var profiles = (namedProfiles ?? []).ToArray();
+        var profileCounts = profiles
+            .GroupBy(profile => profile.ModelId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+        foreach (var profile in profiles)
         {
+            var model = physicalModels.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, profile.ModelId, StringComparison.OrdinalIgnoreCase));
+            if (model is null) continue;
             var active = isModelActive(model);
-            var profile = launchProfileForModel?.Invoke(model);
-            VariantRows.Add(new ModelGridRow
+            var hasAlternative = profileCounts.GetValueOrDefault(profile.ModelId) > 1;
+            _allVariantRows.Add(new ModelGridRow
             {
-                Name = model.Name,
-                Quant = "Variant",
+                Name = profile.Name,
+                Quant = "Profile",
                 Size = ModelSizeLabel(model.ModelPath),
-                BaseModel = ModelAliasService.BaseModelName(model, allModels),
-                Port = profile is null ? "Auto" : profile.Port.ToString(CultureInfo.InvariantCulture),
-                DeleteAction = "Remove",
-                DeleteToolTip = active
-                    ? "Unload this saved variant before removing it."
-                    : "Remove this saved model variant. The GGUF file is kept.",
-                CanDelete = !active,
-                Model = model
+                BaseModel = model.Name,
+                Port = profile.Settings.Port.ToString(CultureInfo.InvariantCulture),
+                DeleteAction = hasAlternative ? "Remove" : "",
+                DeleteToolTip = !hasAlternative
+                    ? "Every model needs at least one launch profile. Add another profile before removing this one."
+                    : active
+                    ? "Unload this model before removing its selected launch profile."
+                    : profile.IsDefault
+                    ? "Remove this profile. A remaining profile will become the model default."
+                    : "Remove this launch profile. The model file is kept.",
+                CanDelete = hasAlternative && !active,
+                Model = model,
+                LaunchProfile = profile
             });
         }
+
+        ShowLaunchProfilesForModel(Rows.FirstOrDefault()?.Model.Id);
+    }
+
+    public void ShowLaunchProfilesForModel(string? modelId)
+    {
+        var matchingRows = string.IsNullOrWhiteSpace(modelId)
+            ? []
+            : _allVariantRows.Where(row => string.Equals(
+                row.Model.Id,
+                modelId,
+                StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (VariantRows.SequenceEqual(matchingRows)) return;
+
+        VariantRows.Clear();
+        foreach (var row in matchingRows)
+            VariantRows.Add(row);
+    }
+
+    public string? ModelIdForLaunchProfile(string? profileId)
+    {
+        if (string.IsNullOrWhiteSpace(profileId)) return null;
+        return _allVariantRows.FirstOrDefault(row => string.Equals(
+            row.LaunchProfile?.Id,
+            profileId,
+            StringComparison.OrdinalIgnoreCase))?.Model.Id;
     }
 
     private static string ModelSizeLabel(string modelPath)

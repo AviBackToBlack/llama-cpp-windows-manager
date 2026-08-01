@@ -63,14 +63,17 @@ public sealed partial class ModelCatalogService
             .ToArray();
         if (duplicates.Length == 0) return;
 
-        if (await _store.GetModelLaunchSettingsAsync(canonical.Id) is null)
+        var canonicalProfiles = (await _store.ListNamedModelLaunchProfilesAsync(canonical.Id)).ToList();
+        foreach (var duplicate in duplicates)
         {
-            foreach (var duplicate in duplicates)
+            foreach (var profile in await _store.ListNamedModelLaunchProfilesAsync(duplicate.Id))
             {
-                var settings = await _store.GetModelLaunchSettingsAsync(duplicate.Id);
-                if (settings is null) continue;
-                await _store.SaveModelLaunchSettingsAsync(canonical.Id, settings);
-                break;
+                if (profile.IsDefault && canonicalProfiles.Any(candidate => candidate.IsDefault)) continue;
+                if (canonicalProfiles.Any(candidate => string.Equals(candidate.Name, profile.Name, StringComparison.OrdinalIgnoreCase))) continue;
+
+                var moved = profile with { ModelId = canonical.Id, UpdatedAt = DateTimeOffset.UtcNow };
+                await _store.SaveNamedModelLaunchProfileAsync(moved);
+                canonicalProfiles.Add(moved);
             }
         }
 

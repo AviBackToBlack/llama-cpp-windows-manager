@@ -29,21 +29,28 @@ public partial class MainWindow
     {
         var modelRefresh = ModelServices.ModelCatalogRefreshApplication;
         var selectedId = SelectedModel()?.Id;
+        var selectedProfileId = SelectedModelLaunchProfileId();
         var result = await modelRefresh.RefreshAsync(ModelCatalogRefreshActions());
 
-        _viewModel.Models.ReplaceModels(result.Models, IsModelLoaded, result.LaunchProfileFor);
-        SelectModelAfterRefresh(selectedId);
+        _viewModel.Models.ReplaceModels(result.Models, IsModelLoaded, result.NamedLaunchProfiles);
+        var profileModelId = _viewModel.Models.ModelIdForLaunchProfile(selectedProfileId);
+        _viewModel.Models.ShowLaunchProfilesForModel(
+            profileModelId ?? selectedId ?? _viewModel.Models.Rows.FirstOrDefault()?.Model.Id);
+        SelectModelAfterRefresh(selectedId, selectedProfileId);
         await RenderSelectedModelLaunchSettingsAsync();
-        RefreshOverviewModelChoices(result.Models);
+        await RefreshOverviewModelChoicesAsync(result.Models);
     }
 
     private ModelCatalogRefreshApplicationActions ModelCatalogRefreshActions()
-        => new(ReadModelLaunchProfileAsync);
+        => new(EnsureDefaultModelLaunchProfilesAsync);
 
-    private void SelectModelAfterRefresh(string? selectedId)
+    private void SelectModelAfterRefresh(string? selectedId, string? selectedProfileId = null)
     {
-        _modelsPage.SelectModelAfterRefresh(selectedId, _viewModel.Models.Rows, _viewModel.Models.VariantRows);
+        _modelsPage.SelectModelAfterRefresh(selectedId, selectedProfileId, _viewModel.Models.Rows, _viewModel.Models.VariantRows);
     }
+
+    private void SelectLaunchProfileAfterRefresh(string profileId)
+        => SelectModelAfterRefresh(null, profileId);
 
     private async Task RefreshRuntimesAsync()
     {

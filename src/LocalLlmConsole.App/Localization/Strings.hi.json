@@ -1,4 +1,10 @@
 {
+  "Launch.Field.GpuMode": "GPU mode",
+  "Launch.Field.GpuDevices": "GPU devices",
+  "Launch.Field.GpuSplit": "GPU split",
+  "Tooltip.Field.GpuMode": "Choose auto for llama.cpp defaults, single for one GPU, layer or row for multi-GPU splitting, or tensor for experimental tensor parallelism.",
+  "Tooltip.Field.GpuDevices": "Optional comma-separated llama.cpp device IDs, such as CUDA0,CUDA1. Leave empty to use every available GPU. Use one ID with single mode.",
+  "Tooltip.Field.GpuSplit": "Optional comma-separated proportions matching GPU devices, such as 1,1 or 3,1. Leave empty for automatic memory-based splitting.",
   "App.Title": "llama.cpp Windows Manager",
   "App.Version": "v{0}",
   "Nav.Overview": "Overview",
@@ -65,6 +71,7 @@
   "Overview.Metric.ModelStatus": "Model status",
   "Overview.Metric.Hardware": "Hardware",
   "Overview.Metric.Settings": "Settings",
+  "Overview.Metric.KvCache": "KV cache",
   "Overview.Metric.Tokens": "Tokens",
   "Overview.Metric.MtpTokens": "MTP tokens",
   "Overview.Metric.Slots": "Slots",

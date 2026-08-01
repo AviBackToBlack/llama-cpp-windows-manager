@@ -66,7 +66,8 @@ function Count-Vulnerabilities($node) {
 $appDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $projects = @(
   (Join-Path $appDir "src\LocalLlmConsole.App\LocalLlmConsole.App.csproj"),
-  (Join-Path $appDir "tests\LocalLlmConsole.Tests\LocalLlmConsole.Tests.csproj")
+  (Join-Path $appDir "tests\LocalLlmConsole.Tests\LocalLlmConsole.Tests.csproj"),
+  (Join-Path $appDir "tests\LocalLlmConsole.UiTests\LocalLlmConsole.UiTests.csproj")
 )
 
 $dotnet = Resolve-Dotnet

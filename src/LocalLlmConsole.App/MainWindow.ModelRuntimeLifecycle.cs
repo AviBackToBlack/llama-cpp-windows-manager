@@ -14,16 +14,24 @@ namespace LocalLlmConsole;
 
 public partial class MainWindow
 {
-    private async Task StartModelRuntimeAsync(RuntimeRecord runtime, ModelRecord model, AppSettings launchSettings, bool interactivePrompts = true)
+    private async Task StartModelRuntimeAsync(
+        RuntimeRecord runtime,
+        ModelRecord model,
+        AppSettings launchSettings,
+        bool interactivePrompts = true,
+        string launchProfileId = "",
+        string launchProfileName = "")
     {
-        await _coreServices.Models.ModelRuntimeLaunchApplication.LaunchAsync(
+        var result = await _coreServices.Models.ModelRuntimeLaunchApplication.LaunchAsync(
             new ModelRuntimeLaunchApplicationRequest(
                 runtime,
                 model,
                 launchSettings,
                 interactivePrompts,
                 _settings.AutoLoadGatewayEnabled,
-                _settings.AutoLoadGatewayPort),
+                _settings.AutoLoadGatewayPort,
+                launchProfileId,
+                launchProfileName),
             new ModelRuntimeLaunchApplicationActions(
                 async (settings, _) => await EnsureModelApiKeyAsync(settings),
                 async (settings, token) => await _coreServices.Runtime.RuntimeEndpointProbe.IsRespondingAsync(settings, token),
@@ -45,6 +53,21 @@ public partial class MainWindow
                 StopRuntimeDashboardRefreshTimer,
                 UpdateOverviewModelActions,
                 SetStatus));
+        if (result is { Launched: true, Session: { } session })
+            await RecordRuntimeLifecycleAsync(
+                "started",
+                session.SessionId,
+                session.ModelId,
+                session.ModelName,
+                new
+                {
+                    session.RuntimeId,
+                    session.RuntimeName,
+                    session.LaunchProfileId,
+                    session.LaunchProfileName,
+                    session.ProcessId,
+                    port = session.LaunchSettings.Port
+                });
     }
 
     private void StartModelLoadingTimer(string modelId, string modelName, AppSettings launchSettings)
@@ -148,6 +171,8 @@ public partial class MainWindow
                 selectedSession,
                 _coreServices.Models.ModelRuntimeStatus.IsLoadingModel(selectedSession?.ModelId ?? "")),
             RuntimeStopActions());
+        if (selectedSession is not null)
+            await RecordRuntimeLifecycleAsync("unloaded", selectedSession.SessionId, selectedSession.ModelId, selectedSession.ModelName);
     }
 
     private async Task StopModelRuntimeAsync(ModelRecord model)
@@ -160,6 +185,8 @@ public partial class MainWindow
                 IsModelActive(model),
                 _coreServices.Models.ModelRuntimeStatus.IsLoadingModel(model.Id)),
             RuntimeStopActions());
+        if (stoppedSession is not null)
+            await RecordRuntimeLifecycleAsync("unloaded", stoppedSession.SessionId, stoppedSession.ModelId, stoppedSession.ModelName);
     }
 
     private async Task SwitchToLoadedModelAsync(ModelRecord model)
@@ -190,4 +217,24 @@ public partial class MainWindow
                 RefreshRuntimeMetricsAsync,
                 UpdateOverviewModelActions,
                 SetStatus);
+
+    private async Task RecordRuntimeLifecycleAsync(
+        string action,
+        string sessionId,
+        string modelId,
+        string modelName,
+        object? details = null)
+    {
+        try
+        {
+            await AppServices.StateStore.AppendHistoryAsync(
+                "runtime-lifecycle",
+                $"{action}: {modelName}",
+                new { action, sessionId, modelId, modelName, details });
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Could not record runtime lifecycle event: {ex.Message}");
+        }
+    }
 }

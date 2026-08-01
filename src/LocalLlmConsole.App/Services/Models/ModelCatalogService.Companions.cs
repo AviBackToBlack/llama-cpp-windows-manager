@@ -48,7 +48,9 @@ public sealed partial class ModelCatalogService
                     && !LooksLikeVisionProjectorName(name)
                     && LooksLikeDraftOrMtpHeadName(name);
             })
-            .OrderBy(file => Path.GetFileName(file).Contains("mtp", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .OrderBy(file => Path.GetFileName(file).Contains("dspark", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(file => Path.GetFileName(file).Contains("dflash", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(file => Path.GetFileName(file).Contains("mtp", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(file => Path.GetFileName(file).Contains("draft", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(file => file, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
@@ -98,6 +100,8 @@ public sealed partial class ModelCatalogService
         return normalized.StartsWith("mtp-", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("-mtp-head", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("mtp-head", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("dspark", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("dflash", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("-draft-", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith("draft-", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("-spec-", StringComparison.OrdinalIgnoreCase)

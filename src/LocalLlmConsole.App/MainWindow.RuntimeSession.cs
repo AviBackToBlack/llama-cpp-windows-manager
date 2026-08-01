@@ -37,7 +37,7 @@ public partial class MainWindow
 
     private async Task MarkLoadedSessionsIfReadyAsync()
     {
-        await _coreServices.Runtime.RuntimeSessionReconciliationApplication.ReconcileAsync(
+        var result = await _coreServices.Runtime.RuntimeSessionReconciliationApplication.ReconcileAsync(
             new RuntimeSessionReconciliationApplicationActions(
                 session => _coreServices.Runtime.RuntimeEndpointProbe.IsRespondingAsync(session.LaunchSettings),
                 session => _coreServices.Runtime.RuntimeEndpointProbe.IsAliveAsync(session.LaunchSettings),
@@ -49,12 +49,19 @@ public partial class MainWindow
                 },
                 RefreshOverviewSessionRows,
                 UpdateOverviewModelActions));
+        foreach (var session in result.RemovedSessions ?? [])
+            await RecordRuntimeLifecycleAsync(
+                session.Status == LoadedModelSessionStatus.Failed ? "failed" : "unloaded",
+                session.SessionId,
+                session.ModelId,
+                session.ModelName,
+                new { status = session.Status.ToString(), session.StatusReason, session.ProcessId });
     }
 
     private void RefreshOverviewSessionRows()
     {
         var selectedSessionId = _overviewPage.SelectedLoadedSessionId;
-        var sessions = _sessions.Snapshots();
+        var sessions = _sessions.OverviewSnapshots();
         if (!_viewModel.Overview.ReplaceSessionsIfChanged(sessions, OverviewGatewayRoutingStatus(sessions)))
             return;
 

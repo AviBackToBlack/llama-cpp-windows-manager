@@ -32,7 +32,18 @@ public partial class MainWindow
         SetMetricText(_runtimeDashboardPage.TokensMetric, summary.Tokens);
         SetMetricText(_runtimeDashboardPage.MtpTokensMetric, summary.MtpTokens);
         SetMetricText(_runtimeDashboardPage.SlotsMetric, summary.Slots);
-        SetMetricText(_runtimeDashboardPage.RequestsMetric, summary.Settings);
+        SetMetricText(_runtimeDashboardPage.KvCacheMetric, summary.KvCache);
+        _runtimeDashboardPage.TokensGraph?.Push(
+            summary.GraphSample.RuntimeKey,
+            summary.GraphSample.GenerationRate,
+            summary.GraphSample.PromptRate);
+        _runtimeDashboardPage.MtpTokensGraph?.Push(
+            summary.GraphSample.RuntimeKey,
+            summary.GraphSample.SpeculativeGeneratedRate,
+            summary.GraphSample.SpeculativeAcceptedRate);
+        _runtimeDashboardPage.KvCacheGraph?.Push(
+            summary.GraphSample.RuntimeKey,
+            summary.GraphSample.KvCacheUsagePercent);
     }
 
     private void UpdateRuntimeModelProgress()

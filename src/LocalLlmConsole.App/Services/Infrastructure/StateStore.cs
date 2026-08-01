@@ -67,6 +67,15 @@ CREATE TABLE IF NOT EXISTS model_launch_settings (
   updated_at TEXT NOT NULL,
   FOREIGN KEY(model_id) REFERENCES models(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS model_launch_profiles (
+  id TEXT PRIMARY KEY,
+  model_id TEXT NOT NULL,
+  name TEXT NOT NULL COLLATE NOCASE,
+  settings_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY(model_id) REFERENCES models(id) ON DELETE CASCADE,
+  UNIQUE(model_id, name)
+);
 CREATE TABLE IF NOT EXISTS runtimes (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,

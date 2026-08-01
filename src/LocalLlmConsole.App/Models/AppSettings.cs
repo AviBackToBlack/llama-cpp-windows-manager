@@ -77,7 +77,10 @@ public sealed record AppSettings(
     int ContextCheckpointCount = 32,
     int ContextCheckpointEveryNTokens = 256,
     string CustomParameters = "",
-    string UiCulture = "en")
+    string UiCulture = "en",
+    string GpuMode = "auto",
+    string GpuDevices = "",
+    string GpuSplit = "")
 {
     public const int DefaultContextSize = 131_072;
     public const int DefaultGpuLayers = 999;
@@ -111,6 +114,7 @@ public sealed record AppSettings(
     public const string DefaultContextCheckpointsMode = "auto";
     public const int DefaultContextCheckpointCount = 32;
     public const int DefaultContextCheckpointEveryNTokens = 256;
+    public const string DefaultGpuMode = "auto";
 
     public static AppSettings CreateDefault(string workspaceRoot) => new(
         workspaceRoot,
@@ -183,5 +187,14 @@ public sealed record AppSettings(
         DefaultCacheType,
         DefaultCacheType,
         DefaultCudaPackagePreference,
+        DefaultPromptCacheMode,
+        DefaultPromptCacheRamMb,
+        DefaultContextCheckpointsMode,
+        DefaultContextCheckpointCount,
+        DefaultContextCheckpointEveryNTokens,
+        "",
+        "en",
+        DefaultGpuMode,
+        "",
         "");
 }

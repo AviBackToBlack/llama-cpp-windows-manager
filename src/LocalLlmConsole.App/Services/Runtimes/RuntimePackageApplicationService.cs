@@ -64,7 +64,8 @@ public sealed class RuntimePackageApplicationService
 
         await _prerequisites.EnsurePackageInstallReadyAsync(preset, settings.WslDistro);
         var inventory = await BuildInventoryAsync(preset, sessionState);
-        if (!RuntimePackageInventoryPresenter.CanInstallPackage(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState))
+        if (inventory.Unavailable.Count == 0
+            && !RuntimePackageInventoryPresenter.CanInstallPackage(inventory.Installed, inventory.SourceBuilds, inventory.CheckedState))
         {
             actions.SetStatus($"This {RuntimePackageSourceCatalog.PackageRuntimeLabel(preset)} is already installed. Run Check to look for a newer release, or delete it before reinstalling.");
             await actions.RefreshRuntimesAsync();

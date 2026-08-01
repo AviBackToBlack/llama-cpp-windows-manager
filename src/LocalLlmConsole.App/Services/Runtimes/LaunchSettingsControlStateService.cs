@@ -43,6 +43,9 @@ public sealed class LaunchSettingsControlStateService
         var visible = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
         {
             ["GPU layers"] = gpuRuntime,
+            ["GPU mode"] = gpuRuntime,
+            ["GPU devices"] = gpuRuntime,
+            ["GPU split"] = gpuRuntime,
             ["Vision"] = visionAvailable,
             ["Vision head"] = visionAvailable,
             ["Image min"] = visionAvailable,
@@ -57,6 +60,9 @@ public sealed class LaunchSettingsControlStateService
         var enabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
         {
             ["GPU layers"] = gpuRuntime,
+            ["GPU mode"] = gpuRuntime,
+            ["GPU devices"] = gpuRuntime,
+            ["GPU split"] = gpuRuntime,
             ["Vision"] = visionAvailable,
             ["Vision head"] = visionAvailable,
             ["Image min"] = visionAvailable,

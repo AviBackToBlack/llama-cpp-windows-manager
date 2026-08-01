@@ -6,7 +6,9 @@ public sealed record ModelRuntimeLaunchApplicationRequest(
     AppSettings LaunchSettings,
     bool InteractivePrompts,
     bool AutoLoadGatewayEnabled,
-    int AutoLoadGatewayPort);
+    int AutoLoadGatewayPort,
+    string LaunchProfileId = "",
+    string LaunchProfileName = "");
 
 public sealed record ModelRuntimeLaunchApplicationActions(
     ModelRuntimeApiKeyEnsurer EnsureApiKeyAsync,
@@ -83,7 +85,12 @@ public sealed class ModelRuntimeLaunchApplicationService
                 actions.SetStatus(preparation.StatusMessage);
 
             actions.StartLoadingStatus(request.Model, launchSettings);
-            var snapshot = await _commands.StartModelAsync(request.Runtime, request.Model, launchSettings);
+            var snapshot = await _commands.StartModelAsync(
+                request.Runtime,
+                request.Model,
+                launchSettings,
+                request.LaunchProfileId,
+                request.LaunchProfileName);
             actions.SetActiveRuntimeSettings(snapshot.LaunchSettings);
 
             await _followupApplication.ApplyAfterSessionStartedAsync(

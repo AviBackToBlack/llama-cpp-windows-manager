@@ -119,9 +119,9 @@ The latest local architecture/release pass ran
 `test-release-gate.ps1 -IncludePublish -IncludeInstaller`, which wraps the
 release build, release-hardening suite, formatting verification,
 `git diff --check`, vulnerable-package audit, publish smoke, and installer
-artifact checks. The portable zip for v1.1.2 and newer includes both
-`LlamaCppWindowsManager.exe` and the legacy `LlamaCppConsole.exe` alias for
-renamed-app update compatibility.
+artifact checks. The v2 portable zip contains only
+`LlamaCppWindowsManager.exe`; the updater and installer remove the obsolete
+pre-rename executable during migration.
 
 ## Post-v1.1.2 Hardening
 
@@ -147,8 +147,10 @@ low-risk items that were safe to take immediately:
   swallowing all stop failures.
 - Release scripts can be run with `-RequireCleanTree` so publish, installer, and
   release-gate packaging fail on dirty worktrees.
-- Overview runtime metrics now use compact token monitors for normal and MTP
-  streams, a live Slots card, CPU temperature for CPU-backed sessions,
+- Overview runtime metrics now use compact aggregate token monitors and
+  60-sample trend graphs for normal, speculative, and KV-cache streams. Slot
+  fallback totals survive parallel task resets without double counting, while
+  the live Slots card reports active capacity. Hardware reports CPU telemetry,
   normalized hardware metric separators, and vendor-neutral Windows GPU fallback
   summaries for AMD/Intel/Vulkan systems.
 - Overview Model Status now separates Loading/Loaded Model from Loading Time and

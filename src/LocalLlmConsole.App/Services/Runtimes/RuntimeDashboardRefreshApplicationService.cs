@@ -20,6 +20,7 @@ public sealed record RuntimeDashboardRefreshApplicationActions(
     Func<Task> MarkLoadedSessionsIfReadyAsync,
     Action RefreshOverviewSessionRows,
     Func<IReadOnlyList<LoadedModelSessionSnapshot>> SessionSnapshots,
+    Func<IReadOnlyList<RuntimeMetricPollResult>, Task> ApplyEndpointHealthAsync,
     Func<IReadOnlyList<RuntimeMetricPollResult>, Task> TrackLifetimeTokenDeltasAsync,
     Func<IReadOnlyList<RuntimeMetricPollResult>, Task> ApplyIdleUnloadPoliciesAsync,
     Func<ModelRecord?> SelectedOverviewModel,
@@ -78,6 +79,7 @@ public sealed class RuntimeDashboardRefreshApplicationService
                 actions.RefreshOverviewSessionRows();
 
             var pollResults = await _telemetry.PollSessionsAsync(actions.SessionSnapshots(), cancellationToken);
+            await actions.ApplyEndpointHealthAsync(pollResults);
             await actions.TrackLifetimeTokenDeltasAsync(pollResults);
             await actions.ApplyIdleUnloadPoliciesAsync(pollResults);
 
@@ -146,6 +148,7 @@ public sealed class RuntimeDashboardRefreshApplicationService
         ArgumentNullException.ThrowIfNull(actions.MarkLoadedSessionsIfReadyAsync);
         ArgumentNullException.ThrowIfNull(actions.RefreshOverviewSessionRows);
         ArgumentNullException.ThrowIfNull(actions.SessionSnapshots);
+        ArgumentNullException.ThrowIfNull(actions.ApplyEndpointHealthAsync);
         ArgumentNullException.ThrowIfNull(actions.TrackLifetimeTokenDeltasAsync);
         ArgumentNullException.ThrowIfNull(actions.ApplyIdleUnloadPoliciesAsync);
         ArgumentNullException.ThrowIfNull(actions.SelectedOverviewModel);

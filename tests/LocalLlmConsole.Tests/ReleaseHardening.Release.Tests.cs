@@ -10,14 +10,14 @@ namespace LocalLlmConsole.Tests;
 public sealed partial class ReleaseHardeningTests
 {
     [Fact]
-    public void ProjectDeclaresVersionOneOneSixMetadata()
+    public void ProjectDeclaresVersionTwoZeroMetadata()
     {
         var project = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "LocalLlmConsole.App.csproj"));
 
-        Assert.Contains("<Version>1.1.7</Version>", project, StringComparison.Ordinal);
-        Assert.Contains("<AssemblyVersion>1.1.7.0</AssemblyVersion>", project, StringComparison.Ordinal);
-        Assert.Contains("<FileVersion>1.1.7.0</FileVersion>", project, StringComparison.Ordinal);
-        Assert.Contains("<InformationalVersion>v1.1.7</InformationalVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<Version>2.0.0</Version>", project, StringComparison.Ordinal);
+        Assert.Contains("<AssemblyVersion>2.0.0.0</AssemblyVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<FileVersion>2.0.0.0</FileVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<InformationalVersion>v2.0.0</InformationalVersion>", project, StringComparison.Ordinal);
     }
 
 
@@ -42,7 +42,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("LLAMA_CPP_WINDOWS_MANAGER_DOTNET", buildScript, StringComparison.Ordinal);
         Assert.Contains("LLAMA_CPP_CONSOLE_DOTNET", buildScript, StringComparison.Ordinal);
         Assert.Contains("LlamaCppWindowsManager-$Runtime", publishScript, StringComparison.Ordinal);
-        Assert.Contains("LlamaCppConsole.exe", publishScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("LlamaCppConsole.exe", publishScript, StringComparison.Ordinal);
         Assert.Contains("LlamaCppWindowsManager-$Runtime.zip", publishScript, StringComparison.Ordinal);
         Assert.Contains("[string] $TimestampServer = \"https://timestamp.digicert.com\"", publishScript, StringComparison.Ordinal);
         Assert.DoesNotContain("http://timestamp.digicert.com", publishScript, StringComparison.Ordinal);
@@ -53,7 +53,6 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("LLAMA_CPP_WINDOWS_MANAGER_WORKSPACE", architecture, StringComparison.Ordinal);
         Assert.Contains("LLAMA_CPP_CONSOLE_WORKSPACE", architecture, StringComparison.Ordinal);
         Assert.Equal("LlamaCppWindowsManager.exe", AppUpdateService.PortableExeName);
-        Assert.Equal("LlamaCppConsole.exe", AppUpdateService.LegacyPortableExeName);
         Assert.DoesNotContain("MainWindow.RuntimeJobLogPreview.cs", architecture, StringComparison.Ordinal);
         Assert.DoesNotContain("# Local LLM Console", readme, StringComparison.Ordinal);
         Assert.DoesNotContain("Local LLM Console", buildScript, StringComparison.Ordinal);
@@ -67,6 +66,7 @@ public sealed partial class ReleaseHardeningTests
     public void RepositoryDefinesAutomatedCiGate()
     {
         var workflow = File.ReadAllText(FindRepositoryFile(".github", "workflows", "ci.yml"));
+        var releaseWorkflow = File.ReadAllText(FindRepositoryFile(".github", "workflows", "release.yml"));
         var globalJson = File.ReadAllText(FindRepositoryFile("global.json"));
         var editorConfig = File.ReadAllText(FindRepositoryFile(".editorconfig"));
         var gitAttributes = File.ReadAllText(FindRepositoryFile(".gitattributes"));
@@ -76,7 +76,7 @@ public sealed partial class ReleaseHardeningTests
 
         Assert.Contains("windows-latest", workflow, StringComparison.Ordinal);
         Assert.Contains(".\\build-app.ps1 -Restore", workflow, StringComparison.Ordinal);
-        Assert.Contains(".\\test-app.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains(".\\test-coverage.ps1", workflow, StringComparison.Ordinal);
         Assert.Contains("dotnet format LocalLlmConsole.sln --verify-no-changes --verbosity minimal", workflow, StringComparison.Ordinal);
         Assert.Contains("git diff --check", workflow, StringComparison.Ordinal);
         Assert.Contains(".\\test-vulnerabilities.ps1", workflow, StringComparison.Ordinal);
@@ -92,8 +92,12 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("[*.{ps1,iss}]", editorConfig, StringComparison.Ordinal);
         Assert.Contains("LocalLlmConsole.App.csproj", solution, StringComparison.Ordinal);
         Assert.Contains("LocalLlmConsole.Tests.csproj", solution, StringComparison.Ordinal);
+        Assert.Contains("LocalLlmConsole.UiTests.csproj", solution, StringComparison.Ordinal);
         Assert.Contains("build-app.ps1", releaseGate, StringComparison.Ordinal);
-        Assert.Contains("test-app.ps1", releaseGate, StringComparison.Ordinal);
+        Assert.Contains("test-coverage.ps1", releaseGate, StringComparison.Ordinal);
+        Assert.Contains("MinimumServiceLineCoverage = 80.0", File.ReadAllText(FindRepositoryFile("test-coverage.ps1")), StringComparison.Ordinal);
+        Assert.Contains("MinimumModelLineCoverage = 95.0", File.ReadAllText(FindRepositoryFile("test-coverage.ps1")), StringComparison.Ordinal);
+        Assert.Contains("Skipped or not-executed tests are not allowed", File.ReadAllText(FindRepositoryFile("test-coverage.ps1")), StringComparison.Ordinal);
         Assert.Contains("dotnet format", releaseGate, StringComparison.Ordinal);
         Assert.Contains("git -C $RepoRoot diff --check", releaseGate, StringComparison.Ordinal);
         Assert.Contains("test-vulnerabilities.ps1", releaseGate, StringComparison.Ordinal);
@@ -105,9 +109,12 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("RequireSigned", releaseGate, StringComparison.Ordinal);
         Assert.Contains("Verify publish artifacts", releaseGate, StringComparison.Ordinal);
         Assert.Contains("Assert-PublishArtifacts", releaseGate, StringComparison.Ordinal);
-        Assert.Contains("LlamaCppConsole.exe", releaseGate, StringComparison.Ordinal);
+        Assert.Contains("removed legacy executable alias", releaseGate, StringComparison.Ordinal);
         Assert.Contains("Verify installer artifacts", releaseGate, StringComparison.Ordinal);
         Assert.Contains("Assert-InstallerArtifacts", releaseGate, StringComparison.Ordinal);
+        Assert.Contains("WINDOWS_SIGNING_PFX_BASE64", releaseWorkflow, StringComparison.Ordinal);
+        Assert.Contains("-RequireSigned", releaseWorkflow, StringComparison.Ordinal);
+        Assert.Contains("actions/upload-artifact@v4", releaseWorkflow, StringComparison.Ordinal);
         Assert.Contains(".\\test-release-gate.ps1", development, StringComparison.Ordinal);
         Assert.Contains("-IncludePublish -IncludeInstaller", development, StringComparison.Ordinal);
     }
@@ -474,6 +481,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains(sourceExe, args);
         Assert.Contains("-TargetExe", args);
         Assert.Contains(targetExe, args);
+        Assert.Contains("-ObsoleteExe", args);
         Assert.Contains("-NoticeTarget", args);
         Assert.Contains(noticePath, args);
         Assert.DoesNotContain("new HttpClient", source, StringComparison.Ordinal);
@@ -639,7 +647,7 @@ public sealed partial class ReleaseHardeningTests
     }
 
     [Fact]
-    public async Task AppUpdateServiceCanUpdateLegacyExecutableNameInPlace()
+    public async Task AppUpdateServiceNormalizesObsoleteExecutableNamesToTheCanonicalName()
     {
         var temp = CreateTempRoot();
         var bytes = Enumerable.Repeat((byte)7, 1024 * 1024).ToArray();
@@ -652,7 +660,7 @@ public sealed partial class ReleaseHardeningTests
         });
         using var http = new HttpClient(handler);
         var service = CreateAppUpdateService(http);
-        var legacyExe = Path.Combine(temp, AppUpdateService.LegacyPortableExeName);
+        var obsoleteExe = Path.Combine(temp, "LlamaCppConsole.exe");
         var update = new AppUpdateInfo(
             true,
             "v1.1.0",
@@ -667,9 +675,10 @@ public sealed partial class ReleaseHardeningTests
 
         try
         {
-            var plan = await service.StageInstallAsync(update, temp, legacyExe, TestContext.Current.CancellationToken);
+            var plan = await service.StageInstallAsync(update, temp, obsoleteExe, TestContext.Current.CancellationToken);
 
-            Assert.Equal(legacyExe, plan.TargetExe, ignoreCase: true);
+            Assert.Equal(Path.Combine(temp, AppUpdateService.PortableExeName), plan.TargetExe, ignoreCase: true);
+            Assert.Equal(obsoleteExe, plan.ObsoleteExe, ignoreCase: true);
             Assert.True(File.Exists(plan.SourceExe));
         }
         finally

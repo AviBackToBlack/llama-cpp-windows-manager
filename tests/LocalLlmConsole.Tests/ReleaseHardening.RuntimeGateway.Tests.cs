@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using LocalLlmConsole.Models;
 using LocalLlmConsole.Services;
 using LocalLlmConsole.ViewModels;
@@ -66,6 +67,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("CPU: 57.2C", GpuStatusService.FormatWindowsCpuTemperatureJson("{\"TemperatureCelsius\":57.2}"));
         Assert.Equal("CPU: 42C", GpuStatusService.FormatWindowsCpuTemperatureJson("[{\"CurrentTemperature\":3151.5},{\"TemperatureCelsius\":36.4}]"));
         Assert.Equal("", GpuStatusService.FormatWindowsCpuTemperatureJson("{}"));
+        Assert.Equal(
+            $"CPU: AMD Ryzen 9 7950X{Environment.NewLine}Telemetry: 18.5% load | 16C/32T | 57.2 °C thermal",
+            GpuStatusService.FormatWindowsCpuStatusJson("{\"Name\":\"AMD Ryzen 9 7950X 16-Core Processor\",\"Utilization\":18.5,\"PhysicalCores\":16,\"LogicalProcessors\":32,\"TemperatureCelsius\":57.2}"));
     }
 
 
@@ -96,14 +100,16 @@ public sealed partial class ReleaseHardeningTests
         var summary = await service.SummaryAsync(TestContext.Current.CancellationToken);
         var windows = await service.WindowsSummaryAsync(TestContext.Current.CancellationToken);
         var cpu = await service.CpuTemperatureAsync(TestContext.Current.CancellationToken);
+        var cpuSummary = await service.CpuSummaryAsync(TestContext.Current.CancellationToken);
         var sycl = await service.WindowsIntelArcSummaryAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(memory);
-        Assert.Equal(8, memory.FreeGiB);
-        Assert.Equal(24, memory.TotalGiB);
+        Assert.Equal(9, memory.FreeGiB);
+        Assert.Equal(48, memory.TotalGiB);
         Assert.Equal("GPU 0: 76% | 62C | 12.0/24.0 GiB", summary);
         Assert.Equal("GPU 0: AMD Radeon RX 7900 XTX | 53.4% | 8.0/24.0 GiB", windows);
         Assert.Equal("CPU: 57.2C", cpu);
+        Assert.Equal("Telemetry: 57.2 °C thermal", cpuSummary);
         Assert.Equal("Intel(R) Arc(TM) A770 Graphics", sycl);
         Assert.Contains(commands, command => command.StartsWith("powershell", StringComparison.OrdinalIgnoreCase)
             && command.Contains("-EncodedCommand", StringComparison.Ordinal));
@@ -277,6 +283,145 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("direct endpoint", source, StringComparison.Ordinal);
         Assert.Contains("Gateway could not auto-load", workflow, StringComparison.Ordinal);
         Assert.Contains("Install or register a runtime", workflow, StringComparison.Ordinal);
+    }
+
+
+    [Fact]
+    public void ModelGatewayResponseContractsExposeStableOpenAiDataAndSafeErrors()
+    {
+        var root = CreateTempRoot();
+        var now = new DateTimeOffset(2026, 7, 31, 10, 0, 0, TimeSpan.Zero);
+        var settings = AppSettings.CreateDefault(root) with { Port = 8093 };
+        var first = new ModelRecord("z-model", "Zulu", Path.Combine(root, "zulu.gguf"), OwnershipKind.External, "{}", now);
+        var second = new ModelRecord("a-model", "Alpha", Path.Combine(root, "alpha.gguf"), OwnershipKind.External, "{}", now.AddMinutes(1));
+        var running = new LoadedModelSessionSnapshot(
+            "session-1",
+            first.Id,
+            first.Name,
+            "runtime-1",
+            "CPU runtime",
+            RuntimeMode.Native,
+            RuntimeBackend.Cpu,
+            settings,
+            Path.Combine(root, "runtime.log"),
+            now,
+            "",
+            123,
+            LoadedModelSessionStatus.Running,
+            IsRunning: true,
+            IsSelected: true);
+        var stopped = running with
+        {
+            SessionId = "session-2",
+            ModelId = second.Id,
+            ModelName = second.Name,
+            Status = LoadedModelSessionStatus.Stopped,
+            IsRunning = false
+        };
+
+        using var modelsJson = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(
+            ModelGatewayResponseWriter.ModelsResponse([first, second])));
+        using var runningJson = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(
+            ModelGatewayResponseWriter.RunningModelRows([stopped, running])));
+        using var errorJson = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(
+            ModelGatewayResponseWriter.GatewayError("upstream offline", "upstream_unavailable", "upstream_unavailable")));
+
+        Assert.Equal("list", modelsJson.RootElement.GetProperty("object").GetString());
+        var modelRows = modelsJson.RootElement.GetProperty("data").EnumerateArray().ToArray();
+        Assert.Equal(["a-model", "z-model"], modelRows.Select(row => row.GetProperty("id").GetString()!).ToArray());
+        Assert.Equal("local-llm-console", modelRows[0].GetProperty("owned_by").GetString());
+        var runningRow = Assert.Single(runningJson.RootElement.EnumerateArray());
+        Assert.Equal(first.Id, runningRow.GetProperty("id").GetString());
+        Assert.Equal("http://127.0.0.1:8093/v1", runningRow.GetProperty("endpoint").GetString());
+        Assert.Equal("upstream_unavailable", errorJson.RootElement.GetProperty("error").GetProperty("code").GetString());
+        Assert.Contains("Friendly name -> model-id", ModelGatewayResponseWriter.GatewayClientLoadError(
+            first with { Id = "model-id" },
+            "Friendly name",
+            new InvalidOperationException("runtime unavailable")), StringComparison.Ordinal);
+        Assert.Equal("socket offline", ModelGatewayResponseWriter.InnermostMessage(
+            new InvalidOperationException("outer", new IOException("socket offline"))));
+        Assert.Equal("http://127.0.0.1:8093/", GatewayUrlReservationService.ListenerPrefixForPort(8093, allowLan: false));
+        Assert.Equal("http://+:8093/", GatewayUrlReservationService.ListenerPrefixForPort(8093, allowLan: true));
+    }
+
+
+    [Fact]
+    public async Task ModelGatewayListenerAuthenticatesListsLoadsAndProxiesOpenAiRequestsEndToEnd()
+    {
+        var root = CreateTempRoot();
+        var port = ReserveLoopbackPort();
+        var apiKey = new string('g', 32);
+        var model = new ModelRecord("qwen-id", "Friendly Qwen", Path.Combine(root, "qwen.gguf"), OwnershipKind.External, "{}", DateTimeOffset.UtcNow);
+        var launchSettings = AppSettings.CreateDefault(root) with { Port = 8123, ModelApiKey = "direct-runtime-key" };
+        var runtime = new GatewayIntegrationRuntimeController([model], launchSettings);
+        using var upstreamHandler = new GatewayProxyHandler();
+        var proxy = new ModelGatewayUpstreamProxy(new HttpClient(upstreamHandler));
+        await using var gateway = new ModelGatewayService(
+            new ModelGatewayOptions(true, "local", port, apiKey, true, ModelGatewaySwapPolicy.KeepLoaded),
+            runtime,
+            proxy);
+        await gateway.StartAsync(TestContext.Current.CancellationToken);
+        using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}/"), Timeout = TimeSpan.FromSeconds(10) };
+
+        using var unauthorized = await client.GetAsync("v1/models", TestContext.Current.CancellationToken);
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        using var health = await client.GetAsync("health", TestContext.Current.CancellationToken);
+        using var models = await client.GetAsync("v1/models", TestContext.Current.CancellationToken);
+        using var proxied = await client.PostAsync(
+            "v1/chat/completions?trace=1",
+            new StringContent("""{"model":"Friendly Qwen","messages":[{"role":"user","content":"hello"}]}""", Encoding.UTF8, "application/json"),
+            TestContext.Current.CancellationToken);
+        using var running = await client.GetAsync("running", TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, unauthorized.StatusCode);
+        Assert.Equal(System.Net.HttpStatusCode.OK, health.StatusCode);
+        Assert.Contains("qwen-id", await models.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Equal(System.Net.HttpStatusCode.Accepted, proxied.StatusCode);
+        Assert.Equal("{" + "\"proxied\":true}", await proxied.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Contains("qwen-id", await running.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Equal(1, runtime.EnsureLoadedCount);
+        var forwarded = Assert.Single(upstreamHandler.Requests);
+        Assert.Equal("/v1/chat/completions?trace=1", forwarded.PathAndQuery);
+        Assert.Equal("Bearer direct-runtime-key", forwarded.Authorization);
+        Assert.Contains("\"model\":\"Friendly Qwen\"", forwarded.Body, StringComparison.Ordinal);
+    }
+
+
+    [Fact]
+    public async Task ModelGatewayListenerReturnsStableClientErrorsForRejectedRequestsEndToEnd()
+    {
+        var root = CreateTempRoot();
+        var port = ReserveLoopbackPort();
+        var apiKey = new string('h', 32);
+        var model = new ModelRecord("qwen-id", "Friendly Qwen", Path.Combine(root, "qwen.gguf"), OwnershipKind.External, "{}", DateTimeOffset.UtcNow);
+        var runtime = new GatewayIntegrationRuntimeController([model], AppSettings.CreateDefault(root))
+        {
+            LoadFailure = new InvalidOperationException("runtime unavailable")
+        };
+        await using var gateway = new ModelGatewayService(
+            new ModelGatewayOptions(true, "local", port, apiKey, true, ModelGatewaySwapPolicy.SingleActive, MaxRequestBodyBytes: 96),
+            runtime);
+        await gateway.StartAsync(TestContext.Current.CancellationToken);
+        using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}/"), Timeout = TimeSpan.FromSeconds(10) };
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+        using var invalid = await client.PostAsync("v1/chat/completions", JsonContent("{" + "\"messages\":[]}"), TestContext.Current.CancellationToken);
+        using var unknown = await client.PostAsync("v1/chat/completions", JsonContent("{" + "\"model\":\"unknown\"}"), TestContext.Current.CancellationToken);
+        using var loadFailed = await client.PostAsync("v1/chat/completions", JsonContent("{" + "\"model\":\"qwen-id\"}"), TestContext.Current.CancellationToken);
+        using var oversized = await client.PostAsync("v1/chat/completions", JsonContent("{" + "\"model\":\"qwen-id\",\"padding\":\"" + new string('x', 120) + "\"}"), TestContext.Current.CancellationToken);
+        using var rejectedHostRequest = new HttpRequestMessage(HttpMethod.Get, "health");
+        rejectedHostRequest.Headers.Host = $"example.com:{port}";
+        using var rejectedHost = await client.SendAsync(rejectedHostRequest, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Contains("invalid_request_error", await invalid.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, unknown.StatusCode);
+        Assert.Contains("model_not_found", await unknown.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, loadFailed.StatusCode);
+        Assert.Contains("model_load_failed", await loadFailed.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Equal(System.Net.HttpStatusCode.RequestEntityTooLarge, oversized.StatusCode);
+        Assert.Contains("request_too_large", await oversized.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, rejectedHost.StatusCode);
     }
 
 
@@ -815,6 +960,84 @@ public sealed partial class ReleaseHardeningTests
             status,
             IsRunning: isRunning,
             IsSelected: true);
+
+    private static StringContent JsonContent(string json)
+        => new(json, Encoding.UTF8, "application/json");
+
+    private static int ReserveLoopbackPort()
+    {
+        var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        try
+        {
+            return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
+
+    private sealed class GatewayIntegrationRuntimeController(
+        IReadOnlyList<ModelRecord> models,
+        AppSettings launchSettings) : IModelGatewayRuntimeController
+    {
+        private readonly List<LoadedModelSessionSnapshot> _sessions = [];
+
+        public Exception? LoadFailure { get; init; }
+
+        public int EnsureLoadedCount { get; private set; }
+
+        public Task<IReadOnlyList<ModelRecord>> ListModelsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(models);
+
+        public Task<IReadOnlyList<LoadedModelSessionSnapshot>> RunningSessionsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<LoadedModelSessionSnapshot>>(_sessions.ToArray());
+
+        public Task<LoadedModelSessionSnapshot> EnsureModelLoadedAsync(
+            ModelRecord model,
+            ModelGatewaySwapPolicy policy,
+            CancellationToken cancellationToken = default)
+        {
+            EnsureLoadedCount++;
+            if (LoadFailure is not null) throw LoadFailure;
+            var session = new LoadedModelSessionSnapshot(
+                "gateway-session",
+                model.Id,
+                model.Name,
+                "runtime-id",
+                "CPU runtime",
+                RuntimeMode.Native,
+                RuntimeBackend.Cpu,
+                launchSettings,
+                "runtime.log",
+                DateTimeOffset.UtcNow,
+                "",
+                123,
+                LoadedModelSessionStatus.Running,
+                IsRunning: true,
+                IsSelected: true);
+            _sessions.Add(session);
+            return Task.FromResult(session);
+        }
+    }
+
+    private sealed class GatewayProxyHandler : HttpMessageHandler
+    {
+        public List<(string PathAndQuery, string Authorization, string Body)> Requests { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests.Add((
+                request.RequestUri?.PathAndQuery ?? "",
+                request.Headers.Authorization?.ToString() ?? "",
+                request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken)));
+            return new HttpResponseMessage(System.Net.HttpStatusCode.Accepted)
+            {
+                Content = new StringContent("{" + "\"proxied\":true}", Encoding.UTF8, "application/json")
+            };
+        }
+    }
 
 
 }

@@ -53,6 +53,15 @@ public sealed partial class ReleaseHardeningTests
         return root;
     }
 
+    private static string CreateRuntimeExecutable(string root, params string[] segments)
+    {
+        var relativeSegments = segments.Length == 0 ? ["llama-server.exe"] : segments;
+        var path = Path.Combine(new[] { root }.Concat(relativeSegments).ToArray());
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, [0]);
+        return path;
+    }
+
     private static OpenCodeLocalModelWorkflowService CreateOpenCodeLocalModelWorkflowService(string root)
         => new(new OpenCodeModelSyncService(new OpenCodeConfigService(root)));
 

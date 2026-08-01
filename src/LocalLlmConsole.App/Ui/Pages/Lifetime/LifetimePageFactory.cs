@@ -33,7 +33,7 @@ public static class LifetimePageFactory
             (Loc.T("Lifetime.Col.Generated"), "C3", .8),
             (Loc.T("Lifetime.Col.Total"), "C4", .8),
             (Loc.T("Lifetime.Col.Updated"), "C5", 1.1));
-        PageSectionFactory.AddButtonColumn(metricsGrid, Loc.T("Lifetime.ResetButton"), "C6", "B1", request.Actions.ResetLifetimeRowClick, .55, tooltipBinding: "T1");
+        PageSectionFactory.AddButtonColumn(metricsGrid, Loc.T("Lifetime.ResetButton"), "C6", "B1", request.Actions.ResetLifetimeRowClick, .55, tooltipBinding: "T1", visualRole: VisualRole.Danger);
         metricsGrid.ItemsSource = request.Rows;
         root.Children.Add(PageSectionFactory.GridSection(Loc.T("Lifetime.TokenUsageTitle"), metricsGrid));
 

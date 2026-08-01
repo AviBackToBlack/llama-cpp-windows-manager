@@ -44,7 +44,6 @@ public static class LaunchSettingsSaveStateService
         if (selectedModel is null) return false;
 
         var normalizedName = (requestedVariantName ?? "").Trim();
-        return !string.IsNullOrWhiteSpace(normalizedName)
-            && !string.Equals(normalizedName, selectedModel.Name, StringComparison.OrdinalIgnoreCase);
+        return !string.IsNullOrWhiteSpace(normalizedName);
     }
 }

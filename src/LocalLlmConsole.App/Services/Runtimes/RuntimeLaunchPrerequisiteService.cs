@@ -50,6 +50,8 @@ public sealed class RuntimeLaunchPrerequisiteService
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.EndpointRespondingAsync);
 
+        RuntimeAvailabilityService.EnsureAvailable(request.Runtime);
+
         if (request.Runtime.Mode == RuntimeMode.Wsl)
             await _runtimeTools.EnsureWslDistroReadyAsync(request.LaunchSettings.WslDistro, cancellationToken);
         if (request.Runtime.Mode == RuntimeMode.Wsl && request.Runtime.Backend == RuntimeBackend.Sycl)

@@ -334,7 +334,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("public async Task DeleteBuildPresetAsync", executor, StringComparison.Ordinal);
         Assert.Contains("DeleteRuntimeFiles", executor, StringComparison.Ordinal);
         Assert.Contains("DeleteSafeRuntimeFolder", executor, StringComparison.Ordinal);
-        Assert.Contains("SaveModelLaunchSettingsAsync", executor, StringComparison.Ordinal);
+        Assert.Contains("SaveNamedModelLaunchProfileAsync", executor, StringComparison.Ordinal);
 
         Assert.Contains("_deletionPlanner.PlanRuntimeDeletionAsync", buildDeletionApplication, StringComparison.Ordinal);
         Assert.Contains("_deletionExecutor.DeleteRuntimeAsync", buildDeletionApplication, StringComparison.Ordinal);

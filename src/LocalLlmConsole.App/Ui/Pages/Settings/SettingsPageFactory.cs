@@ -26,6 +26,7 @@ public sealed record SettingsPageRequest(
 public sealed record SettingsPageControls(
     DockPanel Root,
     WpfComboBox ThemeCombo,
+    WpfButton SaveButton,
     DataGrid SettingsGrid);
 
 public static class SettingsPageFactory
@@ -38,7 +39,7 @@ public static class SettingsPageFactory
         ArgumentNullException.ThrowIfNull(request.ButtonToolTip);
 
         var root = new DockPanel { Margin = new Thickness(16) };
-        var toolbar = Toolbar(request, out var themeCombo);
+        var toolbar = Toolbar(request, out var themeCombo, out var saveButton);
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
 
@@ -46,17 +47,19 @@ public static class SettingsPageFactory
         var sections = SettingsSections(rows, request);
         root.Children.Add(sections.Root);
 
-        return new SettingsPageControls(root, themeCombo, sections.FirstGrid);
+        return new SettingsPageControls(root, themeCombo, saveButton, sections.FirstGrid);
     }
 
-    private static Grid Toolbar(SettingsPageRequest request, out WpfComboBox themeCombo)
+    private static Grid Toolbar(SettingsPageRequest request, out WpfComboBox themeCombo, out WpfButton saveButton)
     {
         var toolbar = new Grid { Margin = new Thickness(0, 0, 0, 10) };
         toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         toolbar.ColumnDefinitions.Add(new ColumnDefinition());
         toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var saveButton = Button(Loc.T("Settings.SaveSettingsButton"), request.Actions.SaveSettings, request.ButtonToolTip);
+        saveButton = Button(Loc.T("Settings.SaveSettingsButton"), request.Actions.SaveSettings, request.ButtonToolTip);
+        saveButton.IsEnabled = false;
+        VisualRole.SetButtonRole(saveButton, VisualRole.Primary);
         Grid.SetColumn(saveButton, 0);
         toolbar.Children.Add(saveButton);
 
@@ -66,14 +69,15 @@ public static class SettingsPageFactory
             Margin = new Thickness(0),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Right
         };
-        themeBar.Children.Add(new TextBlock
+        var themeLabel = new TextBlock
         {
             Text = Loc.T("Settings.ThemeLabel"),
-            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 6)
-        });
+        };
+        themeLabel.SetResourceReference(TextBlock.ForegroundProperty, "TextMuted");
+        themeBar.Children.Add(themeLabel);
         themeCombo = new WpfComboBox
         {
             ItemsSource = new[] { "system", "light", "dark" },

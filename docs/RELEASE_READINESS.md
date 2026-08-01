@@ -8,7 +8,7 @@ Run from a clean checkout with the .NET 8 SDK on `PATH`, or set `LLAMA_CPP_WINDO
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-app.ps1 -Restore
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-app.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-coverage.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-vulnerabilities.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\publish-app.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-installer.ps1
@@ -34,15 +34,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build-installer.ps1 -C
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 -IncludePublish -IncludeInstaller -CertificateThumbprint "<cert-thumbprint>" -RequireSigned
 ```
 
+GitHub public release builds must run `.github/workflows/release.yml` with the
+protected `release` environment and its `WINDOWS_SIGNING_PFX_BASE64` and
+`WINDOWS_SIGNING_PFX_PASSWORD` secrets configured.
+
 ## Release Gate
 
 - Publish `dist\LlamaCppWindowsManager-win-x64.zip` and `dist\LlamaCppWindowsManager-win-x64\LlamaCppWindowsManager.exe` from a clean checkout.
-- Build `dist\installer\LlamaCppWindowsManager-Setup-1.1.4-win-x64.exe` from the published app with Inno Setup 6.
+- Build `dist\installer\LlamaCppWindowsManager-Setup-2.0.0-win-x64.exe` from the published app with Inno Setup 6.
 - Confirm the publish folder contains no `.pdb` files.
 - Confirm the portable zip, published executable, and installer each have a matching `.sha256` companion file. For signed builds, generate the companion file after signing.
 - Confirm signed installer builds fail before compilation if `-SkipPublish`
   points at an unsigned published executable.
-- Confirm the portable zip contains both `LlamaCppWindowsManager.exe` and the legacy `LlamaCppConsole.exe` alias for renamed-app updates.
+- Confirm the portable zip contains `LlamaCppWindowsManager.exe` and does not contain the removed `LlamaCppConsole.exe` alias.
 - Confirm fresh installer default path is `D:\LlamaCppWindowsManager` when `D:` exists, `%LocalAppData%\Programs\LlamaCppWindowsManager` when it does not, and that the setup wizard still allows the user to change the install folder.
 - Confirm the installer detects an existing install and reuses its install directory on update or repair.
 - Confirm the final installer page can launch `LlamaCppWindowsManager.exe`.
@@ -91,10 +95,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 
 - Confirm Overview token monitors use two compact rows in the form
   `0.0 t/s (Gen) | 0.0 t/s (Avg) | 0 t (Total)`, with matching Prompt and
   Accepted rows, live rates falling back to `0.0 t/s` when idle, and average or
-  total segments omitted when those values are unavailable.
-- Confirm the Overview Slots card shows active/queued requests and busy decode
-  slots in two rows, and that hardware metrics render separators as ` | ` with
-  spaces on both sides.
+  total segments omitted when those values are unavailable. Run two parallel
+  requests and confirm totals continue increasing after either slot is reused.
+- Confirm Tokens, Speculative Tokens, and KV Cache show compact trend graphs on
+  the bottom row, retain at most 60 samples, and reset when the selected runtime
+  changes. Confirm Slots appears on the top row and shows active/total capacity,
+  queued requests, and busy decode slots.
 - Confirm the Overview Hardware card shows CPU temperature for CPU-backed
   sessions, uses NVIDIA metrics for CUDA when available, falls back to Windows
   GPU performance counters for AMD/Intel/Vulkan-backed sessions, and does not
@@ -138,6 +144,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 
 - Confirm per-model MTP head choices persist separately from Vision head,
   `Spec type = mtp` launches with `--mtp-head`, and draft-* speculative modes
   continue to use the upstream `--model-draft` path.
+- Confirm `Spec type = draft-dspark` launches a DSpark GGUF with
+  `--spec-type draft-dspark --model-draft <path> --spec-draft-n-max 7` on a
+  llama.cpp b10164-or-newer runtime and reports draft acceptance metrics.
+- Confirm GPU mode `single` emits `--split-mode none`, multi-GPU modes emit the
+  selected `layer`, `row`, or `tensor` split mode, and optional GPU device IDs
+  and proportions emit `--device` and `--tensor-split`.
 - Confirm downloaded runtime source and build deletion cannot escape the configured runtimes folder.
 - Confirm successful builds from downloaded runtime sources delete the source folder when Settings > Runtime > Delete source after build is `Yes`, and preserve it when set to `No`.
 - Confirm multiple models can be loaded at the same time on different saved model ports when hardware capacity allows it.
@@ -168,7 +180,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test-release-gate.ps1 
 - Confirm release assets include a matching SHA-256 companion file and that a bad checksum prevents staging.
 - Confirm a signed installed app refuses an unsigned or differently signed staged update.
 - Confirm a completed staged update restarts `LlamaCppWindowsManager.exe` and shows the GitHub release notes.
-- Confirm an older `LlamaCppConsole.exe` portable install can stage a newer update without changing the target path unexpectedly.
+- Confirm an older renamed portable install migrates to `LlamaCppWindowsManager.exe` and removes the obsolete executable after shutdown.
 
 ## Latest Local Verification
 

@@ -136,7 +136,6 @@ function Assert-PublishArtifacts {
 
   $publishDir = Join-Path $RepoRoot "dist\LlamaCppWindowsManager-$Runtime"
   $appExe = Join-Path $publishDir "LlamaCppWindowsManager.exe"
-  $legacyExe = Join-Path $publishDir "LlamaCppConsole.exe"
   $zipPath = Join-Path $RepoRoot "dist\LlamaCppWindowsManager-$Runtime.zip"
 
   if (-not (Test-Path -LiteralPath $publishDir -PathType Container)) {
@@ -144,7 +143,6 @@ function Assert-PublishArtifacts {
   }
 
   Assert-HashCompanion -Path $appExe
-  Assert-HashCompanion -Path $legacyExe
   Assert-HashCompanion -Path $zipPath
 
   $pdbs = @(Get-ChildItem -LiteralPath $publishDir -Recurse -Filter *.pdb -File -ErrorAction SilentlyContinue)
@@ -157,7 +155,9 @@ function Assert-PublishArtifacts {
   try {
     $entries = @($zip.Entries | ForEach-Object { $_.FullName -replace "\\", "/" })
     Assert-ZipContainsEntry -Entries $entries -ExpectedEntry "LlamaCppWindowsManager.exe" -ZipPath $zipPath
-    Assert-ZipContainsEntry -Entries $entries -ExpectedEntry "LlamaCppConsole.exe" -ZipPath $zipPath
+    if ($entries -contains "LlamaCppConsole.exe") {
+      throw "Release archive contains the removed legacy executable alias: $zipPath"
+    }
     $pdbEntry = $entries | Where-Object { $_.EndsWith(".pdb", [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
     if ($pdbEntry) {
       throw "Release archive contains a PDB file: $pdbEntry"
@@ -219,8 +219,10 @@ Invoke-GateStep "Build app" {
   & powershell.exe @buildArgs
 }
 
-Invoke-GateStep "Run tests" {
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "test-app.ps1") -Configuration $Configuration
+Invoke-GateStep "Run tests and enforce coverage" {
+  # Release binaries deliberately omit PDBs. Coverage is collected from the same
+  # source in Debug while the separate build step enforces Release compilation.
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "test-coverage.ps1") -Configuration Debug
 }
 
 Invoke-GateStep "Verify formatting" {

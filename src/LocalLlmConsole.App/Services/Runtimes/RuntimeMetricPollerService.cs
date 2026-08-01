@@ -5,7 +5,8 @@ public sealed record RuntimeMetricPollResult(
     string RuntimeKey,
     IReadOnlyList<PrometheusSample> Samples,
     RuntimeSlotSnapshot? SlotSnapshot,
-    string Error);
+    string Error,
+    bool EndpointResponded = true);
 
 public sealed class RuntimeMetricPollerService
 {
@@ -34,7 +35,10 @@ public sealed class RuntimeMetricPollerService
         var settings = session.LaunchSettings;
         var slotTask = SlotSnapshotAsync(settings, cancellationToken);
         if (!settings.EnableMetrics)
-            return new RuntimeMetricPollResult(session, runtimeKey, [], await slotTask, "");
+        {
+            var slot = await slotTask;
+            return new RuntimeMetricPollResult(session, runtimeKey, [], slot.Snapshot, slot.Error, slot.Responded);
+        }
 
         try
         {
@@ -43,20 +47,29 @@ public sealed class RuntimeMetricPollerService
                 $"{RuntimeEndpointService.LocalServerBaseUrl(settings)}/metrics",
                 settings,
                 cancellationToken);
+            var slot = await slotTask;
             return new RuntimeMetricPollResult(
                 session,
                 runtimeKey,
                 RuntimeMetrics.ParsePrometheus(raw),
-                await slotTask,
-                "");
+                slot.Snapshot,
+                "",
+                EndpointResponded: true);
         }
         catch (Exception ex)
         {
-            return new RuntimeMetricPollResult(session, runtimeKey, [], await slotTask, ex.Message);
+            var slot = await slotTask;
+            return new RuntimeMetricPollResult(
+                session,
+                runtimeKey,
+                [],
+                slot.Snapshot,
+                ex.Message,
+                slot.Responded);
         }
     }
 
-    private async Task<RuntimeSlotSnapshot?> SlotSnapshotAsync(
+    private async Task<(RuntimeSlotSnapshot? Snapshot, bool Responded, string Error)> SlotSnapshotAsync(
         AppSettings settings,
         CancellationToken cancellationToken)
     {
@@ -67,11 +80,11 @@ public sealed class RuntimeMetricPollerService
                 $"{RuntimeEndpointService.LocalServerBaseUrl(settings)}/slots",
                 settings,
                 cancellationToken);
-            return RuntimeDashboardService.ParseSlotSnapshot(raw);
+            return (RuntimeDashboardService.ParseSlotSnapshot(raw), true, "");
         }
-        catch
+        catch (Exception ex)
         {
-            return null;
+            return (null, false, ex.Message);
         }
     }
 }

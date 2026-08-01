@@ -44,6 +44,8 @@ public sealed class RuntimeSessionPersistenceService
                 session.ProcessMarker,
                 session.ProcessId,
                 session.SessionId,
-                session.IsSelected))
+                session.IsSelected,
+                session.LaunchProfileId,
+                session.LaunchProfileName))
             .ToArray();
 }

@@ -17,21 +17,25 @@ public partial class MainWindow
     private void ShowSettings()
     {
         SetPage("Settings", "Application preferences.");
-        _viewModel.Settings.ReplaceRows(_coreServices.App.SettingsPageDefinitions.BuildRows(_settings));
+        var definitions = _coreServices.App.SettingsPageDefinitions.BuildRows(_settings);
+        _viewModel.Settings.ReplaceRows(definitions);
 
         var page = SettingsPageFactory.Create(new SettingsPageRequest(
             _viewModel.Settings.Rows,
             _settings.ThemeMode,
             _pageControllers.Settings.Build(),
             ButtonToolTip));
-        _settingsPage.Apply(page);
+        _settingsPage.Apply(
+            page,
+            _viewModel.Settings.Rows,
+            definitions.ToDictionary(definition => definition.Key, definition => definition.Value, StringComparer.OrdinalIgnoreCase),
+            _settings.ThemeMode);
         PageHost.Content = page.Root;
     }
 
     private void PreviewSettingsTheme()
     {
         var mode = AppPreferenceService.ThemeMode(_settingsPage.SelectedThemeValue);
-        _settings = _settings with { ThemeMode = mode };
         ApplyTheme(mode);
         SetStatus(Loc.T("Status.ThemePreviewApplied"));
     }

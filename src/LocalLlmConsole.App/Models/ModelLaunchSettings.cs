@@ -1,5 +1,13 @@
 namespace LocalLlmConsole.Models;
 
+public sealed record NamedModelLaunchProfile(
+    string Id,
+    string ModelId,
+    string Name,
+    ModelLaunchSettings Settings,
+    DateTimeOffset UpdatedAt,
+    bool IsDefault = false);
+
 public sealed record ModelLaunchSettings(
     int ContextSize,
     int GpuLayers,
@@ -55,7 +63,10 @@ public sealed record ModelLaunchSettings(
     string ContextCheckpointsMode = AppSettings.DefaultContextCheckpointsMode,
     int ContextCheckpointCount = AppSettings.DefaultContextCheckpointCount,
     int ContextCheckpointEveryNTokens = AppSettings.DefaultContextCheckpointEveryNTokens,
-    string CustomParameters = "")
+    string CustomParameters = "",
+    string GpuMode = AppSettings.DefaultGpuMode,
+    string GpuDevices = "",
+    string GpuSplit = "")
 {
     public static ModelLaunchSettings FromAppSettings(AppSettings settings, string runtimeId = "") => new(
         settings.ContextSize,
@@ -112,7 +123,10 @@ public sealed record ModelLaunchSettings(
         settings.ContextCheckpointsMode,
         settings.ContextCheckpointCount,
         settings.ContextCheckpointEveryNTokens,
-        settings.CustomParameters);
+        settings.CustomParameters,
+        settings.GpuMode,
+        settings.GpuDevices,
+        settings.GpuSplit);
 
     public AppSettings ApplyTo(AppSettings settings) => settings with
     {
@@ -169,6 +183,9 @@ public sealed record ModelLaunchSettings(
         ContextCheckpointsMode = ContextCheckpointsMode,
         ContextCheckpointCount = ContextCheckpointCount,
         ContextCheckpointEveryNTokens = ContextCheckpointEveryNTokens,
-        CustomParameters = CustomParameters ?? ""
+        CustomParameters = CustomParameters ?? "",
+        GpuMode = GpuMode ?? AppSettings.DefaultGpuMode,
+        GpuDevices = GpuDevices ?? "",
+        GpuSplit = GpuSplit ?? ""
     };
 }

@@ -4,8 +4,9 @@ namespace LocalLlmConsole;
 
 public sealed record ModelsPageRowActionControllerActions(
     Func<object, ModelRecord?> ModelFromRowButton,
+    Func<object, ModelGridRow?> ModelRowFromButton,
     Func<ModelFolderApplicationActions> ModelFolderActions,
-    Func<ModelRecord, Task> DeleteModelAsync,
+    Func<ModelGridRow, Task> DeleteModelRowAsync,
     Func<HuggingFaceFile, Task> StartHuggingFaceDownloadAsync,
     Func<HuggingFaceModelCardApplicationActions> ModelCardActions,
     Func<Func<Task>, Task> RunEventAsync);
@@ -33,8 +34,8 @@ public sealed class ModelsPageRowActionController
     {
         await _actions.RunEventAsync(async () =>
         {
-            var model = _actions.ModelFromRowButton(sender);
-            if (model is not null) await _actions.DeleteModelAsync(model);
+            var row = _actions.ModelRowFromButton(sender);
+            if (row is not null) await _actions.DeleteModelRowAsync(row);
         });
     }
 

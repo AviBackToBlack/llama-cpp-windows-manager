@@ -126,7 +126,6 @@ Get-ChildItem -Path $PublishDir -Recurse -Filter *.pdb -File -ErrorAction Silent
   Remove-Item -Force
 
 $Exe = Join-Path $PublishDir "LlamaCppWindowsManager.exe"
-$LegacyExe = Join-Path $PublishDir "LlamaCppConsole.exe"
 if ($CertificateThumbprint) {
   $Cert = Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My -ErrorAction SilentlyContinue |
     Where-Object { $_.Thumbprint -replace '\s', '' -ieq ($CertificateThumbprint -replace '\s', '') } |
@@ -144,14 +143,9 @@ if ($PublishedSignature.Status -ne "Valid") {
   Write-Warning "Published executable is not signed. Use -CertificateThumbprint and -RequireSigned for public release builds."
 }
 
-Copy-Item -LiteralPath $Exe -Destination $LegacyExe -Force
-
 $ExeHash = (Get-FileHash -LiteralPath $Exe -Algorithm SHA256).Hash.ToLowerInvariant()
 $ExeHashPath = "$Exe.sha256"
 Set-Content -LiteralPath $ExeHashPath -Value "$ExeHash  $(Split-Path -Leaf $Exe)" -Encoding ascii
-
-$LegacyExeHashPath = "$LegacyExe.sha256"
-Set-Content -LiteralPath $LegacyExeHashPath -Value "$ExeHash  $(Split-Path -Leaf $LegacyExe)" -Encoding ascii
 
 $ZipPath = Join-Path $DistRoot "LlamaCppWindowsManager-$Runtime.zip"
 if (Test-Path -LiteralPath $ZipPath) {

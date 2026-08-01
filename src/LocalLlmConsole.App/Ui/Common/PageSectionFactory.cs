@@ -24,6 +24,7 @@ public static class PageSectionFactory
     {
         grid.BorderThickness = new Thickness(0);
         grid.Margin = new Thickness(0);
+        grid.FontSize = 12.5;
         ScrollViewer.SetHorizontalScrollBarVisibility(grid, ScrollBarVisibility.Auto);
         ScrollViewer.SetVerticalScrollBarVisibility(grid, ScrollBarVisibility.Auto);
     }
@@ -38,40 +39,26 @@ public static class PageSectionFactory
         return new DataTemplate { VisualTree = factory };
     }
 
-    public static Border GridFrame(DataGrid grid) => new()
+    public static Border GridFrame(DataGrid grid)
     {
-        Background = (WpfBrush)WpfApplication.Current.Resources["InputBack"],
-        BorderBrush = (WpfBrush)WpfApplication.Current.Resources["PanelBorder"],
-        BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(6),
-        Margin = new Thickness(0, 6, 0, 6),
-        Child = grid
-    };
+        var frame = new Border
+        {
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Margin = new Thickness(0, 7, 0, 8),
+            Child = grid
+        };
+        frame.SetResourceReference(Border.BackgroundProperty, "SurfaceRaised");
+        frame.SetResourceReference(Border.BorderBrushProperty, "PanelBorderStrong");
+        return frame;
+    }
 
     public static Grid GridSection(string title, DataGrid grid, string description = "")
     {
         var section = new Grid { Margin = new Thickness(0, 0, 0, 6) };
         section.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         section.RowDefinitions.Add(new RowDefinition());
-        var header = new StackPanel { Margin = new Thickness(2, 0, 0, 4) };
-        header.Children.Add(new TextBlock
-        {
-            Text = title,
-            FontSize = 14,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextSoft"],
-            Margin = new Thickness(0, 0, 0, string.IsNullOrWhiteSpace(description) ? 0 : 2)
-        });
-        if (!string.IsNullOrWhiteSpace(description))
-        {
-            header.Children.Add(new TextBlock
-            {
-                Text = description,
-                FontSize = 12,
-                Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
-                TextWrapping = TextWrapping.Wrap
-            });
-        }
+        var header = SectionHeader(title, description);
 
         section.Children.Add(header);
         var frame = GridFrame(grid);
@@ -80,28 +67,62 @@ public static class PageSectionFactory
         return section;
     }
 
+    private static Grid SectionHeader(string title, string description = "")
+    {
+        var header = new Grid { Margin = new Thickness(1, 1, 0, 3) };
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        header.ColumnDefinitions.Add(new ColumnDefinition());
+        var marker = new Border
+        {
+            Width = 4,
+            MinHeight = 26,
+            CornerRadius = new CornerRadius(2),
+            Margin = new Thickness(0, 1, 9, 1)
+        };
+        marker.SetResourceReference(Border.BackgroundProperty, "AccentStrong");
+        header.Children.Add(marker);
+        var copy = new StackPanel();
+        var titleBlock = new TextBlock
+        {
+            Text = title,
+            FontSize = 14.5,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, string.IsNullOrWhiteSpace(description) ? 0 : 3)
+        };
+        titleBlock.SetResourceReference(TextBlock.ForegroundProperty, "TextMain");
+        copy.Children.Add(titleBlock);
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            var descriptionBlock = new TextBlock
+            {
+                Text = description,
+                FontSize = 12.5,
+                TextWrapping = TextWrapping.Wrap
+            };
+            descriptionBlock.SetResourceReference(TextBlock.ForegroundProperty, "TextMuted");
+            copy.Children.Add(descriptionBlock);
+        }
+        Grid.SetColumn(copy, 1);
+        header.Children.Add(copy);
+        return header;
+    }
+
     public static Grid FramedSection(string title, UIElement child)
     {
         var section = new Grid { Margin = new Thickness(0, 0, 0, 6) };
         section.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         section.RowDefinitions.Add(new RowDefinition());
-        section.Children.Add(new TextBlock
-        {
-            Text = title,
-            FontSize = 14,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextSoft"],
-            Margin = new Thickness(2, 0, 0, 4)
-        });
+        section.Children.Add(SectionHeader(title));
         var frame = new Border
         {
-            Background = (WpfBrush)WpfApplication.Current.Resources["InputBack"],
-            BorderBrush = (WpfBrush)WpfApplication.Current.Resources["PanelBorder"],
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
-            Margin = new Thickness(0, 6, 0, 6),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(2),
+            Margin = new Thickness(0, 7, 0, 8),
             Child = child
         };
+        frame.SetResourceReference(Border.BackgroundProperty, "SurfaceRaised");
+        frame.SetResourceReference(Border.BorderBrushProperty, "PanelBorderStrong");
         Grid.SetRow(frame, 1);
         section.Children.Add(frame);
         return section;
@@ -111,14 +132,14 @@ public static class PageSectionFactory
     {
         var splitter = new GridSplitter
         {
-            Height = 8,
+            Height = 7,
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             ResizeDirection = GridResizeDirection.Rows,
             ResizeBehavior = GridResizeBehavior.PreviousAndNext,
             ShowsPreview = false,
-            Background = (WpfBrush)WpfApplication.Current.Resources["PanelBorder"],
-            Margin = new Thickness(0, 2, 0, 2)
+            Background = (WpfBrush)WpfApplication.Current.Resources["PanelBorderStrong"],
+            Margin = new Thickness(0, 3, 0, 3)
         };
         Grid.SetRow(splitter, row);
         return splitter;
@@ -128,13 +149,13 @@ public static class PageSectionFactory
     {
         var splitter = new GridSplitter
         {
-            Width = 8,
+            Width = 7,
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             ResizeDirection = GridResizeDirection.Columns,
             ResizeBehavior = GridResizeBehavior.PreviousAndNext,
             ShowsPreview = false,
-            Background = (WpfBrush)WpfApplication.Current.Resources["PanelBorder"],
+            Background = (WpfBrush)WpfApplication.Current.Resources["PanelBorderStrong"],
             Margin = new Thickness(2, 6, 2, 6)
         };
         Grid.SetColumn(splitter, column);
@@ -172,17 +193,20 @@ public static class PageSectionFactory
             ? new Style(typeof(DataGridRow))
             : new Style(typeof(DataGridRow), baseStyle);
 
-        var statusForeground = SolidBrush("#F2F5F8");
-        var statuses = new (string Status, string Background)[]
+        var statusForeground = (WpfBrush)WpfApplication.Current.Resources["TextMain"];
+        var statuses = new (string Status, string BackgroundResource)[]
         {
-            ("Queued", "#173126"),
-            ("Running", "#1E3F30"),
-            ("Failed", "#472329"),
-            ("Cancelled", "#3A2428"),
-            ("Interrupted", "#3A2428")
+            ("Queued", "StatusQueued"),
+            ("Running", "StatusRunning"),
+            ("Failed", "StatusFailed"),
+            ("Cancelled", "StatusCancelled"),
+            ("Interrupted", "StatusCancelled")
         };
-        foreach (var (status, background) in statuses)
-            style.Triggers.Add(RuntimeJobStatusTrigger(status, background, statusForeground));
+        foreach (var (status, backgroundResource) in statuses)
+            style.Triggers.Add(RuntimeJobStatusTrigger(
+                status,
+                (WpfBrush)WpfApplication.Current.Resources[backgroundResource],
+                statusForeground));
         grid.RowStyle = style;
 
         var textStyle = new Style(typeof(TextBlock), (Style)WpfApplication.Current.Resources["GridCellText"]);
@@ -204,12 +228,15 @@ public static class PageSectionFactory
         RoutedEventHandler click,
         double weight,
         string tooltipBinding = "",
-        Func<string, string>? tooltipProvider = null)
+        Func<string, string>? tooltipProvider = null,
+        string visualRole = "")
     {
         var factory = new FrameworkElementFactory(typeof(WpfButton));
         factory.SetBinding(ContentControl.ContentProperty, new WpfBinding(contentBinding));
         factory.SetBinding(UIElement.IsEnabledProperty, new WpfBinding(enabledBinding));
         factory.SetBinding(FrameworkElement.TagProperty, new WpfBinding("."));
+        if (!string.IsNullOrWhiteSpace(visualRole))
+            factory.SetValue(VisualRole.ButtonRoleProperty, visualRole);
         if (!string.IsNullOrWhiteSpace(tooltipBinding))
         {
             factory.SetBinding(FrameworkElement.ToolTipProperty, new WpfBinding(tooltipBinding));
@@ -242,20 +269,11 @@ public static class PageSectionFactory
         });
     }
 
-    private static DataTrigger RuntimeJobStatusTrigger(string status, string backgroundHex, WpfBrush foreground)
+    private static DataTrigger RuntimeJobStatusTrigger(string status, WpfBrush background, WpfBrush foreground)
     {
-        var brush = SolidBrush(backgroundHex);
-
         var trigger = new DataTrigger { Binding = new WpfBinding("C1"), Value = status };
-        trigger.Setters.Add(new Setter(WpfControl.BackgroundProperty, brush));
+        trigger.Setters.Add(new Setter(WpfControl.BackgroundProperty, background));
         trigger.Setters.Add(new Setter(WpfControl.ForegroundProperty, foreground));
         return trigger;
-    }
-
-    private static SolidColorBrush SolidBrush(string color)
-    {
-        var brush = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color)!);
-        brush.Freeze();
-        return brush;
     }
 }

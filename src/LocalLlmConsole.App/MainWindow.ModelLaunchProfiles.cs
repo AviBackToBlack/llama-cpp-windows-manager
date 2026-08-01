@@ -20,11 +20,26 @@ public partial class MainWindow
         return launchProfiles is null ? null : await launchProfiles.ReadAsync(model);
     }
 
-    private async Task<ModelLaunchSettings> DraftModelLaunchProfileAsync(ModelRecord model)
+    private async Task<NamedModelLaunchProfile> EnsureDefaultModelLaunchProfileAsync(ModelRecord model)
     {
         var launchProfiles = ModelServices.LaunchProfiles;
         Require(launchProfiles);
-        return await launchProfiles!.DraftAsync(model, _settings);
+        return await launchProfiles!.EnsureDefaultAsync(model, _settings);
+    }
+
+    private async Task<IReadOnlyList<NamedModelLaunchProfile>> EnsureDefaultModelLaunchProfilesAsync(
+        IReadOnlyList<ModelRecord> models)
+    {
+        var launchProfiles = ModelServices.LaunchProfiles;
+        Require(launchProfiles);
+        return await launchProfiles!.EnsureDefaultsAsync(models, _settings);
+    }
+
+    private async Task<ModelLaunchSettings> DraftModelLaunchProfileAsync(ModelRecord model, string profileId = "")
+    {
+        var launchProfiles = ModelServices.LaunchProfiles;
+        Require(launchProfiles);
+        return await launchProfiles!.DraftAsync(model, _settings, profileId);
     }
 
     private async Task<ModelLaunchSettings?> EnsureModelLaunchProfileAsync(ModelRecord model)

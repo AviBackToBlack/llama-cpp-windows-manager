@@ -9,9 +9,10 @@ public static class LaunchSettingMetadataService
     public static readonly IReadOnlyList<string> OnOffOptions = ["on", "off"];
     public static readonly IReadOnlyList<string> OffOnOptions = ["off", "on"];
     public static readonly IReadOnlyList<string> CacheTypeOptions = ["f16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "f32", "bf16"];
-    public static readonly IReadOnlyList<string> SpeculativeTypeOptions = ["none", AtomicMtpSpeculativeType, "draft-mtp", "draft-simple", "draft-eagle3", "ngram-simple", "ngram-map-k", "ngram-map-k4v", "ngram-mod", "ngram-cache"];
+    public static readonly IReadOnlyList<string> SpeculativeTypeOptions = ["none", AtomicMtpSpeculativeType, "draft-mtp", "draft-simple", "draft-eagle3", "draft-dflash", "draft-dspark", "ngram-simple", "ngram-map-k", "ngram-map-k4v", "ngram-mod", "ngram-cache"];
     public static readonly IReadOnlyList<string> ReasoningFormatOptions = ["auto", "none", "deepseek", "deepseek-legacy"];
     public static readonly IReadOnlyList<string> RopeScalingOptions = ["auto", "none", "linear", "yarn"];
+    public static readonly IReadOnlyList<string> GpuModeOptions = ["auto", "single", "layer", "row", "tensor"];
 
     public static string NormalizeSpeculativeType(string value)
     {
@@ -29,6 +30,81 @@ public static class LaunchSettingMetadataService
     public static string LlamaSpeculativeTypeArgument(string value)
         => IsAtomicMtpSpeculativeType(value) ? "mtp" : NormalizeSpeculativeType(value);
 
+    public static string NormalizeGpuMode(string value)
+    {
+        var normalized = (value ?? "").Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "" => AppSettings.DefaultGpuMode,
+            "none" => "single",
+            _ => normalized
+        };
+    }
+
+    public static string LlamaSplitModeArgument(string value)
+        => NormalizeGpuMode(value) == "single" ? "none" : NormalizeGpuMode(value);
+
+    public static IReadOnlyList<string> ValidateGpuSettings(string mode, string devices, string split)
+    {
+        var errors = new List<string>();
+        var normalizedMode = NormalizeGpuMode(mode);
+        if (!GpuModeOptions.Contains(normalizedMode, StringComparer.OrdinalIgnoreCase))
+            errors.Add($"GPU mode must be one of: {string.Join(", ", GpuModeOptions)}.");
+
+        var deviceItems = CsvItems(devices, "GPU devices", errors);
+        var splitItems = CsvItems(split, "GPU split", errors);
+        if (deviceItems.Count > 128)
+            errors.Add("GPU devices cannot contain more than 128 entries.");
+        if (splitItems.Count > 128)
+            errors.Add("GPU split cannot contain more than 128 entries.");
+
+        foreach (var device in deviceItems)
+        {
+            if (device.Any(char.IsWhiteSpace) || device.StartsWith('-') || device.Any(char.IsControl))
+            {
+                errors.Add($"GPU device '{device}' is invalid. Use llama.cpp device IDs such as CUDA0 or Vulkan0.");
+                break;
+            }
+        }
+
+        var hasPositiveSplit = false;
+        foreach (var item in splitItems)
+        {
+            if (!double.TryParse(item, NumberStyles.Float, CultureInfo.InvariantCulture, out var proportion)
+                || !double.IsFinite(proportion)
+                || proportion < 0)
+            {
+                errors.Add($"GPU split value '{item}' must be a non-negative number.");
+                continue;
+            }
+            hasPositiveSplit |= proportion > 0;
+        }
+
+        if (splitItems.Count > 0 && !hasPositiveSplit)
+            errors.Add("GPU split must assign a positive proportion to at least one GPU.");
+        if (deviceItems.Count > 0 && splitItems.Count > 0 && deviceItems.Count != splitItems.Count)
+            errors.Add("GPU devices and GPU split must contain the same number of entries.");
+        if (normalizedMode == "single" && deviceItems.Count > 1)
+            errors.Add("Single GPU mode accepts at most one GPU device.");
+        if (normalizedMode == "single" && splitItems.Count > 0)
+            errors.Add("GPU split must be empty in single GPU mode.");
+
+        return errors;
+    }
+
+    public static string NormalizeGpuCsv(string value)
+        => string.Join(',', (value ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
+    private static IReadOnlyList<string> CsvItems(string value, string label, List<string> errors)
+    {
+        var text = (value ?? "").Trim();
+        if (text.Length == 0) return [];
+        var items = text.Split(',', StringSplitOptions.TrimEntries);
+        if (items.Any(string.IsNullOrWhiteSpace))
+            errors.Add($"{label} cannot contain empty entries.");
+        return items.Where(item => !string.IsNullOrWhiteSpace(item)).ToArray();
+    }
+
     public static string Tooltip(string label) => label switch
     {
         "Context size" => Loc.T("Tooltip.Field.ContextSize"),
@@ -37,6 +113,9 @@ public static class LaunchSettingMetadataService
         "Micro batch" => Loc.T("Tooltip.Field.MicroBatch"),
         "Threads" => Loc.T("Tooltip.Field.Threads"),
         "GPU layers" => Loc.T("Tooltip.Field.GpuLayers"),
+        "GPU mode" => Loc.T("Tooltip.Field.GpuMode"),
+        "GPU devices" => Loc.T("Tooltip.Field.GpuDevices"),
+        "GPU split" => Loc.T("Tooltip.Field.GpuSplit"),
         "Reasoning" => Loc.T("Tooltip.Field.Reasoning"),
         "Reason format" => Loc.T("Tooltip.Field.ReasonFormat"),
         "Reason budget" => Loc.T("Tooltip.Field.ReasonBudget"),

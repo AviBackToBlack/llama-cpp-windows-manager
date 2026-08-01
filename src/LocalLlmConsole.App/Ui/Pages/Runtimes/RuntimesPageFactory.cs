@@ -180,8 +180,8 @@ public static class RuntimesPageFactory
         grid.RowDetailsVisibilityMode = DataGridRowDetailsVisibilityMode.VisibleWhenSelected;
         grid.RowDetailsTemplate = PageSectionFactory.RowDetailsTemplate(nameof(RuntimeCatalogRow.Details));
         grid.PreviewMouseLeftButtonDown += request.Actions.RuntimeGridPreviewMouseLeftButtonDown;
-        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Build"), nameof(RuntimeCatalogRow.BuildAction), nameof(RuntimeCatalogRow.CanBuild), request.Actions.BuildRuntimeRowClick, .65, tooltipBinding: nameof(RuntimeCatalogRow.BuildToolTip));
-        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.ActionButton"), nameof(RuntimeCatalogRow.DeleteAction), nameof(RuntimeCatalogRow.CanDelete), request.Actions.DeleteRuntimeRowClick, .65, tooltipBinding: nameof(RuntimeCatalogRow.DeleteToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Build"), nameof(RuntimeCatalogRow.BuildAction), nameof(RuntimeCatalogRow.CanBuild), request.Actions.BuildRuntimeRowClick, .65, tooltipBinding: nameof(RuntimeCatalogRow.BuildToolTip), visualRole: VisualRole.Primary);
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.ActionButton"), nameof(RuntimeCatalogRow.DeleteAction), nameof(RuntimeCatalogRow.CanDelete), request.Actions.DeleteRuntimeRowClick, .65, tooltipBinding: nameof(RuntimeCatalogRow.DeleteToolTip), visualRole: VisualRole.Danger);
         PageSectionFactory.ApplyGridTextMargin(grid, new Thickness(6, 0, 6, 0));
         request.Actions.ConfigureRuntimeGridColumnSizing(grid);
         grid.ItemsSource = request.ViewModel.Runtimes.Rows;
@@ -196,9 +196,9 @@ public static class RuntimesPageFactory
             (Loc.T("Runtimes.Col.Local"), nameof(RuntimePackagePresetRow.LocalStatus), .78),
             (Loc.T("Runtimes.Col.LatestRelease"), nameof(RuntimePackagePresetRow.LatestRelease), 1.2),
             (Loc.T("Runtimes.Col.Assets"), nameof(RuntimePackagePresetRow.Assets), 2.35));
-        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Install"), nameof(RuntimePackagePresetRow.InstallAction), nameof(RuntimePackagePresetRow.CanInstall), request.Actions.InstallRuntimePackageRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.InstallToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Install"), nameof(RuntimePackagePresetRow.InstallAction), nameof(RuntimePackagePresetRow.CanInstall), request.Actions.InstallRuntimePackageRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.InstallToolTip), visualRole: VisualRole.Primary);
         PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Update"), nameof(RuntimePackagePresetRow.CheckAction), nameof(RuntimePackagePresetRow.CanCheck), request.Actions.CheckRuntimePackageUpdateRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.CheckToolTip));
-        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.DeleteButton"), nameof(RuntimePackagePresetRow.DeleteAction), nameof(RuntimePackagePresetRow.CanDelete), request.Actions.DeleteRuntimePackageRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.DeleteToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.DeleteButton"), nameof(RuntimePackagePresetRow.DeleteAction), nameof(RuntimePackagePresetRow.CanDelete), request.Actions.DeleteRuntimePackageRowClick, .75, tooltipBinding: nameof(RuntimePackagePresetRow.DeleteToolTip), visualRole: VisualRole.Danger);
         PageSectionFactory.ApplyGridTextMargin(grid, new Thickness(6, 0, 6, 0));
         request.Actions.ConfigureRuntimeBuildGridColumnSizing(grid);
         grid.ItemsSource = request.ViewModel.RuntimePackages.Rows;
@@ -214,9 +214,9 @@ public static class RuntimesPageFactory
             (Loc.T("Runtimes.Col.LatestLocal"), nameof(RuntimeBuildPresetRow.LatestLocal), 1.2),
             (Loc.T("Runtimes.Col.Source"), nameof(RuntimeBuildPresetRow.Source), 2.3));
         grid.IsReadOnly = false;
-        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Download"), nameof(RuntimeBuildPresetRow.DownloadAction), nameof(RuntimeBuildPresetRow.CanDownload), request.Actions.DownloadRuntimePresetRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.DownloadToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Download"), nameof(RuntimeBuildPresetRow.DownloadAction), nameof(RuntimeBuildPresetRow.CanDownload), request.Actions.DownloadRuntimePresetRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.DownloadToolTip), visualRole: VisualRole.Primary);
         PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Update"), nameof(RuntimeBuildPresetRow.CheckAction), nameof(RuntimeBuildPresetRow.CanCheck), request.Actions.CheckRuntimePresetUpdateRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.CheckToolTip));
-        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.DeleteButton"), nameof(RuntimeBuildPresetRow.DeleteAction), nameof(RuntimeBuildPresetRow.CanDelete), request.Actions.DeleteRuntimePresetRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.DeleteToolTip));
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.DeleteButton"), nameof(RuntimeBuildPresetRow.DeleteAction), nameof(RuntimeBuildPresetRow.CanDelete), request.Actions.DeleteRuntimePresetRowClick, .75, tooltipBinding: nameof(RuntimeBuildPresetRow.DeleteToolTip), visualRole: VisualRole.Danger);
         PageSectionFactory.ApplyGridTextMargin(grid, new Thickness(6, 0, 6, 0));
         request.Actions.ConfigureRuntimeBuildGridColumnSizing(grid);
         grid.ItemsSource = request.ViewModel.RuntimeBuilds.Rows;
@@ -231,9 +231,9 @@ public static class RuntimesPageFactory
             (Loc.T("Runtimes.Col.Updated"), "C4", 1.1),
             (Loc.T("Runtimes.Col.Payload"), "C5", 3.2));
         PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.LogButton"), "C6", "B1", request.Actions.OpenRuntimeJobLogRowClick, .55, tooltipBinding: "T1");
-        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Cancel"), "C7", "B2", request.Actions.CancelRuntimeJobRowClick, .7, tooltipBinding: "T2");
-        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Retry"), "C8", "B3", request.Actions.RetryRuntimeJobRowClick, .65, tooltipBinding: "T3");
-        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.ClearButton"), "C9", "B4", request.Actions.ClearRuntimeJobRowClick, .65, tooltipBinding: "T4");
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Cancel"), "C7", "B2", request.Actions.CancelRuntimeJobRowClick, .7, tooltipBinding: "T2", visualRole: VisualRole.Danger);
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Runtimes.ActionBtn.Retry"), "C8", "B3", request.Actions.RetryRuntimeJobRowClick, .65, tooltipBinding: "T3", visualRole: VisualRole.Primary);
+        PageSectionFactory.AddButtonColumn(grid, Loc.T("Common.ClearButton"), "C9", "B4", request.Actions.ClearRuntimeJobRowClick, .65, tooltipBinding: "T4", visualRole: VisualRole.Danger);
         PageSectionFactory.ApplyRuntimeJobsRowStyle(grid);
         request.Actions.ConfigureRuntimeJobsGridColumnSizing(grid);
         grid.ItemsSource = request.ViewModel.Jobs.RuntimeRows;

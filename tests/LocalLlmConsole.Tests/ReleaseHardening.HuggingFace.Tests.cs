@@ -40,6 +40,40 @@ public sealed partial class ReleaseHardeningTests
     }
 
     [Fact]
+    public void ModelCatalogFindsAdjacentDFlashHead()
+    {
+        var root = CreateTempRoot();
+        var models = Path.Combine(root, "models");
+        Directory.CreateDirectory(models);
+        var main = Path.Combine(models, "Qwen3.6-27B-Q4_K_M.gguf");
+        var dflash = Path.Combine(models, "Qwen3.6-27B-DFlash-b16-Q4_K_M.gguf");
+        File.WriteAllText(main, "main");
+        File.WriteAllText(dflash, "dflash");
+
+        var found = ModelCatalogService.FindDraftModel(main);
+
+        Assert.Equal(Path.GetFullPath(dflash), Path.GetFullPath(found!));
+    }
+
+    [Fact]
+    public void ModelCatalogFindsAndPrefersAdjacentDSparkHead()
+    {
+        var root = CreateTempRoot();
+        var models = Path.Combine(root, "models");
+        Directory.CreateDirectory(models);
+        var main = Path.Combine(models, "Qwen3-8B-Q4_K_M.gguf");
+        var dflash = Path.Combine(models, "Qwen3-8B-DFlash-b16.gguf");
+        var dspark = Path.Combine(models, "Qwen3-8B-DSpark.gguf");
+        File.WriteAllText(main, "main");
+        File.WriteAllText(dflash, "dflash");
+        File.WriteAllText(dspark, "dspark");
+
+        var found = ModelCatalogService.FindDraftModel(main);
+
+        Assert.Equal(Path.GetFullPath(dspark), Path.GetFullPath(found!));
+    }
+
+    [Fact]
     public async Task ModelCatalogTreatsVisionHeadCompanionsAsProjectorsNotMainModels()
     {
         var root = CreateTempRoot();
@@ -614,7 +648,14 @@ public sealed partial class ReleaseHardeningTests
         var catalog = new ModelCatalogService(store);
         var appOwned = new ModelRecord("app-owned-model", "App Model", modelPath, OwnershipKind.AppOwned, "{}", DateTimeOffset.UtcNow);
         await store.UpsertModelAsync(appOwned);
-        var alias = await catalog.CreateLaunchAliasAsync(appOwned, "App Model 32K");
+        var alias = new ModelRecord(
+            "legacy-alias",
+            "App Model 32K",
+            appOwned.ModelPath,
+            OwnershipKind.RegistryOnly,
+            ModelAliasService.CreateMetadata(appOwned, [appOwned]),
+            DateTimeOffset.UtcNow);
+        await store.UpsertModelAsync(alias);
         await store.SaveModelLaunchSettingsAsync(alias.Id, ModelLaunchSettings.FromAppSettings(AppSettings.CreateDefault(root) with { Port = 8097 }));
 
         await catalog.ScanAsync(modelsRoot);
@@ -676,10 +717,23 @@ public sealed partial class ReleaseHardeningTests
         await store.UpsertModelAsync(external);
         await store.UpsertModelAsync(appOwned);
 
-        var result = await refresh.RefreshAsync(new ModelCatalogRefreshApplicationActions(model =>
+        var result = await refresh.RefreshAsync(new ModelCatalogRefreshApplicationActions(async models =>
         {
-            readIds.Add(model.Id);
-            return Task.FromResult<ModelLaunchSettings?>(model.Id == appOwned.Id ? profile : null);
+            var created = new List<NamedModelLaunchProfile>();
+            foreach (var model in models)
+            {
+                readIds.Add(model.Id);
+                var named = new NamedModelLaunchProfile(
+                    $"default:{model.Id}",
+                    model.Id,
+                    "Default",
+                    profile,
+                    DateTimeOffset.UtcNow,
+                    IsDefault: true);
+                await store.SaveNamedModelLaunchProfileAsync(named);
+                created.Add(named);
+            }
+            return created;
         }), TestContext.Current.CancellationToken);
 
         var model = Assert.Single(result.Models);

@@ -73,6 +73,7 @@ public partial class MainWindow
             MarkLoadedSessionsIfReadyAsync,
             RefreshOverviewSessionRows,
             () => _sessions.Snapshots(),
+            ApplyRuntimeEndpointHealthAsync,
             TrackLifetimeTokenDeltasAsync,
             ApplyIdleUnloadPoliciesAsync,
             SelectedOverviewModel,
@@ -93,4 +94,28 @@ public partial class MainWindow
             RenderStoppedSelectedOverviewModelAsync,
             RuntimeDashboardMetricsActions(),
             UpdateOverviewModelActions);
+
+    private async Task ApplyRuntimeEndpointHealthAsync(IReadOnlyList<RuntimeMetricPollResult> pollResults)
+    {
+        var transitions = _sessions.ApplyEndpointHealth(pollResults);
+        foreach (var transition in transitions)
+        {
+            Trace.TraceInformation(
+                $"Runtime endpoint health changed for {transition.ModelName} ({transition.SessionId}): " +
+                $"{transition.Previous} -> {transition.Current}. {transition.Reason}");
+            await RecordRuntimeLifecycleAsync(
+                "endpoint-health",
+                transition.SessionId,
+                transition.ModelId,
+                transition.ModelName,
+                new
+                {
+                    previous = transition.Previous.ToString(),
+                    current = transition.Current.ToString(),
+                    transition.Reason
+                });
+        }
+        if (transitions.Count > 0)
+            RefreshOverviewSessionRows();
+    }
 }

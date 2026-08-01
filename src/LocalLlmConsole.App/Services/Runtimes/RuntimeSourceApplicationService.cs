@@ -83,10 +83,13 @@ public sealed class RuntimeSourceApplicationService
             await actions.YieldUiAsync();
         }
 
+        var sourcesTask = _catalogData.LoadSourcesAsync(settings.RuntimeRoot);
+        var runtimesTask = _stateStore.ListRuntimesAsync();
+        await Task.WhenAll(sourcesTask, runtimesTask);
         var local = RuntimeSourceRepositoryService.LatestLocalVersion(
             preset,
-            _catalogData.Sources(settings.RuntimeRoot),
-            await _stateStore.ListRuntimesAsync());
+            await sourcesTask,
+            await runtimesTask);
         if (string.IsNullOrWhiteSpace(local.Commit))
         {
             ApplyUnknownLocalVersion(row);
@@ -132,11 +135,16 @@ public sealed class RuntimeSourceApplicationService
         RuntimeBuildPreset preset,
         AppSettings settings,
         RuntimeCatalogSessionState sessionState)
-        => RuntimeCatalogDataService.BuildPresetLocalState(
+    {
+        var sourcesTask = _catalogData.LoadSourcesAsync(settings.RuntimeRoot);
+        var runtimesTask = _stateStore.ListRuntimesAsync();
+        await Task.WhenAll(sourcesTask, runtimesTask);
+        return RuntimeCatalogDataService.BuildPresetLocalState(
             preset,
-            await _stateStore.ListRuntimesAsync(),
-            _catalogData.Sources(settings.RuntimeRoot),
+            await runtimesTask,
+            await sourcesTask,
             sessionState.RuntimeUpdateStates);
+    }
 
     private async Task ApplyCheckResultAsync(
         RuntimeBuildPreset preset,

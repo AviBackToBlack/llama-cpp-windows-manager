@@ -60,9 +60,8 @@ public sealed partial class AppServiceFactory
         => new(stateStore, sessions);
 
     public ModelLaunchVariantWorkflowService CreateModelLaunchVariantWorkflowService(
-        ModelCatalogService catalog,
         ModelLaunchProfileService launchProfiles)
-        => new(catalog, launchProfiles);
+        => new(launchProfiles);
 
     public ModelLaunchSettingsWorkflowService CreateModelLaunchSettingsWorkflowService(
         ModelLaunchProfileService launchProfiles)

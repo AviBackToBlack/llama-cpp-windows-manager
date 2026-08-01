@@ -25,6 +25,7 @@ public partial class MainWindow : Window
         ApplyLocalizedXamlStrings();
         _serviceFactory = new AppServiceFactory(_workspaceRoot);
         _infrastructureServices = _serviceFactory.CreateMainWindowInfrastructureServices();
+        _runtimeLaunchOptionDiscovery = _serviceFactory.CreateRuntimeLaunchOptionDiscoveryService(_infrastructureServices.ProcessRunner);
         _sessions = _infrastructureServices.Sessions;
         _settings = AppSettings.CreateDefault(_workspaceRoot);
         _coreServices = _serviceFactory.CreateMainWindowCoreServices(_infrastructureServices.CoreServiceRequest());

@@ -6,6 +6,8 @@ public sealed class LaunchSettingsEditorSession
 
     public string ModelId { get; private set; } = "";
 
+    public string ProfileId { get; private set; } = "";
+
     public ModelLaunchSettings? SavedProfile { get; private set; }
 
     public bool HasSavedProfile { get; private set; }
@@ -15,6 +17,7 @@ public sealed class LaunchSettingsEditorSession
     public void Clear()
     {
         ModelId = "";
+        ProfileId = "";
         SavedProfile = null;
         HasSavedProfile = false;
     }
@@ -23,23 +26,26 @@ public sealed class LaunchSettingsEditorSession
     {
         ArgumentNullException.ThrowIfNull(viewState);
         ModelId = viewState.ModelId;
+        ProfileId = viewState.ProfileId;
         SavedProfile = viewState.SavedProfile;
         HasSavedProfile = viewState.HasSavedProfile;
     }
 
-    public void MarkSaved(string modelId, ModelLaunchSettings savedProfile)
+    public void MarkSaved(string modelId, string profileId, ModelLaunchSettings savedProfile)
     {
         ModelId = modelId ?? "";
+        ProfileId = profileId ?? "";
         SavedProfile = savedProfile ?? throw new ArgumentNullException(nameof(savedProfile));
         HasSavedProfile = true;
     }
 
-    public bool IsLoadedFor(string modelId)
-        => string.Equals(ModelId, modelId, StringComparison.OrdinalIgnoreCase);
+    public bool IsLoadedFor(string modelId, string profileId = "")
+        => string.Equals(ModelId, modelId, StringComparison.OrdinalIgnoreCase)
+           && string.Equals(ProfileId, profileId ?? "", StringComparison.OrdinalIgnoreCase);
 
-    public bool TryChangeSaveAsNewSource(ModelRecord? model)
+    public bool TryChangeSaveAsNewSource(ModelRecord? model, string profileId = "")
     {
-        var nextSourceModelId = model?.Id ?? "";
+        var nextSourceModelId = $"{model?.Id ?? ""}|{profileId ?? ""}";
         if (string.Equals(_saveAsNewSourceId, nextSourceModelId, StringComparison.OrdinalIgnoreCase))
             return false;
 

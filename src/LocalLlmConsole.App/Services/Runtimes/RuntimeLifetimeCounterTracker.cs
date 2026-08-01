@@ -12,6 +12,9 @@ public sealed class RuntimeLifetimeCounterTracker
     {
         public double? PromptCounter;
         public double? GeneratedCounter;
+        public bool SlotsInitialized;
+        public bool UsingSlotFallback;
+        public Dictionary<string, SlotCounterState> Slots { get; } = new(StringComparer.Ordinal);
     }
 
     private readonly Dictionary<string, CounterState> _states = new(StringComparer.Ordinal);
@@ -29,23 +32,60 @@ public sealed class RuntimeLifetimeCounterTracker
         if (string.IsNullOrWhiteSpace(runtimeKey) || string.IsNullOrWhiteSpace(modelId))
             return TokenUsageDelta.Empty;
 
-        var observedGenerated = RuntimeDashboardService.MaxNullable(generatedCounter, slotSnapshot?.GeneratedTokens);
-        var observedPrompt = RuntimeDashboardService.MaxNullable(promptCounter, slotSnapshot?.PromptTokensProcessed);
-        if (observedGenerated is null && observedPrompt is null)
+        if (generatedCounter is null && promptCounter is null && slotSnapshot is null)
             return TokenUsageDelta.Empty;
 
         if (!_states.TryGetValue(runtimeKey, out var state))
         {
-            _states[runtimeKey] = new CounterState
+            state = new CounterState();
+            _states[runtimeKey] = state;
+            if (generatedCounter is not null || promptCounter is not null)
             {
-                GeneratedCounter = observedGenerated,
-                PromptCounter = observedPrompt
-            };
+                state.GeneratedCounter = generatedCounter;
+                state.PromptCounter = promptCounter;
+            }
+            else if (slotSnapshot is not null)
+            {
+                RememberSlots(state, SlotCounters(slotSnapshot));
+                state.SlotsInitialized = true;
+                state.UsingSlotFallback = true;
+            }
             return TokenUsageDelta.Empty;
         }
 
-        var generatedDelta = RuntimeDashboardService.WholePositiveDeltaAndRemember(observedGenerated, ref state.GeneratedCounter);
-        var promptDelta = RuntimeDashboardService.WholePositiveDeltaAndRemember(observedPrompt, ref state.PromptCounter);
+        long generatedDelta;
+        long promptDelta;
+        if (generatedCounter is not null || promptCounter is not null)
+        {
+            if (state.UsingSlotFallback)
+            {
+                state.GeneratedCounter = generatedCounter;
+                state.PromptCounter = promptCounter;
+                state.UsingSlotFallback = false;
+                generatedDelta = 0;
+                promptDelta = 0;
+            }
+            else
+            {
+                generatedDelta = RuntimeDashboardService.WholePositiveDeltaAndRemember(generatedCounter, ref state.GeneratedCounter);
+                promptDelta = RuntimeDashboardService.WholePositiveDeltaAndRemember(promptCounter, ref state.PromptCounter);
+            }
+        }
+        else
+        {
+            if (!state.UsingSlotFallback)
+            {
+                RememberSlots(state, SlotCounters(slotSnapshot!));
+                state.SlotsInitialized = true;
+                state.UsingSlotFallback = true;
+                promptDelta = 0;
+                generatedDelta = 0;
+            }
+            else
+            {
+                (promptDelta, generatedDelta) = ObserveSlotDeltas(state, slotSnapshot!);
+            }
+        }
         if (generatedDelta <= 0 && promptDelta <= 0)
             return TokenUsageDelta.Empty;
 
@@ -66,4 +106,48 @@ public sealed class RuntimeLifetimeCounterTracker
         foreach (var key in _states.Keys.Where(key => !active.Contains(key)).ToArray())
             _states.Remove(key);
     }
+
+    private static (long Prompt, long Generated) ObserveSlotDeltas(CounterState state, RuntimeSlotSnapshot snapshot)
+    {
+        var counters = SlotCounters(snapshot);
+        if (!state.SlotsInitialized)
+        {
+            RememberSlots(state, counters);
+            state.SlotsInitialized = true;
+            return (0, 0);
+        }
+
+        double prompt = 0;
+        double generated = 0;
+        foreach (var counter in counters)
+        {
+            var hadPrevious = state.Slots.TryGetValue(counter.SlotId, out var previous);
+            prompt += hadPrevious
+                ? CounterDelta(counter.PromptTokensProcessed, previous!.PromptTokens, counter.TaskId, previous.TaskId)
+                : Math.Max(0, counter.PromptTokensProcessed);
+            generated += hadPrevious
+                ? CounterDelta(counter.GeneratedTokens, previous!.GeneratedTokens, counter.TaskId, previous.TaskId)
+                : Math.Max(0, counter.GeneratedTokens);
+        }
+        RememberSlots(state, counters);
+        return (Math.Max(0, (long)Math.Floor(prompt)), Math.Max(0, (long)Math.Floor(generated)));
+    }
+
+    private static IReadOnlyList<RuntimeSlotCounterSnapshot> SlotCounters(RuntimeSlotSnapshot snapshot)
+        => snapshot.SlotCounters is { Count: > 0 } counters
+            ? counters
+            : [new RuntimeSlotCounterSnapshot("aggregate", "", snapshot.PromptTokensProcessed, snapshot.GeneratedTokens, snapshot.IsProcessing)];
+
+    private static double CounterDelta(double current, double previous, string currentTaskId, string previousTaskId)
+        => current >= previous && string.Equals(currentTaskId, previousTaskId, StringComparison.Ordinal)
+            ? current - previous
+            : Math.Max(0, current);
+
+    private static void RememberSlots(CounterState state, IReadOnlyList<RuntimeSlotCounterSnapshot> counters)
+    {
+        foreach (var counter in counters)
+            state.Slots[counter.SlotId] = new SlotCounterState(counter.TaskId, counter.PromptTokensProcessed, counter.GeneratedTokens);
+    }
+
+    private sealed record SlotCounterState(string TaskId, double PromptTokens, double GeneratedTokens);
 }

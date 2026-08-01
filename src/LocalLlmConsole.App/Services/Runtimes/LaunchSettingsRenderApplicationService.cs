@@ -2,9 +2,10 @@ namespace LocalLlmConsole.Services;
 
 public sealed record LaunchSettingsRenderActions(
     Func<ModelRecord?> SelectedModel,
+    Func<string> SelectedProfileId,
     Action ClearEditor,
     Action<ModelRecord?> UpdateSaveAsNewName,
-    Func<ModelRecord, AppSettings, CancellationToken, Task<ModelLaunchSettingsViewState>> BuildViewStateAsync,
+    Func<ModelRecord, AppSettings, string, CancellationToken, Task<ModelLaunchSettingsViewState>> BuildViewStateAsync,
     Action<ModelLaunchSettingsViewState> LoadEditor,
     Func<string, Task> RefreshRuntimeSelectorAsync,
     Action<AppSettings> ApplyLaunchSettingsToControls,
@@ -35,10 +36,13 @@ public sealed class LaunchSettingsRenderApplicationService
         }
 
         var selectedId = model.Id;
+        var selectedProfileId = actions.SelectedProfileId();
         actions.UpdateSaveAsNewName(model);
-        var viewState = await actions.BuildViewStateAsync(model, settings, cancellationToken);
+        var viewState = await actions.BuildViewStateAsync(model, settings, selectedProfileId, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (!string.Equals(actions.SelectedModel()?.Id, selectedId, StringComparison.OrdinalIgnoreCase))
+            return;
+        if (!string.Equals(actions.SelectedProfileId(), selectedProfileId, StringComparison.OrdinalIgnoreCase))
             return;
 
         actions.LoadEditor(viewState);

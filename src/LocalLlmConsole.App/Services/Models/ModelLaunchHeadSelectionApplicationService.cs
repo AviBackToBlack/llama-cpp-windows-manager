@@ -34,6 +34,15 @@ public sealed class ModelLaunchHeadSelectionApplicationService
             "Choose MTP head GGUF",
             selected => selected);
 
+    public LaunchHeadSelectionOutcome ChooseDraftModel(
+        LaunchHeadSelectionRequest request,
+        LaunchHeadSelectionActions actions)
+        => Choose(
+            request,
+            actions,
+            "Choose speculative draft head GGUF",
+            selected => selected);
+
     public OpenFilePickerRequest BuildPickerRequest(LaunchHeadSelectionRequest request, string title)
     {
         ArgumentNullException.ThrowIfNull(request);

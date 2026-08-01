@@ -26,9 +26,9 @@ jobs:
         shell: pwsh
         run: .\build-app.ps1 -Restore
 
-      - name: Test
+      - name: Test and enforce coverage
         shell: pwsh
-        run: .\test-app.ps1
+        run: .\test-coverage.ps1
 
       - name: Verify formatting
         shell: pwsh
@@ -50,11 +50,10 @@ jobs:
         shell: pwsh
         run: |
           $exe = Join-Path $PWD "dist\LlamaCppWindowsManager-win-x64\LlamaCppWindowsManager.exe"
-          $legacyExe = Join-Path $PWD "dist\LlamaCppWindowsManager-win-x64\LlamaCppConsole.exe"
           $zip = Join-Path $PWD "dist\LlamaCppWindowsManager-win-x64.zip"
           if (-not (Test-Path -LiteralPath $exe)) { throw "Published executable was not produced: $exe" }
           if (-not (Test-Path -LiteralPath "$exe.sha256")) { throw "Published executable checksum was not produced: $exe.sha256" }
-          if (-not (Test-Path -LiteralPath $legacyExe)) { throw "Legacy updater executable alias was not produced: $legacyExe" }
+          if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $exe) "LlamaCppConsole.exe")) { throw "Removed legacy executable alias was published." }
           if (-not (Test-Path -LiteralPath $zip)) { throw "Portable release archive was not produced: $zip" }
           if (-not (Test-Path -LiteralPath "$zip.sha256")) { throw "Portable release archive checksum was not produced: $zip.sha256" }
           $pdbs = Get-ChildItem -Path (Split-Path -Parent $exe) -Recurse -Filter *.pdb -File -ErrorAction SilentlyContinue

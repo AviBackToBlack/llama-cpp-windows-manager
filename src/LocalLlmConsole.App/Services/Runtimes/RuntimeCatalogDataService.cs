@@ -85,7 +85,8 @@ public sealed class RuntimeCatalogDataService
         IReadOnlyList<RuntimeRecord> runtimes,
         string presetId)
         => runtimes
-            .Where(runtime => string.Equals(RuntimeMetadataService.ManagedPresetId(runtime), presetId, StringComparison.OrdinalIgnoreCase))
+            .Where(runtime => RuntimeAvailabilityService.IsAvailable(runtime)
+                && string.Equals(RuntimeMetadataService.ManagedPresetId(runtime), presetId, StringComparison.OrdinalIgnoreCase))
             .GroupBy(runtime => RuntimeMetadataService.Folder(runtime), StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(runtime => runtime.UpdatedAt).First())
             .OrderByDescending(runtime => runtime.UpdatedAt)

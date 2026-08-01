@@ -63,6 +63,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal(20, snapshot.PromptTokens);
         Assert.Equal(36, snapshot.ContextTokens);
         Assert.Equal(4096, snapshot.ContextSize);
+        Assert.Equal(6144, snapshot.ContextCapacityTokens);
         Assert.Equal(9, snapshot.MtpGeneratedTokens);
         Assert.Equal(6, snapshot.MtpAcceptedTokens);
         Assert.NotNull(snapshot.SlotCounters);
@@ -84,7 +85,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("2.0 t/s (Gen) | 3.0 t/s (Avg) | 13 t (Total)\nUnknown (Prompt) | 15 t (Total)", RuntimeDashboardService.TokenActivitySummaryLabel(2, 3, null, null, 13, 15));
         Assert.Equal("5.0 t/s (Gen) | 20 t (Total)\n0.0 t/s (Prompt) | 10 t (Total)", RuntimeDashboardService.TokenActivitySummaryLabel(5, 0, 0, 0, 20, 10));
         Assert.Equal(
-            "Active 1 | Queued 0\nBusy/decode 1.5",
+            "Active 1/1 | Queued 0\nBusy/decode 1.5",
             RuntimeDashboardService.RuntimeSlotsLabel(
             [
                 new PrometheusSample("llamacpp:requests_processing", "", 1, "1", "gauge", ""),
@@ -92,7 +93,7 @@ public sealed partial class ReleaseHardeningTests
                 new PrometheusSample("llamacpp:n_busy_slots_per_decode", "", 1.5, "1.5", "gauge", "")
             ]));
         Assert.Equal(
-            "Active 2 | Queued 0\nBusy/decode 2.0",
+            "Active 2/2 | Queued 0\nBusy/decode 2.0",
             RuntimeDashboardService.RuntimeSlotsLabel([], snapshot));
         Assert.Equal("2.0 t/s (Gen) | 3.0 t/s (Avg) | 9 t (Total)\n1.5 t/s (Accepted) | 2.5 t/s (Avg) | 6 t (Total)", RuntimeDashboardService.MtpTokenSummaryLabel(2, 3, 1.5, 2.5, 9, 6));
         var parsedMtpStats = RuntimeDashboardService.ParseMtpTokenStats(
@@ -110,6 +111,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("Context 195,584 total\nSlots: 3 enabled\nKV cache 8,325 tokens", RuntimeDashboardService.RuntimeSettingsLabel(null, 8325, 586752, 195584, 3, "on"));
         Assert.Equal("Context 586,752 total\nSlots: 3 enabled\nKV cache Unknown", RuntimeDashboardService.RuntimeSettingsLabel(null, null, 195584, 195584, 3, "off"));
         Assert.Equal("Context 195,584 total\nSlots: 3 enabled\nKV cache Unknown", RuntimeDashboardService.RuntimeSettingsLabel(null, null, 195584, 0, 3));
+        Assert.Equal("Used 28 t | 50%\nCapacity 6,144 t | unified", RuntimeDashboardService.RuntimeKvCacheLabel(.5, 28, 6144, "on"));
+        Assert.Equal("Used 8,325 t | 4.3%\nCapacity 195,584 t | partitioned", RuntimeDashboardService.RuntimeKvCacheLabel(null, 8325, 195584, "off"));
+        Assert.Equal(4.2565, RuntimeDashboardService.KvCacheUsagePercent(null, 8325, 195584)!.Value, 4);
     }
 
 
@@ -265,7 +269,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Equal("Gen 16\nPrompt 8", second.TotalTokens);
         Assert.Equal("2.0 t/s (Gen) | 2.0 t/s (Avg) | 16 t (Total)\n2.0 t/s (Prompt) | 2.0 t/s (Avg) | 8 t (Total)", second.Tokens);
         Assert.Equal("3.0 t/s (Gen) | 3.0 t/s (Avg) | 12 t (Total)\n3.0 t/s (Accepted) | 2.0 t/s (Avg) | 10 t (Total)", second.MtpTokens);
-        Assert.Equal("Active 2 | Queued 0\nBusy/decode 1.5", second.Slots);
+        Assert.Equal("Active 2/2 | Queued 0\nBusy/decode 1.5", second.Slots);
         Assert.True(stale.UsedLastKnown);
         Assert.Equal(capturedAt.AddSeconds(2), stale.LastKnownCapturedAt);
         Assert.Equal(second.GenerationRate, stale.GenerationRate);
@@ -294,8 +298,8 @@ public sealed partial class ReleaseHardeningTests
                 ContextSize: 4096,
                 SlotCounters:
                 [
-                    new RuntimeSlotCounterSnapshot("0", "task-a", 100, 1000, true),
-                    new RuntimeSlotCounterSnapshot("1", "task-b", 20, 500, true)
+                    new RuntimeSlotCounterSnapshot("0", "task-a", 100, 1000, true, 40, 30),
+                    new RuntimeSlotCounterSnapshot("1", "task-b", 20, 500, true, 20, 10)
                 ]),
             mtpTokenSnapshot: null,
             capturedAt);
@@ -313,16 +317,59 @@ public sealed partial class ReleaseHardeningTests
                 ContextSize: 4096,
                 SlotCounters:
                 [
-                    new RuntimeSlotCounterSnapshot("0", "task-c", 30, 10, true),
-                    new RuntimeSlotCounterSnapshot("1", "task-b", 25, 560, true)
+                    new RuntimeSlotCounterSnapshot("0", "task-c", 30, 10, true, 4, 3),
+                    new RuntimeSlotCounterSnapshot("1", "task-b", 25, 560, true, 25, 14)
                 ]),
             mtpTokenSnapshot: null,
             capturedAt.AddSeconds(2));
 
-        Assert.True(second.UsedLastKnown);
-        Assert.Equal(capturedAt, second.LastKnownCapturedAt);
-        Assert.Equal("35.0 t/s (Gen) | 1,500 t (Total)\n17.5 t/s (Prompt) | 120 t (Total)", second.Tokens);
-        Assert.Equal("Active 2 | Queued 0\nBusy/decode 2.0", second.Slots);
+        Assert.False(second.UsedLastKnown);
+        Assert.Null(second.LastKnownCapturedAt);
+        Assert.Equal("35.0 t/s (Gen) | 1,570 t (Total)\n17.5 t/s (Prompt) | 155 t (Total)", second.Tokens);
+        Assert.Equal("4.5 t/s (Gen) | 69 t (Total)\n3.5 t/s (Accepted) | 47 t (Total)", second.MtpTokens);
+        Assert.Equal("Active 2/2 | Queued 0\nBusy/decode 2.0", second.Slots);
+        Assert.Equal(35, second.GraphSample.GenerationRate);
+        Assert.Equal(17.5, second.GraphSample.PromptRate);
+        Assert.Equal(4.5, second.GraphSample.SpeculativeGeneratedRate);
+        Assert.Equal(3.5, second.GraphSample.SpeculativeAcceptedRate);
+    }
+
+    [Fact]
+    public void RuntimeMetricSummaryTrackerDerivesAggregateKvOccupancyFromAllSlots()
+    {
+        var root = CreateTempRoot();
+        var settings = AppSettings.CreateDefault(root) with
+        {
+            ContextSize = 8192,
+            ParallelSlots = 2,
+            KvUnified = "on"
+        };
+        var tracker = new RuntimeMetricSummaryTracker();
+        var snapshot = new RuntimeSlotSnapshot(
+            PromptTokensProcessed: 1200,
+            GeneratedTokens: 848,
+            IsProcessing: true,
+            PromptTokens: 1200,
+            ContextTokens: 2048,
+            ContextSize: 4096,
+            SlotCounters:
+            [
+                new RuntimeSlotCounterSnapshot("0", "task-a", 800, 448, true),
+                new RuntimeSlotCounterSnapshot("1", "task-b", 400, 400, true)
+            ],
+            ContextCapacityTokens: 8192);
+
+        var summary = tracker.Apply(
+            "model|runtime|8081",
+            [],
+            settings,
+            snapshot,
+            mtpTokenSnapshot: null,
+            DateTimeOffset.Parse("2026-07-31T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture));
+
+        Assert.Equal("Used 2,048 t | 25%\nCapacity 8,192 t | unified", summary.KvCache);
+        Assert.Equal(25, summary.GraphSample.KvCacheUsagePercent);
+        Assert.Equal("Active 2/2 | Queued 0\nBusy/decode 2.0", summary.Slots);
     }
 
     [Fact]
@@ -379,6 +426,20 @@ public sealed partial class ReleaseHardeningTests
         var settings = AppSettings.CreateDefault(root) with { SpeculativeType = "draft-mtp" };
         var tracker = new RuntimeMetricSummaryTracker();
         var capturedAt = DateTimeOffset.Parse("2026-05-26T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+
+        var summary = tracker.Apply("model|runtime|8081", [], settings, slotSnapshot: null, mtpTokenSnapshot: null, capturedAt: capturedAt);
+
+        Assert.False(summary.UsedLastKnown);
+        Assert.Equal("Unknown (Gen)\nUnknown (Accepted)", summary.MtpTokens);
+    }
+
+    [Fact]
+    public void RuntimeMetricSummaryTrackerShowsConfiguredDSparkIdleInsteadOfInactive()
+    {
+        var root = CreateTempRoot();
+        var settings = AppSettings.CreateDefault(root) with { SpeculativeType = "draft-dspark" };
+        var tracker = new RuntimeMetricSummaryTracker();
+        var capturedAt = DateTimeOffset.Parse("2026-07-28T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
 
         var summary = tracker.Apply("model|runtime|8081", [], settings, slotSnapshot: null, mtpTokenSnapshot: null, capturedAt: capturedAt);
 
@@ -577,7 +638,9 @@ public sealed partial class ReleaseHardeningTests
         {
             files.Add(psi.FileName ?? "");
             if (string.Equals(Path.GetFileName(psi.FileName), "powershell.exe", StringComparison.OrdinalIgnoreCase))
-                return new ProcessRunResult(0, "[{\"Index\":0,\"Name\":\"Intel(R) Arc(TM) A770 Graphics\",\"Utilization\":42,\"MemoryUsedBytes\":4294967296,\"MemoryTotalBytes\":17179869184}]", "");
+                return DecodedPowerShellScript(psi).Contains("Win32_Processor", StringComparison.Ordinal)
+                    ? new ProcessRunResult(0, "{\"Name\":\"AMD Ryzen 9 7950X 16-Core Processor\",\"Utilization\":18.5,\"PhysicalCores\":16,\"LogicalProcessors\":32}", "")
+                    : new ProcessRunResult(0, "[{\"Index\":0,\"Name\":\"Intel(R) Arc(TM) A770 Graphics\",\"Utilization\":42,\"MemoryUsedBytes\":4294967296,\"MemoryTotalBytes\":17179869184}]", "");
             return new ProcessRunResult(0, "[level_zero:gpu][level_zero:0] Intel(R) Arc(TM) A770 Graphics", "");
         });
         var service = new RuntimeGpuSummaryApplicationService(
@@ -589,24 +652,26 @@ public sealed partial class ReleaseHardeningTests
         var first = await service.SummaryAsync(nativeSycl, now, TestContext.Current.CancellationToken);
         var cached = await service.SummaryAsync(nativeSycl, now.AddSeconds(1), TestContext.Current.CancellationToken);
 
-        Assert.Equal("GPU 0: Intel(R) Arc(TM) A770 Graphics | 42% | 4.0/16.0 GiB", first);
+        Assert.Equal($"CPU: AMD Ryzen 9 7950X{Environment.NewLine}Telemetry: 18.5% load | 16C/32T{Environment.NewLine}GPU 0: Intel(R) Arc(TM) A770 Graphics | 42% | 4.0/16.0 GiB", first);
         Assert.Equal(first, cached);
-        Assert.Equal(["powershell.exe"], files);
+        Assert.Equal(["powershell.exe", "powershell.exe"], files);
 
         files.Clear();
         var amdService = new RuntimeGpuSummaryApplicationService(
             new GpuStatusProbeService(new ScriptedProcessRunner(psi =>
             {
                 files.Add(psi.FileName ?? "");
-                return new ProcessRunResult(0, "[{\"Index\":0,\"Name\":\"AMD Radeon RX 7900 XTX\",\"Utilization\":53.4,\"MemoryUsedBytes\":8589934592,\"MemoryTotalBytes\":25769803776}]", "");
+                return DecodedPowerShellScript(psi).Contains("Win32_Processor", StringComparison.Ordinal)
+                    ? new ProcessRunResult(0, "{\"Name\":\"AMD Ryzen 9 7950X\",\"Utilization\":18.5,\"PhysicalCores\":16,\"LogicalProcessors\":32}", "")
+                    : new ProcessRunResult(0, "[{\"Index\":0,\"Name\":\"AMD Radeon RX 7900 XTX\",\"Utilization\":53.4,\"MemoryUsedBytes\":8589934592,\"MemoryTotalBytes\":25769803776}]", "");
             }), () => "", () => "nvidia-smi.exe", () => "powershell.exe"),
             new GpuSummaryCache(),
             () => "wsl.exe");
 
         var amd = await amdService.SummaryAsync(Session(RuntimeMode.Native, RuntimeBackend.Vulkan, AppSettings.CreateDefault(root), now), now, TestContext.Current.CancellationToken);
 
-        Assert.Equal("GPU 0: AMD Radeon RX 7900 XTX | 53.4% | 8.0/24.0 GiB", amd);
-        Assert.Equal(["powershell.exe"], files);
+        Assert.Equal($"CPU: AMD Ryzen 9 7950X{Environment.NewLine}Telemetry: 18.5% load | 16C/32T{Environment.NewLine}GPU 0: AMD Radeon RX 7900 XTX | 53.4% | 8.0/24.0 GiB", amd);
+        Assert.Equal(["powershell.exe", "powershell.exe"], files);
 
         files.Clear();
         var cpuService = new RuntimeGpuSummaryApplicationService(
@@ -620,7 +685,7 @@ public sealed partial class ReleaseHardeningTests
 
         var cpu = await cpuService.SummaryAsync(Session(RuntimeMode.Native, RuntimeBackend.Cpu, AppSettings.CreateDefault(root), now), now, TestContext.Current.CancellationToken);
 
-        Assert.Equal("CPU: 58.4C", cpu);
+        Assert.Equal("Telemetry: 58.4 °C thermal", cpu);
         Assert.Equal(["powershell.exe"], files);
 
         files.Clear();
@@ -628,7 +693,9 @@ public sealed partial class ReleaseHardeningTests
         {
             files.Add(psi.FileName ?? "");
             if (string.Equals(Path.GetFileName(psi.FileName), "powershell.exe", StringComparison.OrdinalIgnoreCase))
-                return new ProcessRunResult(0, "[]", "");
+                return DecodedPowerShellScript(psi).Contains("Win32_Processor", StringComparison.Ordinal)
+                    ? new ProcessRunResult(0, "{\"Name\":\"Intel Core Ultra 9\",\"Utilization\":11,\"PhysicalCores\":16,\"LogicalProcessors\":22}", "")
+                    : new ProcessRunResult(0, "[]", "");
             return new ProcessRunResult(0, "[level_zero:gpu][level_zero:0] Intel(R) Arc(TM) A770 Graphics", "");
         });
         var wslService = new RuntimeGpuSummaryApplicationService(
@@ -639,8 +706,8 @@ public sealed partial class ReleaseHardeningTests
 
         var wsl = await wslService.SummaryAsync(wslSycl, now, TestContext.Current.CancellationToken);
 
-        Assert.Equal("Intel(R) Arc(TM) A770 Graphics", wsl);
-        Assert.Equal(["powershell.exe", "wsl.exe"], files);
+        Assert.Equal($"CPU: Intel Core Ultra 9{Environment.NewLine}Telemetry: 11% load | 16C/22T{Environment.NewLine}Intel(R) Arc(TM) A770 Graphics", wsl);
+        Assert.Equal(["powershell.exe", "powershell.exe", "wsl.exe"], files);
         Assert.Equal(["-d", "Ubuntu-24.04", "--", "bash", "-lc"], wslRunner.Commands.Last().Take(5).ToArray());
 
         var nvidiaRunner = new ScriptedProcessRunner(_ => new ProcessRunResult(0, "0, NVIDIA RTX, 76, 62, 12288, 24576", ""));
@@ -672,6 +739,14 @@ public sealed partial class ReleaseHardeningTests
                 IsSelected: true);
     }
 
+    private static string DecodedPowerShellScript(ProcessStartInfo startInfo)
+    {
+        var encodedIndex = startInfo.ArgumentList.IndexOf("-EncodedCommand");
+        return encodedIndex >= 0 && encodedIndex + 1 < startInfo.ArgumentList.Count
+            ? System.Text.Encoding.Unicode.GetString(Convert.FromBase64String(startInfo.ArgumentList[encodedIndex + 1]))
+            : "";
+    }
+
 
     [Fact]
     public void RuntimeLifetimeCounterTrackerTracksRuntimeKeysAndUsesSlotFallback()
@@ -697,6 +772,47 @@ public sealed partial class ReleaseHardeningTests
         tracker.RetainRuntimeKeys([secondKey]);
         Assert.Equal(1, tracker.Count);
         Assert.False(tracker.Observe(firstKey, "model-a", "Model A", generatedCounter: 100, promptCounter: 100, slotSnapshot: null).HasTokens);
+    }
+
+    [Fact]
+    public void RuntimeLifetimeCounterTrackerAggregatesParallelSlotResetsWithoutDoubleCountingSourceChanges()
+    {
+        var tracker = new RuntimeLifetimeCounterTracker();
+        const string key = "model-a|runtime-a|8081";
+        var first = new RuntimeSlotSnapshot(
+            120,
+            1500,
+            true,
+            null,
+            null,
+            4096,
+            SlotCounters:
+            [
+                new RuntimeSlotCounterSnapshot("0", "task-a", 100, 1000, true),
+                new RuntimeSlotCounterSnapshot("1", "task-b", 20, 500, true)
+            ]);
+        var second = new RuntimeSlotSnapshot(
+            55,
+            570,
+            true,
+            null,
+            null,
+            4096,
+            SlotCounters:
+            [
+                new RuntimeSlotCounterSnapshot("0", "task-c", 30, 10, true),
+                new RuntimeSlotCounterSnapshot("1", "task-b", 25, 560, true)
+            ]);
+
+        Assert.False(tracker.Observe(key, "model-a", "Model A", null, null, first).HasTokens);
+        var slotDelta = tracker.Observe(key, "model-a", "Model A", null, null, second);
+        Assert.Equal(35, slotDelta.PromptTokens);
+        Assert.Equal(70, slotDelta.GeneratedTokens);
+
+        Assert.False(tracker.Observe(key, "model-a", "Model A", 2000, 500, second).HasTokens);
+        var prometheusDelta = tracker.Observe(key, "model-a", "Model A", 2020, 508, second);
+        Assert.Equal(8, prometheusDelta.PromptTokens);
+        Assert.Equal(20, prometheusDelta.GeneratedTokens);
     }
 
 
@@ -1235,6 +1351,11 @@ public sealed partial class ReleaseHardeningTests
                 () => [session],
                 results =>
                 {
+                    calls.Add($"health:{results.Count}");
+                    return Task.CompletedTask;
+                },
+                results =>
+                {
                     calls.Add($"lifetime:{results.Count}");
                     return Task.CompletedTask;
                 },
@@ -1302,6 +1423,7 @@ public sealed partial class ReleaseHardeningTests
             [
                 "mark",
                 "overview",
+                "health:1",
                 "lifetime:1",
                 "idle:1",
                 $"select:{model.Id}",

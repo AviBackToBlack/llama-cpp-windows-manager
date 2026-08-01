@@ -16,6 +16,10 @@ public partial class MainWindow
 {
     private void SetPage(string title, string subtitle)
     {
+        if (_viewModel.CurrentPage == "Settings"
+            && title != "Settings"
+            && _settingsPage.HasUnsavedChanges)
+            ApplyTheme(_settings.ThemeMode);
         if (title != "Models") StopDownloadHistoryRefreshTimer();
         if (title != "Overview" && !_sessions.HasRunningSessions) StopRuntimeDashboardRefreshTimer();
         _viewModel.CurrentPage = title;
@@ -39,6 +43,21 @@ public partial class MainWindow
         if (!_viewModel.EndBusy()) return;
         _coreServices.Ui.UiBusyState.End(SetPageHostEnabled, SetWaitCursor);
     }
+
+    private bool TryBeginResponsiveActivity(string message)
+    {
+        if (_viewModel.TryBeginBusy(out var busyMessage))
+        {
+            SetStatus(message);
+            return true;
+        }
+
+        SetStatus(busyMessage);
+        return false;
+    }
+
+    private void EndResponsiveActivity()
+        => _viewModel.EndBusy();
 
     private void SetStatus(string text)
     {

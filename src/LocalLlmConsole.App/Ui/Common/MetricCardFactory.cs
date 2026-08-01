@@ -11,8 +11,10 @@ namespace LocalLlmConsole;
 
 public static class MetricCardFactory
 {
+    private const double MetricCardHeight = 104;
+    private const double GraphValueBandHeight = 31;
     private static readonly Regex MetricImportantValuePattern = new(
-        @"\d[\d,]*(?:\.\d+)?(?:/\d[\d,]*(?:\.\d+)?)?\s*(?:t/s|/s|avg|%|C|GiB|GB|MiB|tokens?|t)?",
+        @"\d[\d,]*(?:\.\d+)?(?:/\d[\d,]*(?:\.\d+)?)?\s*(?:t/s|/s|avg|%|\u00b0?C|GiB|GB|MiB|tokens?|t)?",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly System.Windows.Media.FontFamily MetricValueFont = new("Cascadia Mono, Consolas, Segoe UI");
 
@@ -21,6 +23,36 @@ public static class MetricCardFactory
 
     public static Grid AddMetric(Grid grid, string label, int row, int column, out TextBlock lastKnown)
         => AddMetric(grid, label, row, column, includeProgress: false, out _, out lastKnown);
+
+    public static Grid AddMetricGraph(
+        Grid grid,
+        string label,
+        int row,
+        int column,
+        out MetricSparkline graph,
+        out TextBlock lastKnown,
+        string primaryBrushKey = "AccentBlue",
+        string secondaryBrushKey = "Accent",
+        double? fixedMaximum = null)
+    {
+        var metric = AddMetric(grid, label, row, column, out lastKnown);
+        // Reserve the same two-line value band in every graph card. Without this,
+        // one-line states such as "Inactive" move the sparkline upward while the
+        // two-line KV-cache summary leaves it lower in the card.
+        metric.Height = GraphValueBandHeight;
+        graph = new MetricSparkline
+        {
+            Height = 28,
+            Margin = new Thickness(0, 2, 0, 0),
+            PrimaryBrushKey = primaryBrushKey,
+            SecondaryBrushKey = secondaryBrushKey,
+            FixedMaximum = fixedMaximum,
+            ToolTip = $"{label} history (latest 60 samples)"
+        };
+        if (metric.Parent is StackPanel stack)
+            stack.Children.Add(graph);
+        return metric;
+    }
 
     public static Grid AddMetric(Grid grid, string label, int row, int column, bool includeProgress, out WpfProgressBar? progress)
         => AddMetric(grid, label, row, column, includeProgress, out progress, out _);
@@ -48,16 +80,18 @@ public static class MetricCardFactory
         var card = new Border
         {
             Style = (Style)WpfApplication.Current.Resources["MetricCard"],
-            Margin = new Thickness(column == 0 ? 0 : 5, 0, column == 0 ? 5 : 0, 7)
+            Height = MetricCardHeight,
+            ClipToBounds = true,
+            Margin = new Thickness(column == 0 ? 0 : 5, 0, column == 0 ? 5 : 0, 8)
         };
         var stack = new StackPanel();
-        var header = new Grid { Margin = new Thickness(0, 0, 0, 2) };
+        var header = new Grid { Margin = new Thickness(0, 0, 0, 4) };
         header.ColumnDefinitions.Add(new ColumnDefinition());
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var labelText = new TextBlock
         {
             Text = label,
-            FontSize = 11,
+            FontSize = 10.5,
             FontWeight = FontWeights.SemiBold,
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
             TextTrimming = TextTrimming.CharacterEllipsis,
@@ -67,7 +101,7 @@ public static class MetricCardFactory
         header.Children.Add(labelText);
         lastKnown = new TextBlock
         {
-            FontSize = 11,
+            FontSize = 10,
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
             HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
             MaxWidth = 150,
@@ -78,7 +112,7 @@ public static class MetricCardFactory
         Grid.SetColumn(lastKnown, 1);
         header.Children.Add(lastKnown);
         stack.Children.Add(header);
-        var valueRows = new Grid { MinHeight = 34, Tag = string.IsNullOrEmpty(labelKey) ? label : labelKey };
+        var valueRows = new Grid { Tag = string.IsNullOrEmpty(labelKey) ? label : labelKey };
         valueRows.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(MetricLabelColumnWidth(label)) });
         valueRows.ColumnDefinitions.Add(new ColumnDefinition());
         SetMetricText(valueRows, "...");
@@ -134,15 +168,21 @@ public static class MetricCardFactory
             var (label, metricValue) = SplitMetricLine(lines[i]);
             if (!string.IsNullOrWhiteSpace(label))
             {
+                if (IsGraphMetricTarget(target))
+                {
+                    AddSpanningMetricBlock(target, MetricLabeledValueBlock(label, metricValue), i);
+                    continue;
+                }
+
                 var labelBlock = new TextBlock
                 {
                     Text = label,
-                    FontSize = 11,
+                    FontSize = 10.5,
                     FontWeight = FontWeights.SemiBold,
                     Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"],
                     TextTrimming = TextTrimming.CharacterEllipsis,
                     VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 8, 2)
+                    Margin = new Thickness(0, 0, 7, 1)
                 };
                 Grid.SetRow(labelBlock, i);
                 Grid.SetColumn(labelBlock, 0);
@@ -200,8 +240,8 @@ public static class MetricCardFactory
     private static double MetricLabelColumnWidth(string label)
         => string.Equals(label, Loc.T("Overview.Metric.ModelStatus"), StringComparison.Ordinal)
             || string.Equals(label, "Overview.Metric.ModelStatus", StringComparison.Ordinal)
-            ? 98
-            : 74;
+            ? 82
+            : 64;
 
     public static bool IsNeutralMetricStatus(string text)
     {
@@ -287,6 +327,12 @@ public static class MetricCardFactory
         => string.Equals(tag, Loc.T("Overview.Metric.ModelStatus"), StringComparison.Ordinal)
            || string.Equals(tag, "Overview.Metric.ModelStatus", StringComparison.Ordinal);
 
+    private static bool IsGraphMetricTarget(Grid target)
+        => target.Tag is string label
+           && (string.Equals(label, Loc.T("Overview.Metric.Tokens"), StringComparison.Ordinal)
+               || string.Equals(label, Loc.T("Overview.Metric.MtpTokens"), StringComparison.Ordinal)
+               || string.Equals(label, Loc.T("Overview.Metric.KvCache"), StringComparison.Ordinal));
+
     private static bool MetricShouldEmphasizeWholeLine(Grid target, string line, bool emphasizeLoadedStatus)
     {
         if (target.Tag is not string label) return false;
@@ -303,12 +349,14 @@ public static class MetricCardFactory
     {
         var block = new TextBlock
         {
-            FontSize = compact ? 13 : 14,
-            FontWeight = FontWeights.SemiBold,
+            FontSize = compact ? 11.5 : 12,
+            FontWeight = FontWeights.Medium,
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = compact ? 16 : 17,
-            Margin = new Thickness(0, 0, 0, 2)
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            LineHeight = 14,
+            Margin = new Thickness(0, 0, 0, 1),
+            ToolTip = text
         };
         block.Inlines.Add(new Run(string.IsNullOrWhiteSpace(text) ? "..." : text));
         return block;
@@ -318,12 +366,14 @@ public static class MetricCardFactory
     {
         var block = new TextBlock
         {
-            FontSize = 14,
-            FontWeight = FontWeights.SemiBold,
+            FontSize = 12,
+            FontWeight = FontWeights.Medium,
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = 17,
-            Margin = new Thickness(0, 0, 0, 2)
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            LineHeight = 14,
+            Margin = new Thickness(0, 0, 0, 1),
+            ToolTip = $"{statusPrefix}{emphasizedName}".Trim()
         };
         if (!string.IsNullOrWhiteSpace(statusPrefix))
         {
@@ -336,21 +386,45 @@ public static class MetricCardFactory
         block.Inlines.Add(new Run(emphasizedName)
         {
             FontWeight = FontWeights.Bold,
-            Foreground = (WpfBrush)WpfApplication.Current.Resources["AccentStrong"]
+            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"]
         });
         return block;
+    }
+
+    private static TextBlock MetricLabeledValueBlock(string label, string value)
+    {
+        var text = new TextBlock
+        {
+            FontSize = 11.5,
+            FontWeight = FontWeights.Medium,
+            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            LineHeight = 14,
+            Margin = new Thickness(0, 0, 0, 1),
+            ToolTip = $"{label}: {value}"
+        };
+        text.Inlines.Add(new Run($"{label} ")
+        {
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMuted"]
+        });
+        AddMetricValueInlines(text, value);
+        return text;
     }
 
     private static TextBlock MetricValueBlock(string text, bool compact, bool emphasizeWholeLine = false)
     {
         var block = new TextBlock
         {
-            FontSize = compact ? 13 : 14,
-            FontWeight = FontWeights.SemiBold,
+            FontSize = compact ? 11.5 : 12,
+            FontWeight = FontWeights.Medium,
             Foreground = (WpfBrush)WpfApplication.Current.Resources["TextMain"],
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = compact ? 16 : 17,
-            Margin = new Thickness(0, 0, 0, 2)
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            LineHeight = 14,
+            Margin = new Thickness(0, 0, 0, 1),
+            ToolTip = text
         };
         AddMetricValueInlines(block, text, emphasizeWholeLine);
         return block;
@@ -369,7 +443,7 @@ public static class MetricCardFactory
             block.Inlines.Add(new Run(text)
             {
                 FontWeight = FontWeights.Bold,
-                Foreground = (WpfBrush)WpfApplication.Current.Resources["AccentStrong"]
+                Foreground = (WpfBrush)WpfApplication.Current.Resources["AccentBlue"]
             });
             return;
         }
@@ -387,7 +461,7 @@ public static class MetricCardFactory
             {
                 FontFamily = MetricValueFont,
                 FontWeight = FontWeights.Bold,
-                Foreground = (WpfBrush)WpfApplication.Current.Resources["AccentStrong"]
+                Foreground = (WpfBrush)WpfApplication.Current.Resources["AccentBlue"]
             };
             Typography.SetNumeralAlignment(valueRun, FontNumeralAlignment.Tabular);
             block.Inlines.Add(valueRun);

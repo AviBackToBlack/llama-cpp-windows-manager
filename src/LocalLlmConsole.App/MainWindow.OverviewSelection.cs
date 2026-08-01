@@ -18,10 +18,10 @@ public partial class MainWindow
     {
         var modelLookup = AppServices.ModelLookupApplication;
         if (modelLookup is null) return;
-        RefreshOverviewModelChoices(await modelLookup.ListAsync());
+        await RefreshOverviewModelChoicesAsync(await modelLookup.ListAsync());
     }
 
-    private void RefreshOverviewModelChoices(IReadOnlyList<ModelRecord> models)
+    private async Task RefreshOverviewModelChoicesAsync(IReadOnlyList<ModelRecord> models)
     {
         var selectedId = SelectedOverviewModel()?.Id;
         if (string.IsNullOrWhiteSpace(selectedId))
@@ -30,7 +30,31 @@ public partial class MainWindow
         _viewModel.Overview.ReplaceModels(models);
         _overviewPage.SelectModelChoice(selectedId, _viewModel.Overview.ModelChoices);
 
+        await RefreshOverviewLaunchProfilesAsync();
+
         UpdateOverviewModelActions();
+    }
+
+    private async Task RefreshOverviewLaunchProfilesAsync()
+    {
+        var selectedProfileId = _overviewPage.SelectedLaunchProfileId;
+        var model = SelectedOverviewModel();
+        IReadOnlyList<NamedModelLaunchProfile> profiles = model is null || ModelServices.LaunchProfiles is null
+            ? []
+            : await ModelServices.LaunchProfiles.ListNamedAsync(model);
+        if (model is not null && ModelServices.LaunchProfiles is not null && profiles.Count == 0)
+            profiles = [await ModelServices.LaunchProfiles.EnsureDefaultAsync(model, _settings)];
+        _viewModel.Overview.ReplaceLaunchProfiles(profiles);
+        _overviewPage.SelectLaunchProfile(selectedProfileId);
+    }
+
+    private string SelectedOverviewLaunchProfileId()
+        => _overviewPage.SelectedLaunchProfileId;
+
+    private Task SelectOverviewLaunchProfileAsync()
+    {
+        UpdateOverviewModelActions();
+        return Task.CompletedTask;
     }
 
     private ModelRecord? SelectedOverviewModel()
@@ -42,8 +66,34 @@ public partial class MainWindow
     {
         var model = SelectedOverviewModel();
         var hasSelection = model is not null;
+        var hasProfileSelection = !string.IsNullOrWhiteSpace(SelectedOverviewLaunchProfileId());
         var selectedModelLoaded = IsModelLoaded(model);
-        _overviewPage.SetModelActionsEnabled(hasSelection, selectedModelLoaded);
+        _overviewPage.SetModelActionsEnabled(hasSelection, hasProfileSelection, selectedModelLoaded);
+    }
+
+    private static string LoadedSessionIdFromRowButton(object sender)
+        => (sender as FrameworkElement)?.Tag is UiRow row
+            ? row.Data["SessionId"]?.ToString() ?? ""
+            : "";
+
+    private async Task UnloadLoadedSessionAsync(string sessionId)
+    {
+        var session = _sessions.Snapshots().FirstOrDefault(item => string.Equals(
+            item.SessionId,
+            sessionId,
+            StringComparison.OrdinalIgnoreCase));
+        if (session is null) return;
+
+        var model = await FindModelByIdAsync(session.ModelId);
+        if (model is null)
+        {
+            SetStatus("The selected loaded model is no longer present in the catalog.");
+            return;
+        }
+
+        await _coreServices.Models.ModelRuntimeUnloadApplication.UnloadOverviewAsync(
+            new ModelRuntimeUnloadApplicationRequest(model, session.IsRunning),
+            ModelRuntimeUnloadActions());
     }
 
     private async Task SelectOverviewModelSessionAsync()
@@ -51,6 +101,7 @@ public partial class MainWindow
         if (_coreServices.Ui.SelectionReentrancy.IsLoadedSessionSelectionChanging) return;
 
         var model = SelectedOverviewModel();
+        await RefreshOverviewLaunchProfilesAsync();
         await _coreServices.Runtime.OverviewModelSelectionApplication.SelectAsync(
             new OverviewModelSelectionApplicationRequest(
                 model,

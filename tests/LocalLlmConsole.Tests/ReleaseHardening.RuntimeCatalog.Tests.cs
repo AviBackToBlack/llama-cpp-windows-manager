@@ -161,6 +161,7 @@ public sealed partial class ReleaseHardeningTests
             Path.Combine(runtimeRoot, "official-cuda", "bin", "llama-server"),
             System.Text.Json.JsonSerializer.Serialize(new { folder = Path.Combine(runtimeRoot, "official-cuda"), runtimeMetadata = new { managedPresetId = preset.Id, commit = "older" } }),
             now.AddMinutes(-10));
+        CreateRuntimeExecutable(runtimeRoot, "official-cuda", "bin", "llama-server");
         var newerRuntime = olderRuntime with { Id = "runtime-new", UpdatedAt = now };
         var updateState = new RuntimeUpdateState(true, source.Commit, "abcdef9999999999", now);
         var staleState = updateState with { LocalCommit = "0000000" };

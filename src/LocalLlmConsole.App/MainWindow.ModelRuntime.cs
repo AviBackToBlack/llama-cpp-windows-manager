@@ -23,10 +23,13 @@ public partial class MainWindow
                 restart,
                 IsModelLoaded(model),
                 IsModelActive(model),
-                model is not null && _coreServices.Ui.LaunchSettingsEditor.IsLoadedFor(model.Id),
+                model is not null && _coreServices.Ui.LaunchSettingsEditor.IsLoadedFor(model.Id, SelectedModelLaunchProfileId()),
                 SelectedLaunchRuntimeId(),
                 SelectedRuntime()),
-            ModelRuntimeLoadActions(ReadLaunchSettingsFromControls));
+            ModelRuntimeLoadActions(
+                ReadLaunchSettingsFromControls,
+                SelectedModelLaunchProfileId(),
+                _modelsPage.SelectedLaunchProfile?.Name ?? ""));
     }
 
     private async Task UnloadSelectedModelAsync()
@@ -39,6 +42,11 @@ public partial class MainWindow
 
     private async Task LoadOverviewSelectedModelAsync()
     {
+        if (string.IsNullOrWhiteSpace(SelectedOverviewLaunchProfileId()))
+        {
+            SetStatus("Select a launch profile before loading the model.");
+            return;
+        }
         await LoadOverviewModelAsync(SelectedOverviewModel());
     }
 
@@ -50,31 +58,34 @@ public partial class MainWindow
                 IsModelLoaded(model),
                 IsModelActive(model),
                 AppReady: true),
-            ModelRuntimeLoadActions(() => _settings));
+            ModelRuntimeLoadActions(
+                () => _settings,
+                SelectedOverviewLaunchProfileId(),
+                _overviewPage.SelectedLaunchProfileName));
     }
 
-    private ModelRuntimeLoadApplicationActions ModelRuntimeLoadActions(Func<AppSettings> readLaunchSettings)
+    private ModelRuntimeLoadApplicationActions ModelRuntimeLoadActions(
+        Func<AppSettings> readLaunchSettings,
+        string launchProfileId,
+        string launchProfileName)
         => new(
-            RunAsync,
+            RunResponsiveAsync,
             SwitchToLoadedModelAsync,
             () => RenderSelectedModelLaunchSettingsAsync(),
             readLaunchSettings,
             ListRuntimesAsync,
-            DraftModelLaunchProfileAsync,
+            model => DraftModelLaunchProfileAsync(model, SelectedOverviewLaunchProfileId()),
             StopModelRuntimeAsync,
-            (runtime, model, launchSettings) => StartModelRuntimeAsync(runtime, model, launchSettings),
+            (runtime, model, launchSettings) => StartModelRuntimeAsync(
+                runtime,
+                model,
+                launchSettings,
+                launchProfileId: launchProfileId,
+                launchProfileName: launchProfileName),
             SetStatus);
 
     private async Task<IReadOnlyList<RuntimeRecord>> ListRuntimesAsync()
         => await AppServices.StateStore.ListRuntimesAsync();
-
-    private async Task UnloadOverviewSelectedModelAsync()
-    {
-        var model = SelectedOverviewModel();
-        await _coreServices.Models.ModelRuntimeUnloadApplication.UnloadOverviewAsync(
-            new ModelRuntimeUnloadApplicationRequest(model, IsModelLoaded(model)),
-            ModelRuntimeUnloadActions());
-    }
 
     private ModelRuntimeUnloadApplicationActions ModelRuntimeUnloadActions()
         => new(StopModelRuntimeAsync, SetStatus);

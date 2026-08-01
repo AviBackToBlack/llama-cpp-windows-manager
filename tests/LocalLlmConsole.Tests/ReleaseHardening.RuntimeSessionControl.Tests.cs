@@ -14,7 +14,7 @@ public sealed partial class ReleaseHardeningTests
     {
         var root = CreateTempRoot();
         var model = new ModelRecord("model", "Qwen", Path.Combine(root, "qwen.gguf"), OwnershipKind.External, "{}", DateTimeOffset.UtcNow);
-        var runtime = new RuntimeRecord("runtime", "Runtime", RuntimeMode.Native, RuntimeBackend.Cuda, Path.Combine(root, "llama-server.exe"), "{}", DateTimeOffset.UtcNow);
+        var runtime = new RuntimeRecord("runtime", "Runtime", RuntimeMode.Native, RuntimeBackend.Cuda, CreateRuntimeExecutable(root), "{}", DateTimeOffset.UtcNow);
         var settings = AppSettings.CreateDefault(root) with { Port = 8084 };
         var service = new ModelRuntimeLoadApplicationService(
             new ModelRuntimeCommandDecisionService(),
@@ -591,7 +591,7 @@ public sealed partial class ReleaseHardeningTests
         };
         var model = new ModelRecord("model", "Model", modelPath, OwnershipKind.External, "{}", DateTimeOffset.UtcNow);
         var loadedModel = model with { Id = "loaded", Name = "Loaded" };
-        var runtime = new RuntimeRecord("runtime-cuda", "CUDA", RuntimeMode.Native, RuntimeBackend.Cuda, "llama-server.exe", "{}", DateTimeOffset.UtcNow);
+        var runtime = new RuntimeRecord("runtime-cuda", "CUDA", RuntimeMode.Native, RuntimeBackend.Cuda, CreateRuntimeExecutable(root), "{}", DateTimeOffset.UtcNow);
         using var sessions = CreateLoadedModelSessionManager();
         sessions.AttachExisting(runtime, loadedModel, settings with { Port = 8081 }, "loaded.log", LlamaRuntimeState.Loaded, "", "loaded-session", DateTimeOffset.UtcNow);
         var coordinator = new RuntimeSessionCoordinator(sessions, Path.Combine(root, "logs"));

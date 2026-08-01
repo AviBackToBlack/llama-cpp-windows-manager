@@ -7,7 +7,8 @@ public sealed record RuntimeSessionLoadedTransition(
 
 public sealed record RuntimeSessionReconcileResult(
     int RemovedSessionCount,
-    IReadOnlyList<RuntimeSessionLoadedTransition> LoadedTransitions)
+    IReadOnlyList<RuntimeSessionLoadedTransition> LoadedTransitions,
+    IReadOnlyList<LoadedModelSessionSnapshot>? RemovedSessions = null)
 {
     public bool HasChanges => RemovedSessionCount > 0 || LoadedTransitions.Count > 0;
 }
@@ -23,6 +24,7 @@ public sealed class RuntimeSessionReconciler
         ArgumentNullException.ThrowIfNull(recoveredSessionAvailable);
         ArgumentNullException.ThrowIfNull(loadingSessionReady);
 
+        var priorSessionIds = sessions.Snapshots().Select(session => session.SessionId).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var removed = sessions.RemoveFailedOrStopped();
         removed += await sessions.StopUnavailableRecoveredSessionsAsync(recoveredSessionAvailable);
 
@@ -38,6 +40,9 @@ public sealed class RuntimeSessionReconciler
                 session.LaunchSettings));
         }
 
-        return new RuntimeSessionReconcileResult(removed, loadedTransitions);
+        var removedSessions = sessions.OverviewSnapshots()
+            .Where(session => !session.IsRunning && priorSessionIds.Contains(session.SessionId))
+            .ToArray();
+        return new RuntimeSessionReconcileResult(removed, loadedTransitions, removedSessions);
     }
 }

@@ -28,7 +28,7 @@ public sealed partial class AppServiceFactory
         var catalog = CreateModelCatalogService(stateStore);
         var modelCatalogRefreshApplication = CreateModelCatalogRefreshApplicationService(stateStore, catalog);
         var launchProfiles = CreateModelLaunchProfileService(stateStore, request.Sessions);
-        var launchVariants = CreateModelLaunchVariantWorkflowService(catalog, launchProfiles);
+        var launchVariants = CreateModelLaunchVariantWorkflowService(launchProfiles);
         var modelLaunchSettingsWorkflow = CreateModelLaunchSettingsWorkflowService(launchProfiles);
         var gatewayModelLoadWorkflow = CreateGatewayModelLoadWorkflowService(stateStore, launchProfiles, core.Runtime.RuntimeSessions);
         var gatewayRuntimeApplication = CreateGatewayRuntimeApplicationService(gatewayModelLoadWorkflow);

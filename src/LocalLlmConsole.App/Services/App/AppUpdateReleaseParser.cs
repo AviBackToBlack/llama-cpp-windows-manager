@@ -2,11 +2,7 @@ namespace LocalLlmConsole.Services;
 
 public static class AppUpdateReleaseParser
 {
-    private static readonly string[] PortableExeNames =
-    [
-        AppUpdateService.PortableExeName,
-        AppUpdateService.LegacyPortableExeName
-    ];
+    private static readonly string[] PortableExeNames = [AppUpdateService.PortableExeName];
 
     public static AppUpdateInfo ParseLatestRelease(JsonObject release, string currentVersion)
     {

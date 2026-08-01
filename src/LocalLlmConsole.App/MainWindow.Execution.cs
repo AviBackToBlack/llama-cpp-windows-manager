@@ -17,6 +17,9 @@ public partial class MainWindow
     private async Task RunAsync(string message, Func<Task> action)
         => await _coreServices.App.ForegroundTasks.RunBusyAsync(message, action, ForegroundTaskActions());
 
+    private async Task RunResponsiveAsync(string message, Func<Task> action)
+        => await _coreServices.App.ForegroundTasks.RunBusyAsync(message, action, ResponsiveTaskActions());
+
     private async Task RunEventAsync(Func<Task> action)
         => await _coreServices.App.ForegroundTasks.RunEventAsync(action, ForegroundTaskActions());
 
@@ -32,6 +35,16 @@ public partial class MainWindow
         => new(
             TryBeginUiBusy,
             EndUiBusy,
+            SetStatus,
+            () => _viewModel.StatusText,
+            async () => await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background),
+            WriteAppLogAsync,
+            ex => _coreServices.App.Dialogs.Notify(this, ex.Message, AppDisplayName, MessageBoxImage.Error));
+
+    private ForegroundTaskApplicationActions ResponsiveTaskActions()
+        => new(
+            TryBeginResponsiveActivity,
+            EndResponsiveActivity,
             SetStatus,
             () => _viewModel.StatusText,
             async () => await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background),

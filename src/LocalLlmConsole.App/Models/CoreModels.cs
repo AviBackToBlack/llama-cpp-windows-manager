@@ -40,7 +40,16 @@ public enum LoadedModelSessionStatus
     Loading,
     Running,
     Warm,
+    Unreachable,
+    Stopping,
     Failed
+}
+
+public enum RuntimeEndpointHealth
+{
+    Unknown,
+    Healthy,
+    Unreachable
 }
 
 public sealed record ModelRecord(
@@ -60,7 +69,9 @@ public sealed record ActiveRuntimeSession(
     string ProcessMarker = "",
     int ProcessId = 0,
     string SessionId = "",
-    bool IsSelected = true);
+    bool IsSelected = true,
+    string LaunchProfileId = "",
+    string LaunchProfileName = "");
 
 public sealed record LoadedModelSessionSnapshot(
     string SessionId,
@@ -78,7 +89,13 @@ public sealed record LoadedModelSessionSnapshot(
     LoadedModelSessionStatus Status,
     bool IsRunning,
     bool IsSelected,
-    long ModelSizeBytes = 0)
+    long ModelSizeBytes = 0,
+    string LaunchProfileId = "",
+    string LaunchProfileName = "",
+    RuntimeEndpointHealth EndpointHealth = RuntimeEndpointHealth.Unknown,
+    int ConsecutiveEndpointFailures = 0,
+    string StatusReason = "",
+    DateTimeOffset? StoppedAt = null)
 {
     public string Endpoint => RuntimeEndpointService.LocalOpenAiBaseUrl(LaunchSettings);
     public string EndpointDisplay => RuntimeEndpointService.EndpointDisplay(LaunchSettings);

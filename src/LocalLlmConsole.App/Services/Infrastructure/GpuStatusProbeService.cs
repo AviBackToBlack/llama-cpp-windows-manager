@@ -2,8 +2,13 @@ namespace LocalLlmConsole.Services;
 
 public sealed class GpuStatusProbeService
 {
-    private const string WindowsCpuTemperatureProbeScript = """
+    private const string WindowsCpuStatusProbeScript = """
         $ErrorActionPreference = 'SilentlyContinue'
+
+        $processors = @()
+        try {
+            $processors = @(Get-CimInstance Win32_Processor | Select-Object Name, LoadPercentage, NumberOfCores, NumberOfLogicalProcessors)
+        } catch {}
 
         $readings = @()
         try {
@@ -17,12 +22,19 @@ public sealed class GpuStatusProbeService
             }
         } catch {}
 
-        if ($readings.Count -eq 0) {
+        if ($processors.Count -eq 0 -and $readings.Count -eq 0) {
             '{}'
         } else {
+            $loadSamples = @($processors | Where-Object { $null -ne $_.LoadPercentage } | ForEach-Object { [double]$_.LoadPercentage })
+            $physicalCores = @($processors | Where-Object { $null -ne $_.NumberOfCores } | Measure-Object NumberOfCores -Sum).Sum
+            $logicalProcessors = @($processors | Where-Object { $null -ne $_.NumberOfLogicalProcessors } | Measure-Object NumberOfLogicalProcessors -Sum).Sum
             [pscustomobject]@{
-                TemperatureCelsius = ($readings | Measure-Object -Maximum).Maximum
-                Source = 'ACPI thermal zone'
+                Name = if ($processors.Count -gt 0) { [string]$processors[0].Name } else { '' }
+                Utilization = if ($loadSamples.Count -gt 0) { [Math]::Round(($loadSamples | Measure-Object -Average).Average, 1) } else { $null }
+                PhysicalCores = if ($physicalCores -gt 0) { [int]$physicalCores } else { $null }
+                LogicalProcessors = if ($logicalProcessors -gt 0) { [int]$logicalProcessors } else { $null }
+                TemperatureCelsius = if ($readings.Count -gt 0) { ($readings | Measure-Object -Maximum).Maximum } else { $null }
+                TemperatureSource = if ($readings.Count -gt 0) { 'ACPI thermal zone' } else { '' }
             } | ConvertTo-Json -Compress
         }
         """;
@@ -114,12 +126,16 @@ public sealed class GpuStatusProbeService
                 cancellationToken);
             if (result.ExitCode != 0) return null;
 
-            return result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            var snapshots = result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
                 .Select(GpuStatusService.ParseMemoryLine)
                 .Where(snapshot => snapshot is not null)
                 .Select(snapshot => snapshot!)
-                .OrderByDescending(snapshot => snapshot.FreeGiB)
-                .FirstOrDefault();
+                .ToArray();
+            return snapshots.Length == 0
+                ? null
+                : new VramMemorySnapshot(
+                    snapshots.Sum(snapshot => snapshot.FreeGiB),
+                    snapshots.Sum(snapshot => snapshot.TotalGiB));
         }
         catch (Exception ex)
         {
@@ -182,7 +198,7 @@ public sealed class GpuStatusProbeService
         try
         {
             var result = await _processRunner.RunAsync(
-                WindowsPowerShellStartInfo(WindowsCpuTemperatureProbeScript),
+                WindowsPowerShellStartInfo(WindowsCpuStatusProbeScript),
                 TimeSpan.FromSeconds(3),
                 cancellationToken);
             if (result.ExitCode != 0) return "Unavailable";
@@ -193,6 +209,26 @@ public sealed class GpuStatusProbeService
         catch (Exception ex)
         {
             Trace.TraceInformation($"Windows CPU temperature unavailable: {ex.Message}");
+            return "Unavailable";
+        }
+    }
+
+    public async Task<string> CpuSummaryAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _processRunner.RunAsync(
+                WindowsPowerShellStartInfo(WindowsCpuStatusProbeScript),
+                TimeSpan.FromSeconds(3),
+                cancellationToken);
+            if (result.ExitCode != 0) return "Unavailable";
+
+            var summary = GpuStatusService.FormatWindowsCpuStatusJson(result.Output);
+            return string.IsNullOrWhiteSpace(summary) ? "Unavailable" : summary;
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceInformation($"Windows CPU summary unavailable: {ex.Message}");
             return "Unavailable";
         }
     }

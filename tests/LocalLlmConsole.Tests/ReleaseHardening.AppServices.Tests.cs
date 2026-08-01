@@ -1695,6 +1695,7 @@ public sealed partial class ReleaseHardeningTests
         var controlStateService = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Services", "Runtimes", "LaunchSettingsControlStateService.cs"));
         var launchFormBinder = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "LaunchSettingsFormBinder.cs"));
         var launchPanelFactory = ReadLaunchSettingsPanelFactorySources();
+        var launchUiSchema = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "LaunchSettingUiSchema.cs"));
         var launchPanelState = File.ReadAllText(FindRepositoryFile("src", "LocalLlmConsole.App", "Ui", "Pages", "Models", "LaunchSettingsPanelState.cs"));
         var advancedState = new AdvancedSectionStateController();
 
@@ -1713,6 +1714,9 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("public LaunchSettingsFormControls FormControls { get; private set; } = new();", launchPanelState, StringComparison.Ordinal);
         Assert.Contains("public string SaveAsNewModelName", launchPanelState, StringComparison.Ordinal);
         Assert.Contains("SetSaveForModelState", launchPanelState, StringComparison.Ordinal);
+        Assert.Contains("SaveModelLaunchSettingsButton.Visibility = visible ? Visibility.Visible : Visibility.Collapsed", launchPanelState, StringComparison.Ordinal);
+        Assert.Contains("SetSaveForModelState(content, hasNamedProfile && state.CanSaveForModel, hasNamedProfile)", source, StringComparison.Ordinal);
+        Assert.Contains("Select a named launch profile to update it", source, StringComparison.Ordinal);
         Assert.Contains("public void ApplyControlState(LaunchSettingsControlStatePlan plan)", launchPanelState, StringComparison.Ordinal);
         Assert.Contains("LaunchSettingsSearch.From(LaunchSettingsSearchBox?.Text)", launchPanelState, StringComparison.Ordinal);
         Assert.Contains("ApplyLaunchSectionVisibility(plan, search)", launchPanelState, StringComparison.Ordinal);
@@ -1747,35 +1751,38 @@ public sealed partial class ReleaseHardeningTests
         Assert.DoesNotContain("_modelCapabilityText", source, StringComparison.Ordinal);
         Assert.Contains("var launchSettings = ModelServices.ModelLaunchSettingsWorkflow;", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Models.LaunchSettingsRenderApplication.RenderSelectedAsync(", source, StringComparison.Ordinal);
-        Assert.Contains("return await launchSettings!.BuildAsync(selectedModel, defaults, token);", source, StringComparison.Ordinal);
+        Assert.Contains("SelectedModelLaunchProfileId());", source, StringComparison.Ordinal);
         Assert.Contains("EnsureModelLaunchProfileAsync(profileModel)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ModelLaunchPortAvailableAsync", source, StringComparison.Ordinal);
         Assert.DoesNotContain("GetModelLaunchSettingsAsync(", source, StringComparison.Ordinal);
         Assert.DoesNotContain("SaveModelLaunchSettingsAsync(", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ModelPortAllocator.NextAvailable", source, StringComparison.Ordinal);
-        Assert.Contains("ReadAsync(ModelRecord model)", launchProfileService, StringComparison.Ordinal);
-        Assert.Contains("DraftAsync(ModelRecord model, AppSettings defaults)", launchProfileService, StringComparison.Ordinal);
-        Assert.Contains("GetModelLaunchSettingsAsync(model.Id)", launchProfileService, StringComparison.Ordinal);
-        Assert.Contains("SaveModelLaunchSettingsAsync(model.Id, settings)", launchProfileService, StringComparison.Ordinal);
+        Assert.Contains("ReadAsync(ModelRecord model, string profileId", launchProfileService, StringComparison.Ordinal);
+        Assert.Contains("DraftAsync(ModelRecord model, AppSettings defaults, string profileId", launchProfileService, StringComparison.Ordinal);
+        Assert.Contains("ListNamedAsync(model)", launchProfileService, StringComparison.Ordinal);
+        Assert.Contains("SaveNamedAsync(saved)", launchProfileService, StringComparison.Ordinal);
         Assert.Contains("EnsureAsync(ModelRecord model, AppSettings defaults)", launchProfileService, StringComparison.Ordinal);
-        Assert.Contains("IsPortAvailableAsync(string modelId, int port, AppSettings settings)", launchProfileService, StringComparison.Ordinal);
+        Assert.Contains("IsPortAvailableAsync(string modelId, int port, AppSettings settings, string currentProfileId", launchProfileService, StringComparison.Ordinal);
         Assert.Contains("ModelPortAllocator.NextAvailable(settings.Port, used)", launchProfileService, StringComparison.Ordinal);
-        Assert.Contains("AddLaunchSection(panel, builder, Loc.T(\"Launch.Section.Basic\"), basicGrid);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("AddLaunchSection(panel, builder, Loc.T(\"Launch.Section.PerformanceMemory\"), memoryGrid);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("AddLaunchSection(panel, builder, Loc.T(\"Launch.Section.SpeculativeMtp\"), speculativeGrid);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("AddLaunchSection(panel, builder, Loc.T(\"Launch.Section.ChatCapabilities\"), chatGrid);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("AddLaunchSection(panel, builder, Loc.T(\"Launch.Section.GenerationDefaults\"), generationGrid);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("AddLaunchSection(panel, builder, Loc.T(\"Launch.Section.ContextExtension\"), ropeGrid, isAdvancedSection: true);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("AddLaunchSection(panel, builder, Loc.T(\"Launch.Section.Server\"), serverGrid, isAdvancedSection: true);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("searchBox.TextChanged += (_, _) => request.LaunchSettingsSearchChanged();", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("foreach (var sectionGroup in LaunchSettingUiSchema.Definitions.GroupBy", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("\"Basic\", \"ContextSize\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"PerformanceMemory\", \"FlashAttention\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"SpeculativeMtp\", \"SpecType\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"ChatCapabilities\", \"Vision\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"GenerationDefaults\", \"Temperature\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"ContextExtension\", \"RopeScaling\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"Server\", \"ParallelSlots\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("LaunchSettingsSearchHost(request.LaunchSettingsSearchChanged, out searchBox)", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("FormControls.RuntimeOptions?.ApplyFilter(LaunchSettingsSearchBox?.Text)", launchPanelState, StringComparison.Ordinal);
         Assert.Contains("AdvancedButtonText(showAdvanced)", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("VisionProjectorPicker(visionProjectorPathBox, request.ChooseVisionProjectorAsync", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("LaunchSettingEditorKind.VisionProjector", launchUiSchema, StringComparison.Ordinal);
         Assert.Contains("Picker.Vision.Embedded", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("MtpHeadPicker(mtpHeadPathBox, request.ChooseMtpHeadAsync", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddLaunchSetting(speculativeGrid, Loc.T(\"Launch.Field.MtpHead\"), mtpHeadPicker);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddLaunchSetting(chatGrid, Loc.T(\"Launch.Field.VisionHead\"), visionProjectorPicker);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddLaunchSetting(chatGrid, Loc.T(\"Launch.Field.ImageMin\"), visionImageMinTokensBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddLaunchSetting(chatGrid, Loc.T(\"Launch.Field.ImageMax\"), visionImageMaxTokensBox);", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("LaunchSettingEditorKind.MtpHead", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"ChatCapabilities\", \"ImageMin\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"ChatCapabilities\", \"ImageMax\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"Basic\", \"GpuMode\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"Basic\", \"GpuDevices\", advanced: true", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"Basic\", \"GpuSplit\", advanced: true", launchUiSchema, StringComparison.Ordinal);
         Assert.Contains("public bool VisionLaunchSettingsAvailable => Capabilities.LikelyVision;", selectedCapabilities, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Ui.SelectedCapabilities.Apply(model, capabilities)", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Models.LaunchSettingsControlStates.Build(new LaunchSettingsControlStateRequest(", source, StringComparison.Ordinal);
@@ -1792,23 +1799,14 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("builder.AddSection(title, section, grid, isAdvancedSection);", launchPanelFactory, StringComparison.Ordinal);
         Assert.Contains("if (isAdvancedSection)", launchPanelFactory, StringComparison.Ordinal);
         Assert.Contains("builder.AddAdvancedSection(section);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T(\"Launch.Field.KvOffload\"), kvOffloadCombo);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T(\"Launch.Field.UnifiedKv\"), kvUnifiedCombo);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T(\"Launch.Field.PromptCache\"), promptCacheCombo);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T(\"Launch.Field.Checkpoints\"), contextCheckpointsCombo);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T(\"Launch.Field.MemoryMap\"), mmapCombo);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(memoryGrid, Loc.T(\"Launch.Field.MemoryLock\"), mlockCombo);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(speculativeGrid, Loc.T(\"Launch.Field.DraftGpu\"), specDraftGpuLayersBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(speculativeGrid, Loc.T(\"Launch.Field.SplitProb\"), specDraftPSplitBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(speculativeGrid, Loc.T(\"Launch.Field.MinProb\"), specDraftPMinBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(generationGrid, Loc.T(\"Launch.Field.MaxTokens\"), maxTokensBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(generationGrid, Loc.T(\"Launch.Field.Seed\"), seedBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(generationGrid, Loc.T(\"Launch.Field.RepeatWindow\"), repeatLastNBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(generationGrid, Loc.T(\"Launch.Field.RepeatPen\"), repeatPenaltyBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(generationGrid, Loc.T(\"Launch.Field.Presence\"), presencePenaltyBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(generationGrid, Loc.T(\"Launch.Field.Frequency\"), frequencyPenaltyBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("builder.AddAdvancedLaunchSetting(serverGrid, Loc.T(\"Launch.Field.CustomParams\"), customParametersBox);", launchPanelFactory, StringComparison.Ordinal);
-        Assert.Contains("CustomParametersBox = customParametersBox", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("if (definition.Advanced)", launchPanelFactory, StringComparison.Ordinal);
+        Assert.Contains("\"PerformanceMemory\", \"KvOffload\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"PerformanceMemory\", \"PromptCache\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"PerformanceMemory\", \"MemoryLock\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"SpeculativeMtp\", \"DraftGpu\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"GenerationDefaults\", \"MaxTokens\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("\"GenerationDefaults\", \"Frequency\"", launchUiSchema, StringComparison.Ordinal);
+        Assert.Contains("nameof(AppSettings.CustomParameters)", launchUiSchema, StringComparison.Ordinal);
         Assert.DoesNotContain("Performance & Memory - Advanced", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Speculative / MTP - Advanced", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Generation Defaults - Advanced", source, StringComparison.Ordinal);
@@ -1842,6 +1840,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.True(cudaVisionDraft.DraftSpeculativeSettingsAvailable);
         Assert.False(cudaVisionDraft.MtpHeadSettingsAvailable);
         Assert.True(cudaVisionDraft.VisibleSettings["GPU layers"]);
+        Assert.True(cudaVisionDraft.VisibleSettings["GPU mode"]);
+        Assert.True(cudaVisionDraft.EnabledSettings["GPU devices"]);
         Assert.True(cudaVisionDraft.VisibleSettings["Vision head"]);
         Assert.True(cudaVisionDraft.VisibleSettings["Image min"]);
         Assert.True(cudaVisionDraft.EnabledSettings["Draft model"]);
@@ -1853,6 +1853,8 @@ public sealed partial class ReleaseHardeningTests
         Assert.False(cpuNoVision.DraftSpeculativeSettingsAvailable);
         Assert.False(cpuNoVision.MtpHeadSettingsAvailable);
         Assert.False(cpuNoVision.VisibleSettings["GPU layers"]);
+        Assert.False(cpuNoVision.VisibleSettings["GPU mode"]);
+        Assert.False(cpuNoVision.EnabledSettings["GPU split"]);
         Assert.True(cpuNoVision.VisibleSettings["Vision head"]);
         Assert.True(cpuNoVision.VisibleSettings["Image max"]);
         Assert.False(cpuNoVision.EnabledSettings["Draft GPU"]);
@@ -1916,6 +1918,10 @@ public sealed partial class ReleaseHardeningTests
             LaunchSettingsFormBinder.ValidateCrossFieldRules(settings with { ContextCheckpointsMode = "on", ContextCheckpointCount = 0 })).Message, StringComparison.Ordinal);
         Assert.Contains("Checkpoint spacing", Assert.Throws<InvalidOperationException>(() =>
             LaunchSettingsFormBinder.ValidateCrossFieldRules(settings with { ContextCheckpointsMode = "on", ContextCheckpointEveryNTokens = -1 })).Message, StringComparison.Ordinal);
+        Assert.Contains("Single GPU mode", Assert.Throws<InvalidOperationException>(() =>
+            LaunchSettingsFormBinder.ValidateCrossFieldRules(settings with { GpuMode = "single", GpuDevices = "CUDA0,CUDA1" })).Message, StringComparison.Ordinal);
+        Assert.Contains("same number", Assert.Throws<InvalidOperationException>(() =>
+            LaunchSettingsFormBinder.ValidateCrossFieldRules(settings with { GpuMode = "layer", GpuDevices = "CUDA0,CUDA1", GpuSplit = "1" })).Message, StringComparison.Ordinal);
         Assert.Contains("unterminated quote", Assert.Throws<InvalidOperationException>(() =>
             LaunchSettingsFormBinder.ValidateCrossFieldRules(settings with { CustomParameters = "\"oops" })).Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -1971,7 +1977,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.False(noSelection.CanSaveAsNewVariant);
         Assert.Equal(LaunchSettingsSaveStateService.SaveForModelText, newProfile.SaveForModelContent);
         Assert.True(newProfile.CanSaveForModel);
-        Assert.False(newProfile.CanSaveAsNewVariant);
+        Assert.True(newProfile.CanSaveAsNewVariant);
         Assert.True(unreadableCurrentProfile.CanSaveForModel);
         Assert.True(unreadableCurrentProfile.CanSaveAsNewVariant);
         Assert.Equal(LaunchSettingsSaveStateService.SavedText, cleanProfile.SaveForModelContent);
@@ -1979,7 +1985,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.True(cleanProfile.CanSaveAsNewVariant);
         Assert.Equal(LaunchSettingsSaveStateService.SaveForModelText, dirtyProfile.SaveForModelContent);
         Assert.True(dirtyProfile.CanSaveForModel);
-        Assert.False(dirtyProfile.CanSaveAsNewVariant);
+        Assert.True(dirtyProfile.CanSaveAsNewVariant);
         Assert.Contains("LaunchSettingsSaveStateService.Evaluate", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_saveModelLaunchSettingsButton.Content = \"Saved\"", source, StringComparison.Ordinal);
     }
@@ -2016,7 +2022,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.False(session.IsProgrammaticUpdate);
 
         var nextSaved = saved with { ContextSize = 65536 };
-        session.MarkSaved(model.Id, nextSaved);
+        session.MarkSaved(model.Id, "", nextSaved);
 
         Assert.Same(nextSaved, session.SavedProfile);
 
@@ -2030,7 +2036,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("_coreServices.Models.ModelLaunchSettingsSaveApplication.SaveSelectedProfileAsync(", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Ui.LaunchSettingsEditor.MarkSaved,", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Ui.LaunchSettingsEditor.IsLoadedFor,", source, StringComparison.Ordinal);
-        Assert.Contains("_coreServices.Ui.LaunchSettingsEditor.TryChangeSaveAsNewSource(model)", source, StringComparison.Ordinal);
+        Assert.Contains("_coreServices.Ui.LaunchSettingsEditor.TryChangeSaveAsNewSource(model, SelectedModelLaunchProfileId())", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Ui.LaunchSettingsEditor.RunProgrammaticUpdate", source, StringComparison.Ordinal);
         Assert.Contains("_coreServices.Ui.LaunchSettingsEditor.IsProgrammaticUpdate", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_launchSettingsModelId", source, StringComparison.Ordinal);
@@ -2053,6 +2059,7 @@ public sealed partial class ReleaseHardeningTests
         Assert.Contains("atomic-mtp", LaunchSettingMetadataService.SpeculativeTypeOptions);
         Assert.DoesNotContain("mtp", LaunchSettingMetadataService.SpeculativeTypeOptions);
         Assert.Contains("draft-mtp", LaunchSettingMetadataService.SpeculativeTypeOptions);
+        Assert.Contains("draft-dspark", LaunchSettingMetadataService.SpeculativeTypeOptions);
         Assert.True(LaunchSettingMetadataService.IsAtomicMtpSpeculativeType("mtp"));
         Assert.Equal("mtp", LaunchSettingMetadataService.LlamaSpeculativeTypeArgument("atomic-mtp"));
         Assert.Contains("Tooltip.Field.MtpHead", LaunchSettingMetadataService.Tooltip("MTP head"), StringComparison.OrdinalIgnoreCase);

@@ -81,12 +81,14 @@ public sealed class RuntimeDeletionExecutorService
     {
         foreach (var reassignment in reassignments)
         {
-            var profile = await _stateStore.GetModelLaunchSettingsAsync(reassignment.ModelId);
+            var profile = await _stateStore.GetNamedModelLaunchProfileAsync(reassignment.ProfileId);
             if (profile is null) continue;
-            if (!string.Equals(profile.RuntimeId, reassignment.OldRuntimeId, StringComparison.OrdinalIgnoreCase)) continue;
-            await _stateStore.SaveModelLaunchSettingsAsync(
-                reassignment.ModelId,
-                profile with { RuntimeId = reassignment.ReplacementRuntimeId });
+            if (!string.Equals(profile.Settings.RuntimeId, reassignment.OldRuntimeId, StringComparison.OrdinalIgnoreCase)) continue;
+            await _stateStore.SaveNamedModelLaunchProfileAsync(profile with
+            {
+                Settings = profile.Settings with { RuntimeId = reassignment.ReplacementRuntimeId },
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
         }
     }
 }

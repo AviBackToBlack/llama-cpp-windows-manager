@@ -39,14 +39,14 @@ public sealed partial class ReleaseHardeningTests
         var settings = AppSettings.CreateDefault(root) with { ContextSize = 131072, GpuLayers = AppSettings.DefaultGpuLayers };
         var service = new RuntimeLaunchAdmissionService(new VramAdmissionService());
 
-        var noRunning = service.Assess(cudaRuntime, model, settings, hasRunningSessions: false, memory: null);
-        var cpu = service.Assess(cpuRuntime, model, settings, hasRunningSessions: true, memory: null);
-        var warn = service.Assess(cudaRuntime, model, settings, hasRunningSessions: true, memory: null);
-        var block = service.Assess(cudaRuntime, model, settings, hasRunningSessions: true, memory: new VramMemorySnapshot(0.1, 24));
+        var noRunning = service.Assess(cudaRuntime, model, settings, hasRunningGpuSessions: false, memory: null);
+        var cpu = service.Assess(cpuRuntime, model, settings, hasRunningGpuSessions: true, memory: null);
+        var warn = service.Assess(cudaRuntime, model, settings, hasRunningGpuSessions: true, memory: null);
+        var block = service.Assess(cudaRuntime, model, settings, hasRunningGpuSessions: true, memory: new VramMemorySnapshot(0.1, 24));
 
-        Assert.False(service.RequiresMemoryProbe(hasRunningSessions: false, cudaRuntime));
-        Assert.False(service.RequiresMemoryProbe(hasRunningSessions: true, cpuRuntime));
-        Assert.True(service.RequiresMemoryProbe(hasRunningSessions: true, cudaRuntime));
+        Assert.False(service.RequiresMemoryProbe(hasRunningGpuSessions: false, cudaRuntime));
+        Assert.False(service.RequiresMemoryProbe(hasRunningGpuSessions: true, cpuRuntime));
+        Assert.True(service.RequiresMemoryProbe(hasRunningGpuSessions: true, cudaRuntime));
         Assert.Equal(RuntimeLaunchAdmissionAction.Allow, noRunning.Action);
         Assert.Equal(RuntimeLaunchAdmissionAction.Allow, cpu.Action);
         Assert.Equal(RuntimeLaunchAdmissionAction.Warn, warn.Action);
@@ -65,8 +65,8 @@ public sealed partial class ReleaseHardeningTests
     {
         var root = CreateTempRoot();
         var settings = AppSettings.CreateDefault(root) with { WslDistro = "Ubuntu-24.04", Port = 8088 };
-        var wslSyclRuntime = new RuntimeRecord("wsl-sycl", "WSL SYCL", RuntimeMode.Wsl, RuntimeBackend.Sycl, "/opt/llama/llama-server", "{}", DateTimeOffset.UtcNow);
-        var nativeSyclRuntime = new RuntimeRecord("native-sycl", "Native SYCL", RuntimeMode.Native, RuntimeBackend.Sycl, "llama-server.exe", "{}", DateTimeOffset.UtcNow);
+        var wslSyclRuntime = new RuntimeRecord("wsl-sycl", "WSL SYCL", RuntimeMode.Wsl, RuntimeBackend.Sycl, CreateRuntimeExecutable(root, "wsl", "llama-server"), "{}", DateTimeOffset.UtcNow);
+        var nativeSyclRuntime = new RuntimeRecord("native-sycl", "Native SYCL", RuntimeMode.Native, RuntimeBackend.Sycl, CreateRuntimeExecutable(root, "native", "llama-server.exe"), "{}", DateTimeOffset.UtcNow);
         var validWsl = new WslEnvironmentReport(
             WslExeFound: true,
             WslWorking: true,

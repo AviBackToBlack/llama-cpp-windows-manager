@@ -12,7 +12,9 @@ public sealed record RuntimeSlotCounterSnapshot(
     string TaskId,
     double PromptTokensProcessed,
     double GeneratedTokens,
-    bool IsProcessing);
+    bool IsProcessing,
+    double? MtpGeneratedTokens = null,
+    double? MtpAcceptedTokens = null);
 
 public sealed record RuntimeSlotSnapshot(
     double PromptTokensProcessed,
@@ -23,7 +25,8 @@ public sealed record RuntimeSlotSnapshot(
     double? ContextSize,
     double? MtpGeneratedTokens = null,
     double? MtpAcceptedTokens = null,
-    IReadOnlyList<RuntimeSlotCounterSnapshot>? SlotCounters = null);
+    IReadOnlyList<RuntimeSlotCounterSnapshot>? SlotCounters = null,
+    double? ContextCapacityTokens = null);
 
 public static class RuntimeDashboardService
 {
@@ -32,7 +35,7 @@ public static class RuntimeDashboardService
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     private static readonly Regex DraftAcceptancePattern = new(
-        @"draft acceptance rate\s*=\s*[-+0-9.eE]+\s*\(\s*(?<accepted>[\d,]+)\s+accepted\s*/\s*(?<generated>[\d,]+)\s+generated\s*\)",
+        @"draft acceptance(?:\s+rate)?\s*=\s*[-+0-9.eE]+\s*\(\s*(?<accepted>[\d,]+)\s+accepted\s*/\s*(?<generated>[\d,]+)\s+generated\s*\)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     public static RuntimeSlotSnapshot? ParseSlotSnapshot(string raw)
@@ -45,6 +48,7 @@ public static class RuntimeDashboardService
         double? promptTokens = null;
         double? contextTokens = null;
         double? contextSize = null;
+        double? contextCapacityTokens = null;
         double? mtpGeneratedTokens = null;
         double? mtpAcceptedTokens = null;
         var processing = false;
@@ -89,15 +93,21 @@ public static class RuntimeDashboardService
                 slotPromptTokens,
                 slotPromptCacheTokens);
             contextTokens = SumNullable(contextTokens, slotContextTokens > 0 ? slotContextTokens : null);
-            contextSize = MaxNullable(contextSize, ReadDouble(slotNode, "n_ctx", "context_size", "ctx_size"));
-            mtpGeneratedTokens = SumNullable(mtpGeneratedTokens, ReadMtpGeneratedTokens(slotNode));
-            mtpAcceptedTokens = SumNullable(mtpAcceptedTokens, ReadMtpAcceptedTokens(slotNode));
+            var slotContextSize = ReadDouble(slotNode, "n_ctx", "context_size", "ctx_size");
+            var slotMtpGeneratedTokens = ReadMtpGeneratedTokens(slotNode);
+            var slotMtpAcceptedTokens = ReadMtpAcceptedTokens(slotNode);
+            contextSize = MaxNullable(contextSize, slotContextSize);
+            contextCapacityTokens = SumNullable(contextCapacityTokens, slotContextSize);
+            mtpGeneratedTokens = SumNullable(mtpGeneratedTokens, slotMtpGeneratedTokens);
+            mtpAcceptedTokens = SumNullable(mtpAcceptedTokens, slotMtpAcceptedTokens);
             slotCounters.Add(new RuntimeSlotCounterSnapshot(
                 slotId,
                 taskId,
                 slotPromptProcessed,
                 slotGenerated ?? 0,
-                slotProcessing));
+                slotProcessing,
+                slotMtpGeneratedTokens,
+                slotMtpAcceptedTokens));
             slotIndex++;
         }
 
@@ -110,7 +120,8 @@ public static class RuntimeDashboardService
             contextSize,
             mtpGeneratedTokens,
             mtpAcceptedTokens,
-            slotCounters);
+            slotCounters,
+            contextCapacityTokens);
     }
 
     public static RuntimeMtpTokenSnapshot? ParseMtpTokenStats(string raw)
@@ -209,7 +220,40 @@ public static class RuntimeDashboardService
         return string.Join("\n", lines);
     }
 
-    public static string RuntimeSlotsLabel(IReadOnlyList<PrometheusSample> samples, RuntimeSlotSnapshot? slotSnapshot = null)
+    public static string RuntimeKvCacheLabel(
+        double? reportedUsage,
+        double? tokens,
+        double? capacityTokens,
+        string kvUnified = "auto")
+    {
+        var usagePercent = KvCacheUsagePercent(reportedUsage, tokens, capacityTokens);
+        var usedParts = new List<string>();
+        if (tokens is not null) usedParts.Add($"{tokens.Value:N0} t");
+        if (usagePercent is not null) usedParts.Add($"{usagePercent.Value:0.#}%");
+        var used = usedParts.Count == 0 ? "Unknown" : string.Join(" | ", usedParts);
+        var capacity = capacityTokens is > 0 ? $"{capacityTokens.Value:N0} t" : "Unknown";
+        var allocation = kvUnified.ToLowerInvariant() switch
+        {
+            "on" => "unified",
+            "off" => "partitioned",
+            _ => "automatic"
+        };
+        return $"Used {used}\nCapacity {capacity} | {allocation}";
+    }
+
+    public static double? KvCacheUsagePercent(double? reportedUsage, double? tokens, double? capacityTokens)
+    {
+        if (reportedUsage is { } usage && double.IsFinite(usage))
+            return Math.Clamp(usage <= 1 ? usage * 100 : usage, 0, 100);
+        if (tokens is { } used && capacityTokens is > 0 && double.IsFinite(used))
+            return Math.Clamp(100 * used / capacityTokens.Value, 0, 100);
+        return null;
+    }
+
+    public static string RuntimeSlotsLabel(
+        IReadOnlyList<PrometheusSample> samples,
+        RuntimeSlotSnapshot? slotSnapshot = null,
+        int configuredSlots = 1)
     {
         var active = RuntimeMetrics.First(samples, ["requests", "processing"], [])
             ?? SlotProcessingCount(slotSnapshot)
@@ -219,7 +263,10 @@ public static class RuntimeDashboardService
             ?? RuntimeMetrics.First(samples, ["n", "busy", "slots", "per", "decode"], [])
             ?? SlotProcessingCount(slotSnapshot)
             ?? 0;
-        return $"Active {active:N0} | Queued {queued:N0}\nBusy/decode {busy:0.0}";
+        var capacity = Math.Max(
+            Math.Max(configuredSlots, slotSnapshot?.SlotCounters?.Count ?? 0),
+            (int)Math.Ceiling(Math.Max(0, active)));
+        return $"Active {active:N0}/{capacity:N0} | Queued {queued:N0}\nBusy/decode {busy:0.0}";
     }
 
     public static double? GeneratedTokenCounter(IReadOnlyList<PrometheusSample> samples)

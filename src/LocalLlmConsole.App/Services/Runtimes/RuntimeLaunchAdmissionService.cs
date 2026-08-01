@@ -27,17 +27,17 @@ public sealed class RuntimeLaunchAdmissionService
         _vramAdmission = vramAdmission ?? throw new ArgumentNullException(nameof(vramAdmission));
     }
 
-    public bool RequiresMemoryProbe(bool hasRunningSessions, RuntimeRecord runtime)
-        => RequiresAdmissionCheck(hasRunningSessions, runtime) && runtime.Backend == RuntimeBackend.Cuda;
+    public bool RequiresMemoryProbe(bool hasRunningGpuSessions, RuntimeRecord runtime)
+        => RequiresAdmissionCheck(hasRunningGpuSessions, runtime) && runtime.Backend == RuntimeBackend.Cuda;
 
     public RuntimeLaunchAdmissionPlan Assess(
         RuntimeRecord runtime,
         ModelRecord model,
         AppSettings launchSettings,
-        bool hasRunningSessions,
+        bool hasRunningGpuSessions,
         VramMemorySnapshot? memory)
     {
-        if (!RequiresAdmissionCheck(hasRunningSessions, runtime))
+        if (!RequiresAdmissionCheck(hasRunningGpuSessions, runtime))
             return new RuntimeLaunchAdmissionPlan(RuntimeLaunchAdmissionAction.Allow, "", "", "", "");
 
         var result = _vramAdmission.Assess(model, runtime, launchSettings, memory);
@@ -59,6 +59,6 @@ public sealed class RuntimeLaunchAdmissionService
         };
     }
 
-    private static bool RequiresAdmissionCheck(bool hasRunningSessions, RuntimeRecord runtime)
-        => hasRunningSessions && runtime.Backend is RuntimeBackend.Cuda or RuntimeBackend.Vulkan or RuntimeBackend.Sycl;
+    private static bool RequiresAdmissionCheck(bool hasRunningGpuSessions, RuntimeRecord runtime)
+        => hasRunningGpuSessions && runtime.Backend is RuntimeBackend.Cuda or RuntimeBackend.Vulkan or RuntimeBackend.Sycl;
 }

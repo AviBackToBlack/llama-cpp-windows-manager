@@ -70,15 +70,15 @@ public static class HelpContentFactory
 
         panel.Children.Add(HelpCard(
             "Step 3",
-            "Save model launch settings",
-            "Downloaded models are registered automatically. Use Scan Models Folder only if you copied a model manually or the downloaded model does not appear. Select the runtime, keep or change the model port, adjust launch settings, then click Save For Model.",
+            "Save a launch profile",
+            "Downloaded models are registered automatically. Use Scan Models Folder only if you copied a model manually or it does not appear. Select the model file, adjust its runtime and launch settings, enter a profile name, then click Save New Profile.",
             navigate,
             ("Open Models", "launch-settings")));
 
         panel.Children.Add(HelpCard(
             "Step 4",
             "Load the model",
-            "Open Overview, choose the model from the dropdown at the top, then click Load. Loaded model sessions stay available on their saved per-model ports, so more than one model can serve at the same time when the hardware has room. Model Status keeps the final Loading Time visible after startup completes.",
+            "Open Overview, choose the model and one of its launch profiles, then click Load. To stop a running model, use Unload on its row in Loaded Model Sessions. Multiple models can stay available on their profile ports when the hardware has room.",
             navigate,
             ("Open Overview", "overview-load")));
 
@@ -97,7 +97,7 @@ public static class HelpContentFactory
             ("Loaded Model Sessions", "Every running model appears here. Click a model row to switch Model Status to that model. The gateway row shows shared routing status when Overview refreshes."),
             ("Gateway endpoint", "The shared /v1 address used by auto-load clients. It can route a request to whichever configured model was requested."),
             ("Direct endpoint", "The normal per-model llama.cpp address. It stays available on the model's saved port while that model is loaded."),
-            ("Runtime metrics", "Tokens and MTP Tokens use two rows: live rate by stream, average rate when recent data exists, and total tokens. Slots shows active/queued requests and busy decode slots."),
+            ("Runtime metrics", "Tokens and Speculative Tokens aggregate every active slot and plot the latest 60 throughput samples. KV Cache plots total occupancy across slots. Slots shows active capacity, queued requests, and busy decode slots."),
             ("Model status", "Loading, warm, loaded, stopped, or failed. Loading Model or Loaded Model appears separately from Loading Time, and the completed load duration remains visible after readiness. If a model stalls, inspect the runtime log below the metrics."));
         AddHelpBullets(panel,
             "The gateway row shows the shared router endpoint, policy, LAN exposure, and how many direct model sessions are currently loaded.",

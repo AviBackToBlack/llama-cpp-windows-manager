@@ -19,16 +19,30 @@ public sealed record GatewayRoutingOverviewStatus(
             : new(true, true, endpoint.Trim(), "Listening", "", "", 0);
 }
 
+public sealed record OverviewLaunchProfileChoice(string Id, string Name);
+
 public sealed class OverviewPageViewModel
 {
     public ObservableCollection<ModelRecord> ModelChoices { get; } = new();
+    public ObservableCollection<OverviewLaunchProfileChoice> LaunchProfileChoices { get; } = new();
     public ObservableCollection<UiRow> SessionRows { get; } = new();
 
     public void ReplaceModels(IEnumerable<ModelRecord> models)
     {
         ModelChoices.Clear();
-        foreach (var model in models.OrderBy(model => model.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var model in models
+                     .Where(model => !ModelAliasService.IsLaunchAlias(model))
+                     .OrderBy(model => model.Name, StringComparer.OrdinalIgnoreCase))
             ModelChoices.Add(model);
+    }
+
+    public void ReplaceLaunchProfiles(IEnumerable<NamedModelLaunchProfile> profiles)
+    {
+        LaunchProfileChoices.Clear();
+        foreach (var profile in profiles
+                     .OrderByDescending(profile => profile.IsDefault)
+                     .ThenBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase))
+            LaunchProfileChoices.Add(new OverviewLaunchProfileChoice(profile.Id, profile.Name));
     }
 
     public void ReplaceSessions(IEnumerable<LoadedModelSessionSnapshot> sessions, string gatewayEndpoint = "")
@@ -62,11 +76,14 @@ public sealed class OverviewPageViewModel
             yield return new UiRow
             {
                 C1 = session.IsSelected ? $"{session.ModelName} (selected)" : session.ModelName,
-                C2 = session.ModelSize,
-                C3 = SessionStatusLabel(session),
-                C4 = EndpointLabel(session, gateway),
-                C5 = session.RuntimeName,
-                C6 = $"{session.Backend} {session.Mode}",
+                C2 = string.IsNullOrWhiteSpace(session.LaunchProfileName) ? "Unknown" : session.LaunchProfileName,
+                C3 = session.ModelSize,
+                C4 = SessionStatusLabel(session),
+                C5 = EndpointLabel(session, gateway),
+                C6 = session.RuntimeName,
+                C7 = $"{session.Backend} {session.Mode}",
+                C8 = session.IsRunning && session.Status != LoadedModelSessionStatus.Stopping ? "Unload" : "",
+                B1 = session.IsRunning && session.Status != LoadedModelSessionStatus.Stopping,
                 Data = JsonSerializer.SerializeToNode(new { session.SessionId, session.ModelId }) as JsonObject ?? new JsonObject()
             };
         }
@@ -75,14 +92,16 @@ public sealed class OverviewPageViewModel
     private static UiRow GatewayRow(GatewayRoutingOverviewStatus gateway)
         => new()
         {
-            C1 = gateway.Enabled ? "Auto-load gateway" : "Auto-load gateway (off)",
-            C2 = "Router",
-            C3 = string.IsNullOrWhiteSpace(gateway.State) ? (gateway.Enabled ? "Enabled" : "Off") : gateway.State,
-            C4 = gateway.Enabled
-                ? $"Gateway: {gateway.Endpoint}{Environment.NewLine}Routes by model id to {gateway.RunningSessions.ToString(CultureInfo.InvariantCulture)} loaded direct session(s)."
+            C1 = gateway.Enabled ? "Gateway (shared endpoint)" : "Gateway (off)",
+            C2 = "—",
+            C3 = "Shared router",
+            C4 = string.IsNullOrWhiteSpace(gateway.State) ? (gateway.Enabled ? "Enabled" : "Off") : gateway.State,
+            C5 = gateway.Enabled
+                ? $"Shared: {gateway.Endpoint}{Environment.NewLine}Routes by model id to {gateway.RunningSessions.ToString(CultureInfo.InvariantCulture)} loaded model endpoint(s)."
                 : "Gateway disabled",
-            C5 = string.IsNullOrWhiteSpace(gateway.Policy) ? "" : gateway.Policy,
-            C6 = string.IsNullOrWhiteSpace(gateway.Exposure) ? "" : gateway.Exposure,
+            C6 = string.IsNullOrWhiteSpace(gateway.Policy) ? "" : gateway.Policy,
+            C7 = string.IsNullOrWhiteSpace(gateway.Exposure) ? "" : gateway.Exposure,
+            B1 = false,
             Data = JsonSerializer.SerializeToNode(new { Kind = "Gateway" }) as JsonObject ?? new JsonObject()
         };
 
@@ -124,14 +143,16 @@ public sealed class OverviewPageViewModel
     {
         LoadedModelSessionStatus.Running or LoadedModelSessionStatus.Warm => "Loaded",
         LoadedModelSessionStatus.Loading => "Loading",
-        LoadedModelSessionStatus.Failed => "Failed",
-        _ => session.IsRunning ? "Loaded" : "Stopped"
+        LoadedModelSessionStatus.Unreachable => "Unreachable",
+        LoadedModelSessionStatus.Stopping => "Stopping",
+        LoadedModelSessionStatus.Failed => string.IsNullOrWhiteSpace(session.StatusReason) ? "Failed" : $"Failed — {session.StatusReason}",
+        _ => string.IsNullOrWhiteSpace(session.StatusReason) ? "Unloaded" : $"Unloaded — {session.StatusReason}"
     };
 
     private static string EndpointLabel(LoadedModelSessionSnapshot session, GatewayRoutingOverviewStatus gateway)
     {
         if (!gateway.Visible || !gateway.Enabled)
-            return session.Endpoint;
-        return $"Direct: {session.Endpoint}";
+            return $"Direct: {session.Endpoint}";
+        return $"Direct: {session.Endpoint}{Environment.NewLine}Also available via gateway: {gateway.Endpoint}";
     }
 }
